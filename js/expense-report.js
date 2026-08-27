@@ -169,7 +169,10 @@ export function buildReportData(trip, ratesCache, transactions) {
   }));
 
   return {
-    title: `${titleDate} ${trip.name} 旅遊花費報表`,
+    // 旅程名稱通常使用者自己就會輸入年月（例如「2026/8暑假趴趴走」），標題前面不再自動疊加
+    // 一次年月，避免重複；titleDate 改放到頁尾當作小備註就好。
+    title: `${trip.name} 旅遊花費報表`,
+    footerText: titleDate ? `${titleDate} · 琪 · 旅遊記帳` : undefined,
     startDate: trip.startDate,
     endDate: trip.endDate,
     currency: trip.baseCurrency,
