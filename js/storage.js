@@ -25,10 +25,11 @@ function loadRaw() {
 }
 
 function emptyState() {
-  return { activeTripId: null, trips: {}, ratesCache: {} };
+  return { activeTripId: null, trips: {}, ratesCache: {}, people: [] };
 }
 
 let state = loadRaw() || emptyState();
+if (!Array.isArray(state.people)) state.people = []; // 相容舊版本存的資料（還沒有成員名單功能）
 
 export function getState() {
   return state;
@@ -54,16 +55,64 @@ export function persist() {
   notify();
 }
 
-// 只有 activeTripId + trips 需要跨裝置同步，ratesCache 只是本機快取，各裝置自己抓即可
+// 只有 activeTripId + trips + people 需要跨裝置同步，ratesCache 只是本機快取，各裝置自己抓即可
 export function getSyncableState() {
-  return { activeTripId: state.activeTripId, trips: state.trips };
+  return { activeTripId: state.activeTripId, trips: state.trips, people: state.people };
 }
 
-// 用雲端資料整批覆蓋本機的 activeTripId + trips（不動 ratesCache）
+// 用雲端資料整批覆蓋本機的 activeTripId + trips + people（不動 ratesCache）
 export function applySyncedState(remote) {
   state.activeTripId = remote.activeTripId ?? null;
   state.trips = remote.trips || {};
+  state.people = remote.people || [];
   persist();
+}
+
+// ---------------------------------------------------------------- 成員名單（跨旅程通用）
+
+export function getPeople() {
+  return state.people;
+}
+
+// 依姓名去重複：同名的人會直接沿用既有的那筆（連同他的照片），這樣不同旅程輸入同一個名字就能共用大頭貼
+export function addPerson(name) {
+  const trimmed = name.trim();
+  const existing = state.people.find((p) => p.name === trimmed);
+  if (existing) return existing;
+  const person = { id: uid('person'), name: trimmed, avatar: null };
+  state.people.push(person);
+  persist();
+  return person;
+}
+
+export function renamePerson(personId, name) {
+  const person = state.people.find((p) => p.id === personId);
+  if (!person) return;
+  person.name = name;
+  persist();
+}
+
+export function setPersonAvatar(personId, avatarDataUrl) {
+  const person = state.people.find((p) => p.id === personId);
+  if (!person) return;
+  person.avatar = avatarDataUrl;
+  persist();
+}
+
+export function removePerson(personId) {
+  state.people = state.people.filter((p) => p.id !== personId);
+  persist();
+}
+
+// 把名單裡的人加進某個旅程（複製當下的姓名/照片，之後在名單裡改照片不會回頭更新已加入的旅程）
+export function addTripMember(tripId, personId) {
+  const trip = state.trips[tripId];
+  const person = state.people.find((p) => p.id === personId);
+  if (!trip || !person) return;
+  const member = { id: uid('member'), name: person.name, avatar: person.avatar };
+  trip.members.push(member);
+  persist();
+  return member;
 }
 
 export function uid(prefix = 'id') {
@@ -83,8 +132,13 @@ export function setActiveTrip(tripId) {
   persist();
 }
 
-export function createTrip({ name, baseCurrency, startDate, endDate, budgetTotal, budgetDaily, members }) {
+// memberPersonIds：從成員名單挑選的人（見 getPeople/addPerson），會複製當下的姓名/照片成為旅程成員
+export function createTrip({ name, baseCurrency, startDate, endDate, budgetTotal, budgetDaily, memberPersonIds }) {
   const id = uid('trip');
+  const picked = (memberPersonIds || [])
+    .map((pid) => state.people.find((p) => p.id === pid))
+    .filter(Boolean)
+    .map((person) => ({ id: uid('member'), name: person.name, avatar: person.avatar }));
   const trip = {
     id,
     name,
@@ -93,7 +147,7 @@ export function createTrip({ name, baseCurrency, startDate, endDate, budgetTotal
     endDate: endDate || '',
     budgetTotal: budgetTotal || null,
     budgetDaily: budgetDaily || null,
-    members: (members && members.length ? members : ['我']).map((n) => ({ id: uid('member'), name: n, avatar: null })),
+    members: picked.length ? picked : [{ id: uid('member'), name: '我', avatar: null }],
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     expenses: [],
     createdAt: Date.now(),
@@ -118,15 +172,6 @@ export function deleteTrip(tripId) {
     state.activeTripId = remaining.length ? remaining[0].id : null;
   }
   persist();
-}
-
-export function addMember(tripId, name) {
-  const trip = state.trips[tripId];
-  if (!trip) return;
-  const member = { id: uid('member'), name, avatar: null };
-  trip.members.push(member);
-  persist();
-  return member;
 }
 
 export function renameMember(tripId, memberId, name) {
