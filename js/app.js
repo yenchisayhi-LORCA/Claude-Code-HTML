@@ -860,3 +860,10 @@ function switchTab(tab) {
 }
 
 init();
+
+// 註冊 Service Worker，讓網頁打開過一次之後，離線也能重新打開（記帳資料本來就存在 localStorage，不受影響）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('Service worker 註冊失敗', err));
+  });
+}
