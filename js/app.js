@@ -12,7 +12,8 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 let activeRates = null; // 目前旅程基準貨幣的即時匯率快取
 let pendingReceipt = null; // 新增/編輯花費時，暫存尚未儲存的收據 base64
 let currentFilterCategory = '';
-let pendingAvatarMemberId = null; // 目前正在上傳大頭貼的成員 id
+let pendingAvatarMemberId = null; // 目前正在上傳大頭貼的成員 id（旅程內的成員）
+let pendingAvatarPersonId = null; // 目前正在上傳大頭貼的成員 id（跨旅程名單）
 
 const CATEGORY_ICON_CHOICES = [
   '🍽️', '🍜', '🍔', '🍰', '☕', '🍺', '🍣', '🥐',
@@ -30,6 +31,13 @@ function memberAvatarHtml(member, sizeClass = 'expense-avatar') {
   if (!member) return '';
   if (member.avatar) return `<img class="${sizeClass}" src="${member.avatar}" alt="" />`;
   return '';
+}
+
+// 跟 memberAvatarHtml 不同：沒有照片時會畫一個「姓名第一個字」的圓形佔位圖，用在名單/挑選這種需要一眼看出每個人的地方
+function avatarOrInitialHtml(person) {
+  if (!person) return '';
+  if (person.avatar) return `<img class="member-avatar" src="${person.avatar}" alt="" />`;
+  return `<span class="member-avatar-placeholder">${escapeHtml((person.name || '?').slice(0, 1))}</span>`;
 }
 
 // ---------------------------------------------------------------- 初始化
@@ -290,22 +298,44 @@ function renderStatsTab(trip) {
 function renderMembersTab(trip) {
   $('#member-list').innerHTML =
     trip.members
-      .map((m) => {
-        const avatar = m.avatar
-          ? `<img class="member-avatar" src="${m.avatar}" alt="" />`
-          : `<span class="member-avatar-placeholder">${escapeHtml((m.name || '?').slice(0, 1))}</span>`;
-        return `<li>
+      .map(
+        (m) => `<li>
           <div class="member-row-main">
-            <button type="button" class="member-avatar-btn" data-action="change-avatar" data-id="${m.id}" title="更換照片">${avatar}</button>
+            <button type="button" class="member-avatar-btn" data-action="change-avatar" data-id="${m.id}" title="更換照片">${avatarOrInitialHtml(m)}</button>
             <span>${escapeHtml(m.name)}</span>
           </div>
           <button data-action="remove-member" data-id="${m.id}" title="移除">✕</button>
-        </li>`;
-      })
+        </li>`
+      )
       .join('') || '<li>尚無成員</li>';
+
+  const memberNames = new Set(trip.members.map((m) => m.name));
+  const availablePeople = store.getPeople().filter((p) => !memberNames.has(p.name));
+  $('#member-quick-add').innerHTML = availablePeople
+    .map(
+      (p) => `<button type="button" class="quick-add-chip" data-action="quick-add-member" data-id="${p.id}">${avatarOrInitialHtml(p)}${escapeHtml(p.name)}</button>`
+    )
+    .join('');
+
   $('#category-list').innerHTML = trip.categories
     .map((c) => `<li>${c.icon} ${escapeHtml(c.name)} <button data-action="remove-category" data-id="${c.id}" title="移除">✕</button></li>`)
     .join('');
+}
+
+function renderPeopleDialog() {
+  const people = store.getPeople();
+  $('#people-list').innerHTML =
+    people
+      .map(
+        (p) => `<li>
+          <div class="member-row-main">
+            <button type="button" class="member-avatar-btn" data-action="change-person-avatar" data-id="${p.id}" title="更換照片">${avatarOrInitialHtml(p)}</button>
+            <span>${escapeHtml(p.name)}</span>
+          </div>
+          <button data-action="remove-person" data-id="${p.id}" title="從名單移除">✕</button>
+        </li>`
+      )
+      .join('') || '<li>名單還是空的，在下面新增第一個成員吧！</li>';
 }
 
 // ---------------------------------------------------------------- 旅程對話框
@@ -320,8 +350,22 @@ function openTripDialog(trip) {
   $('#trip-budget-total-input').value = trip && trip.budgetTotal ? trip.budgetTotal : '';
   $('#trip-budget-daily-input').value = trip && trip.budgetDaily ? trip.budgetDaily : '';
   $('#trip-members-field').style.display = trip ? 'none' : '';
-  $('#trip-members-input').value = '';
+  $('#trip-members-new-input').value = '';
+  renderTripMembersPicker();
   $('#dialog-trip').showModal();
+}
+
+function renderTripMembersPicker() {
+  const people = store.getPeople();
+  $('#trip-members-picker').innerHTML = people.length
+    ? people
+        .map(
+          (p) => `<div class="split-member-row">
+            <label><input type="checkbox" value="${p.id}" /> ${avatarOrInitialHtml(p)}${escapeHtml(p.name)}</label>
+          </div>`
+        )
+        .join('')
+    : '<p class="empty-hint">名單裡還沒有人，先在下面輸入新成員名字，或到「👤 管理成員」新增。</p>';
 }
 
 function handleTripSubmit(e) {
@@ -338,8 +382,10 @@ function handleTripSubmit(e) {
   if (id) {
     store.updateTrip(id, payload);
   } else {
-    const members = $('#trip-members-input').value.split(',').map((s) => s.trim()).filter(Boolean);
-    store.createTrip({ ...payload, members });
+    const checkedIds = $$('#trip-members-picker input[type="checkbox"]:checked').map((i) => i.value);
+    const newNames = $('#trip-members-new-input').value.split(',').map((s) => s.trim()).filter(Boolean);
+    const newIds = newNames.map((name) => store.addPerson(name).id);
+    store.createTrip({ ...payload, memberPersonIds: [...checkedIds, ...newIds] });
   }
   $('#dialog-trip').close();
   refreshAll();
@@ -566,8 +612,10 @@ function wireGlobalEvents() {
     e.preventDefault();
     const trip = store.getActiveTrip();
     const input = $('#new-member-name');
-    if (input.value.trim()) {
-      store.addMember(trip.id, input.value.trim());
+    const name = input.value.trim();
+    if (name) {
+      const person = store.addPerson(name);
+      store.addTripMember(trip.id, person.id);
       input.value = '';
       refreshAll();
     }
@@ -588,15 +636,75 @@ function wireGlobalEvents() {
       $('#member-avatar-input').click();
     }
   });
+  $('#member-quick-add').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="quick-add-member"]');
+    if (!btn) return;
+    const trip = store.getActiveTrip();
+    store.addTripMember(trip.id, btn.dataset.id);
+    refreshAll();
+  });
+
+  $('#btn-manage-people').addEventListener('click', () => {
+    renderPeopleDialog();
+    $('#dialog-people').showModal();
+  });
+  $('#form-add-person').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('#new-person-name');
+    if (input.value.trim()) {
+      store.addPerson(input.value.trim());
+      input.value = '';
+      renderPeopleDialog();
+      refreshAll();
+    }
+  });
+  $('#people-list').addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('[data-action="remove-person"]');
+    if (removeBtn) {
+      if (confirm('從名單移除此成員？已經加入旅程的成員不受影響，只是名單裡不會再看到他。')) {
+        store.removePerson(removeBtn.dataset.id);
+        renderPeopleDialog();
+        refreshAll();
+      }
+      return;
+    }
+    const avatarBtn = e.target.closest('[data-action="change-person-avatar"]');
+    if (avatarBtn) {
+      pendingAvatarPersonId = avatarBtn.dataset.id;
+      $('#person-avatar-input').click();
+    }
+  });
+  $('#person-avatar-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file || !pendingAvatarPersonId) return;
+    try {
+      const dataUrl = await compressImage(file, { maxWidth: 300, quality: 0.7 });
+      store.setPersonAvatar(pendingAvatarPersonId, dataUrl);
+      renderPeopleDialog();
+      refreshAll();
+    } catch (err) {
+      console.error(err);
+      alert('照片讀取失敗，請換一張圖片再試。');
+    } finally {
+      pendingAvatarPersonId = null;
+    }
+  });
 
   $('#member-avatar-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
     if (!file || !pendingAvatarMemberId) return;
     const trip = store.getActiveTrip();
+    const member = trip.members.find((m) => m.id === pendingAvatarMemberId);
     try {
       const dataUrl = await compressImage(file, { maxWidth: 300, quality: 0.7 });
       store.setMemberAvatar(trip.id, pendingAvatarMemberId, dataUrl);
+      if (member) {
+        // 同步存回成員名單（用姓名比對），這樣以後新旅程勾選同一個人時就會自動帶入這張照片
+        const person = store.addPerson(member.name);
+        store.setPersonAvatar(person.id, dataUrl);
+      }
       refreshAll();
     } catch (err) {
       console.error(err);
