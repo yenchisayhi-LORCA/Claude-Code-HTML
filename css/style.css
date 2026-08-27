@@ -35,10 +35,15 @@ body {
 }
 
 .app-title { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-.app-logo {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 1.5em; height: 1.5em; border-radius: 0.35em; flex-shrink: 0;
-  background: #f5bb4f; color: #5c3a1e; font-weight: 700; font-size: 0.9em;
+.app-logo-mark { position: relative; width: 32px; height: 32px; flex-shrink: 0; display: inline-block; }
+.app-logo-handle {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 13px; height: 6px; border: 3px solid #E8734A; border-bottom: none; border-radius: 6px 6px 0 0;
+}
+.app-logo-body {
+  position: absolute; bottom: 0; left: 0; width: 32px; height: 27px; background: #F79256; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Zen Maru Gothic', 'Noto Sans TC', sans-serif; font-size: 17px; font-weight: 900; color: #FFFDF8;
 }
 
 .trip-switcher { display: flex; gap: 8px; align-items: center; }
