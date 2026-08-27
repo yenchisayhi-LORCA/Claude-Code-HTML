@@ -203,11 +203,11 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
   vertical-align: -4px; margin-right: 4px; background: #e2e8f0;
 }
 
-.split-avatar-group { display: flex; align-items: center; margin-top: 6px; }
+.split-avatar-group { display: flex; align-items: center; flex-shrink: 0; margin: 0 2px; }
 .split-avatar-group img,
 .split-avatar-group .member-avatar-placeholder {
   border: 2px solid var(--surface);
-  margin-left: -8px;
+  margin-left: -10px;
   object-fit: cover;
 }
 .split-avatar-group img:first-child,
