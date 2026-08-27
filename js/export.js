@@ -1,6 +1,6 @@
 // 匯出報表：CSV / Excel 下載，以及瀏覽器列印（可另存為 PDF）。
 
-import { convertToBase } from './currency.js';
+import { convertToBase, convertToTWD, baseAmountToTWD } from './currency.js';
 import { buildXlsx } from './xlsx-writer.js';
 
 function memberNameOf(trip) {
@@ -14,7 +14,8 @@ function categoryNameOf(trip) {
 function buildExpenseTable(trip, ratesCache) {
   const memberName = memberNameOf(trip);
   const categoryName = categoryNameOf(trip);
-  const header = ['日期', '分類', '說明', '金額', '幣別', '換算後金額', '付款人', '分攤成員'];
+  const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
+  const header = ['日期', '分類', '說明', '金額', '幣別', '換算後金額', ...(needsTwd ? ['台幣金額'] : []), '付款人', '分攤成員'];
 
   const rows = [...trip.expenses]
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
@@ -24,6 +25,7 @@ function buildExpenseTable(trip, ratesCache) {
           ? Object.keys(exp.splitCustom).map(memberName).join('、')
           : (exp.splitMembers || []).map(memberName).join('、');
       const converted = convertToBase(exp.amount, exp.currency, trip.baseCurrency, ratesCache);
+      const twd = convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache);
       return [
         exp.date || '',
         categoryName(exp.categoryId),
@@ -31,6 +33,7 @@ function buildExpenseTable(trip, ratesCache) {
         exp.amount,
         exp.currency,
         converted !== null ? Number(converted.toFixed(2)) : '（無匯率資料）',
+        ...(needsTwd ? [twd !== null ? Number(twd.toFixed(2)) : '（無匯率資料）'] : []),
         memberName(exp.paidBy),
         splitNames,
       ];
@@ -39,11 +42,18 @@ function buildExpenseTable(trip, ratesCache) {
   return [header, ...rows];
 }
 
-function buildSettleTable(trip, transactions) {
+function buildSettleTable(trip, transactions, ratesCache) {
   const memberName = memberNameOf(trip);
-  const header = ['誰', '付給', '金額'];
-  if (!transactions.length) return [header, ['已全部結清 🎉', '', '']];
-  return [header, ...transactions.map((t) => [memberName(t.from), memberName(t.to), Number(t.amount.toFixed(2))])];
+  const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
+  const header = ['誰', '付給', '金額', ...(needsTwd ? ['台幣金額'] : [])];
+  if (!transactions.length) return [header, ['已全部結清 🎉', '', '', ...(needsTwd ? [''] : [])]];
+  return [
+    header,
+    ...transactions.map((t) => {
+      const twd = baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache);
+      return [memberName(t.from), memberName(t.to), Number(t.amount.toFixed(2)), ...(needsTwd ? [twd !== null ? Number(twd.toFixed(2)) : '（無匯率資料）'] : [])];
+    }),
+  ];
 }
 
 export function exportExpensesCsv(trip, ratesCache) {
@@ -56,7 +66,7 @@ export function exportExpensesCsv(trip, ratesCache) {
 export function exportExpensesXlsx(trip, ratesCache, transactions) {
   const bytes = buildXlsx([
     { name: '花費明細', rows: buildExpenseTable(trip, ratesCache) },
-    { name: '分帳結算', rows: buildSettleTable(trip, transactions) },
+    { name: '分帳結算', rows: buildSettleTable(trip, transactions, ratesCache) },
   ]);
   downloadBlob(bytes, `${trip.name}-花費紀錄.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
@@ -76,33 +86,42 @@ function downloadBlob(content, filename, mimeType) {
 export function buildPrintableReport(trip, ratesCache, balances, transactions) {
   const memberName = memberNameOf(trip);
   const categoryName = categoryNameOf(trip);
+  const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
   const total = trip.expenses.reduce((sum, e) => sum + (convertToBase(e.amount, e.currency, trip.baseCurrency, ratesCache) || 0), 0);
+  const totalTwd = baseAmountToTWD(total, trip.baseCurrency, ratesCache);
 
   const rows = [...trip.expenses]
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-    .map(
-      (exp) => `<tr>
+    .map((exp) => {
+      const twd = convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache);
+      return `<tr>
         <td>${exp.date || ''}</td>
         <td>${categoryName(exp.categoryId)}</td>
         <td>${exp.description || ''}</td>
         <td>${exp.amount} ${exp.currency}</td>
+        ${needsTwd ? `<td>${twd !== null ? `≈ ${twd.toFixed(0)} TWD` : ''}</td>` : ''}
         <td>${memberName(exp.paidBy)}</td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join('');
 
   const settleRows = transactions
-    .map((t) => `<tr><td>${memberName(t.from)}</td><td>付給</td><td>${memberName(t.to)}</td><td>${t.amount.toFixed(2)} ${trip.baseCurrency}</td></tr>`)
-    .join('') || '<tr><td colspan="4">已全部結清 🎉</td></tr>';
+    .map((t) => {
+      const twd = baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache);
+      return `<tr><td>${memberName(t.from)}</td><td>付給</td><td>${memberName(t.to)}</td><td>${t.amount.toFixed(2)} ${trip.baseCurrency}</td>${
+        needsTwd ? `<td>${twd !== null ? `≈ ${twd.toFixed(0)} TWD` : ''}</td>` : ''
+      }</tr>`;
+    })
+    .join('') || `<tr><td colspan="${needsTwd ? 5 : 4}">已全部結清 🎉</td></tr>`;
 
   return `
     <h1>${trip.name} 旅遊花費報表</h1>
     <p>期間：${trip.startDate || '—'} ~ ${trip.endDate || '—'}　｜　基準貨幣：${trip.baseCurrency}</p>
-    <p>總花費：約 ${total.toFixed(2)} ${trip.baseCurrency}</p>
+    <p>總花費：約 ${total.toFixed(2)} ${trip.baseCurrency}${needsTwd && totalTwd !== null ? `（≈ ${totalTwd.toFixed(0)} TWD）` : ''}</p>
     <h2>花費明細</h2>
-    <table><thead><tr><th>日期</th><th>分類</th><th>說明</th><th>金額</th><th>付款人</th></tr></thead><tbody>${rows}</tbody></table>
+    <table><thead><tr><th>日期</th><th>分類</th><th>說明</th><th>金額</th>${needsTwd ? '<th>約合台幣</th>' : ''}<th>付款人</th></tr></thead><tbody>${rows}</tbody></table>
     <h2>分帳結算</h2>
-    <table><thead><tr><th>誰</th><th></th><th>付給誰</th><th>金額</th></tr></thead><tbody>${settleRows}</tbody></table>
+    <table><thead><tr><th>誰</th><th></th><th>付給誰</th><th>金額</th>${needsTwd ? '<th>約合台幣</th>' : ''}</tr></thead><tbody>${settleRows}</tbody></table>
   `;
 }
 
