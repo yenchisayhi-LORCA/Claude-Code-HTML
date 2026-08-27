@@ -84,6 +84,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       currentUser = user;
       setStatus({ signedIn: true, user, syncing: true });
       await handleSignedIn(firestoreModule);
+      justCompletedEmailLinkSignIn = false; // 只在「剛登入那一次」的判斷裡有效，用過就消耗掉
       setStatus({ signedIn: true, user, syncing: false });
     } else {
       currentUser = null;
@@ -96,6 +97,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       lastSyncedJson = null;
       clearTimeout(shareSyncTimer);
       lastPushedShareJson.clear();
+      justCompletedEmailLinkSignIn = false;
       setStatus({ signedIn: false, available: true });
     }
   });
@@ -130,6 +132,11 @@ export async function requestSignInLink(email) {
   window.localStorage.setItem(EMAIL_STORAGE_KEY, email);
 }
 
+// 這次執行是不是「剛點信件裡的登入連結完成登入」，而不是單純重新整理一個本來就已經登入的
+// 分頁（Firebase 會自動幫你保留登入狀態，之後每次重新整理都會直接恢復，不需要再點一次連結）。
+// handleSignedIn() 靠這個旗標判斷要不要跳出「雲端跟本機不一樣，選哪一份」的視窗。
+let justCompletedEmailLinkSignIn = false;
+
 async function completeEmailLinkSignInIfPresent(authModule) {
   const { isSignInWithEmailLink, signInWithEmailLink } = authModule;
   if (!isSignInWithEmailLink(auth, window.location.href)) return;
@@ -144,6 +151,7 @@ async function completeEmailLinkSignInIfPresent(authModule) {
     await signInWithEmailLink(auth, email, window.location.href);
     window.localStorage.removeItem(EMAIL_STORAGE_KEY);
     window.history.replaceState({}, document.title, window.location.pathname); // 清掉網址上的登入參數
+    justCompletedEmailLinkSignIn = true;
   } catch (err) {
     console.error('Email 連結登入失敗', err);
     setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
@@ -155,18 +163,12 @@ export function signOutOfSync() {
   window.__cloudSyncAuth.signOut(auth);
 }
 
-// 這台瀏覽器/裝置是否曾經跟雲端成功同步過（跟目前登入哪個帳號無關，純粹是「這台裝置的本機
-// 資料是不是一直都有在跟某個帳號對話」的記號）。故意不放進 state 裡（不會被同步/覆蓋掉），
-// 只是這台裝置自己記住的旗標。
-const HAS_SYNCED_BEFORE_KEY = 'travel-expense-tracker/has-synced-before';
-
 async function handleSignedIn(firestoreModule) {
   const { doc, getDoc } = firestoreModule;
   const ref = doc(db, 'users', currentUser.uid);
   const local = getSyncableState();
   const localJson = JSON.stringify(local);
   const hasLocalTrips = Object.keys(local.trips).length > 0;
-  const hasSyncedBefore = window.localStorage.getItem(HAS_SYNCED_BEFORE_KEY) === '1';
 
   let snap;
   try {
@@ -181,16 +183,20 @@ async function handleSignedIn(firestoreModule) {
     const cloudJson = snap.data().stateJson;
     if (cloudJson === localJson) {
       lastSyncedJson = cloudJson;
-    } else if (!hasLocalTrips || hasSyncedBefore) {
-      // 這台裝置以前就跟這個帳號同步過（或本機根本沒有旅程資料）時，雲端和本機不一樣，
-      // 幾乎都是「本機剛做的變更、還沒送出去就被手機重新整理/背景關閉打斷」造成的落差
-      // ——例如剛存好封面照片，1200ms 的 debounce 還沒送出、頁面就被系統回收重新整理，
-      // 重新整理後這裡讀到的雲端資料自然還是舊的。原本這裡會跳出視窗要求選「用雲端」或
-      // 「用本機」，但選「用雲端」等於直接拿舊資料蓋掉使用者剛做的變更、永久遺失（回報
-      // 的「封面照片/成員縮圖不管選哪個都不見了」就是這樣來的）。既然這台裝置以前就同步
-      // 過，直接信任本機現在的內容送出去就好，不用跳出視窗冒著蓋掉剛做的變更的風險；
-      // 真的需要人來選「留哪一份」的情境，只保留給下面這個 else 分支（這台裝置從沒跟這
-      // 個帳號同步過，卻已經有自己的旅程資料，兩邊各自有獨立歷史紀錄，才需要問）。
+    } else if (!hasLocalTrips || !justCompletedEmailLinkSignIn) {
+      // 這裡走進來的情境，幾乎都不是真的需要人來選「用哪一份」：
+      // - 本機根本沒有旅程資料，雲端有的話直接拿來用最合理；
+      // - 這次不是剛點信件裡的連結完成登入，而是本來就已經登入、單純重新整理頁面
+      //   （Firebase 會自動保留登入狀態，每次重新整理都會直接恢復），這種情況下
+      //   雲端和本機會不一樣，幾乎都是「本機剛做的變更、還沒送出去就被手機重新整理/
+      //   背景關閉打斷」造成的落差——例如剛存好封面照片，1200ms 的 debounce 還沒送出、
+      //   頁面就被系統回收重新整理，重新整理後這裡讀到的雲端資料自然還是舊的。之前這裡
+      //   一律跳出視窗要求選「用雲端」或「用本機」，但選「用雲端」等於直接拿舊資料蓋掉
+      //   使用者剛做的變更、永久遺失（回報的「封面照片/成員縮圖/花費紀錄不管選哪個都不
+      //   見了」就是這樣來的，而且這個情境每次重新整理都可能再發生一次，不是單一事件）。
+      //   既然不是剛登入，直接信任本機現在的內容送出去就好，不用跳出視窗冒險；真的需要
+      //   人來選「留哪一份」的情境，只保留給下面這個 else 分支：剛點連結完成登入、本機卻
+      //   已經有自己的旅程資料，這才是兩邊各自有獨立歷史紀錄、真的需要問的狀況。
       await pushNow(firestoreModule, local);
     } else {
       const useCloud = confirm(
