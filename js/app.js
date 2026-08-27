@@ -206,6 +206,7 @@ function renderTripCover(trip) {
         <button type="button" class="trip-cover-btn" data-action="change-cover" title="更換封面照片">
           <img class="trip-cover-img" src="${trip.coverPhoto}" style="object-position: center ${position}%;" alt="" />
         </button>
+        <button type="button" class="trip-cover-adjust" data-action="toggle-position-slider" title="調整照片位置">⇕</button>
         <button type="button" class="trip-cover-remove" data-action="remove-cover" title="移除封面照片">✕</button>
       </div>
       <div class="trip-cover-position-control">
@@ -213,12 +214,24 @@ function renderTripCover(trip) {
         <input type="range" id="trip-cover-position-input" min="0" max="100" value="${position}" title="拖曳調整照片上下位置" />
         <span title="下方">🔽</span>
       </div>`;
+    // 這個滑桿不常用，平常不用一直佔畫面空間：一段時間沒動作就自動收起來，
+    // 點旁邊的「⇕」再叫出來就好（拖曳中會不斷重設這個計時器，不會拖到一半自己收起來）。
+    scheduleCoverPositionAutoHide();
   } else {
     wrap.innerHTML = `
       <button type="button" class="trip-cover-btn" data-action="change-cover" title="上傳封面照片">
         <div class="trip-cover-placeholder"><span class="icon">📷</span><span>上傳這趟旅程的封面照片</span></div>
       </button>`;
   }
+}
+
+let coverPositionHideTimer = null;
+function scheduleCoverPositionAutoHide() {
+  clearTimeout(coverPositionHideTimer);
+  coverPositionHideTimer = setTimeout(() => {
+    const control = $('.trip-cover-position-control');
+    if (control) control.classList.add('hidden');
+  }, 2500);
 }
 
 function totalSpent(trip) {
@@ -649,6 +662,12 @@ function wireGlobalEvents() {
       refreshAll();
       return;
     }
+    if (e.target.closest('[data-action="toggle-position-slider"]')) {
+      const control = $('.trip-cover-position-control');
+      if (control) control.classList.remove('hidden');
+      scheduleCoverPositionAutoHide();
+      return;
+    }
     if (e.target.closest('[data-action="change-cover"]')) {
       $('#trip-cover-input').click();
     }
@@ -657,6 +676,7 @@ function wireGlobalEvents() {
     if (e.target.id !== 'trip-cover-position-input') return;
     const img = $('.trip-cover-img');
     if (img) img.style.objectPosition = `center ${e.target.value}%`;
+    scheduleCoverPositionAutoHide(); // 拖曳中持續重設計時器，不會拖到一半自己收起來
   });
   $('#trip-cover-wrap').addEventListener('change', (e) => {
     if (e.target.id !== 'trip-cover-position-input') return;
