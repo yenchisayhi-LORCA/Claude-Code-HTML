@@ -1,11 +1,20 @@
-// 匯出報表：CSV 下載 + 瀏覽器列印（可另存為 PDF）。
+// 匯出報表：CSV / Excel 下載，以及瀏覽器列印（可另存為 PDF）。
 
 import { convertToBase } from './currency.js';
+import { buildXlsx } from './xlsx-writer.js';
 
-export function exportExpensesCsv(trip, ratesCache) {
+function memberNameOf(trip) {
+  return (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
+}
+function categoryNameOf(trip) {
+  return (id) => trip.categories.find((c) => c.id === id)?.name || '未分類';
+}
+
+// 回傳表頭 + 每筆花費一列的表格資料（數字欄位維持 number 型別，方便 Excel 直接加總）
+function buildExpenseTable(trip, ratesCache) {
+  const memberName = memberNameOf(trip);
+  const categoryName = categoryNameOf(trip);
   const header = ['日期', '分類', '說明', '金額', '幣別', '換算後金額', '付款人', '分攤成員'];
-  const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
-  const categoryName = (id) => trip.categories.find((c) => c.id === id)?.name || '未分類';
 
   const rows = [...trip.expenses]
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
@@ -18,18 +27,38 @@ export function exportExpensesCsv(trip, ratesCache) {
       return [
         exp.date || '',
         categoryName(exp.categoryId),
-        (exp.description || '').replace(/"/g, "'"),
+        exp.description || '',
         exp.amount,
         exp.currency,
-        converted !== null ? `${trip.baseCurrency} ${converted.toFixed(2)}` : '（無匯率資料）',
+        converted !== null ? Number(converted.toFixed(2)) : '（無匯率資料）',
         memberName(exp.paidBy),
         splitNames,
       ];
     });
 
-  const csvLines = [header, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(','));
+  return [header, ...rows];
+}
+
+function buildSettleTable(trip, transactions) {
+  const memberName = memberNameOf(trip);
+  const header = ['誰', '付給', '金額'];
+  if (!transactions.length) return [header, ['已全部結清 🎉', '', '']];
+  return [header, ...transactions.map((t) => [memberName(t.from), memberName(t.to), Number(t.amount.toFixed(2))])];
+}
+
+export function exportExpensesCsv(trip, ratesCache) {
+  const table = buildExpenseTable(trip, ratesCache);
+  const csvLines = table.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, "'")}"`).join(','));
   const csvContent = '﻿' + csvLines.join('\r\n');
   downloadBlob(csvContent, `${trip.name}-花費紀錄.csv`, 'text/csv;charset=utf-8;');
+}
+
+export function exportExpensesXlsx(trip, ratesCache, transactions) {
+  const bytes = buildXlsx([
+    { name: '花費明細', rows: buildExpenseTable(trip, ratesCache) },
+    { name: '分帳結算', rows: buildSettleTable(trip, transactions) },
+  ]);
+  downloadBlob(bytes, `${trip.name}-花費紀錄.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
 function downloadBlob(content, filename, mimeType) {
@@ -45,8 +74,8 @@ function downloadBlob(content, filename, mimeType) {
 }
 
 export function buildPrintableReport(trip, ratesCache, balances, transactions) {
-  const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
-  const categoryName = (id) => trip.categories.find((c) => c.id === id)?.name || '未分類';
+  const memberName = memberNameOf(trip);
+  const categoryName = categoryNameOf(trip);
   const total = trip.expenses.reduce((sum, e) => sum + (convertToBase(e.amount, e.currency, trip.baseCurrency, ratesCache) || 0), 0);
 
   const rows = [...trip.expenses]
