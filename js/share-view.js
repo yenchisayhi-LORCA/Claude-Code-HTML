@@ -156,7 +156,7 @@ export function renderSharedTrip(shareRoot, data) {
     .map((m) => {
       const bal = balances[m.id] || 0;
       const cls = bal > 0.01 ? 'positive' : bal < -0.01 ? 'negative' : '';
-      const text = bal > 0.01 ? `應收回 ${bal.toFixed(2)}` : bal < -0.01 ? `應付出 ${Math.abs(bal).toFixed(2)}` : '已結清';
+      const text = bal > 0.01 ? `應收回 ${Math.round(bal)}` : bal < -0.01 ? `應付出 ${Math.round(Math.abs(bal))}` : '已結清';
       return `<div class="balance-chip"><div class="name">${avatarHtml(m)}${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency}</div></div>`;
     })
     .join('');
@@ -168,7 +168,7 @@ export function renderSharedTrip(shareRoot, data) {
             <strong>${avatarHtml(findMember(t.from))}${escapeHtml(memberName(t.from))}</strong>
             <span class="arrow">應付給</span>
             <strong>${avatarHtml(findMember(t.to))}${escapeHtml(memberName(t.to))}</strong>
-            <span class="amount">${t.amount.toFixed(2)} ${trip.baseCurrency}</span>
+            <span class="amount">${Math.round(t.amount)} ${trip.baseCurrency}</span>
           </div>`
         )
         .join('')

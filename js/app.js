@@ -323,7 +323,7 @@ function renderSplitTab(trip) {
     .map((m) => {
       const bal = balances[m.id] || 0;
       const cls = bal > 0.01 ? 'positive' : bal < -0.01 ? 'negative' : '';
-      const text = bal > 0.01 ? `應收回 ${bal.toFixed(2)}` : bal < -0.01 ? `應付出 ${Math.abs(bal).toFixed(2)}` : '已結清';
+      const text = bal > 0.01 ? `應收回 ${Math.round(bal)}` : bal < -0.01 ? `應付出 ${Math.round(Math.abs(bal))}` : '已結清';
       return `<div class="balance-chip"><div class="name">${memberAvatarHtml(m)}${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency} ${twdNote(Math.abs(bal))}</div></div>`;
     })
     .join('');
@@ -336,7 +336,7 @@ function renderSplitTab(trip) {
             <strong>${memberAvatarHtml(findMember(t.from))}${escapeHtml(memberName(t.from))}</strong>
             <span class="arrow">應付給</span>
             <strong>${memberAvatarHtml(findMember(t.to))}${escapeHtml(memberName(t.to))}</strong>
-            <span class="amount">${t.amount.toFixed(2)} ${trip.baseCurrency} ${twdNote(t.amount)}</span>
+            <span class="amount">${Math.round(t.amount)} ${trip.baseCurrency} ${twdNote(t.amount)}</span>
           </div>`
         )
         .join('')
