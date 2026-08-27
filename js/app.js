@@ -34,10 +34,12 @@ function memberAvatarHtml(member, sizeClass = 'expense-avatar') {
 }
 
 // 跟 memberAvatarHtml 不同：沒有照片時會畫一個「姓名第一個字」的圓形佔位圖，用在名單/挑選這種需要一眼看出每個人的地方
-function avatarOrInitialHtml(person) {
+function avatarOrInitialHtml(person, size = 32) {
   if (!person) return '';
-  if (person.avatar) return `<img class="member-avatar" src="${person.avatar}" alt="" />`;
-  return `<span class="member-avatar-placeholder">${escapeHtml((person.name || '?').slice(0, 1))}</span>`;
+  const name = person.name || '';
+  const style = `style="width:${size}px;height:${size}px;font-size:${Math.max(10, Math.round(size * 0.4))}px"`;
+  if (person.avatar) return `<img class="member-avatar" ${style} src="${person.avatar}" alt="" title="${escapeHtml(name)}" />`;
+  return `<span class="member-avatar-placeholder" ${style} title="${escapeHtml(name)}">${escapeHtml(name.slice(0, 1))}</span>`;
 }
 
 // ---------------------------------------------------------------- 初始化
@@ -222,16 +224,18 @@ function renderExpenseList(trip) {
     .map((exp) => {
       const cat = trip.categories.find((c) => c.id === exp.categoryId) || { icon: '📦', name: '未分類' };
       const converted = convertToBase(exp.amount, exp.currency, trip.baseCurrency, activeRates);
-      const splitLabel =
-        exp.splitType === 'custom'
-          ? `自訂分攤・${Object.keys(exp.splitCustom || {}).length} 人`
-          : `平均分攤・${(exp.splitMembers || []).length} 人`;
+      const splitMemberIds = exp.splitType === 'custom' ? Object.keys(exp.splitCustom || {}) : exp.splitMembers || [];
+      const splitLabel = exp.splitType === 'custom' ? `自訂分攤・${splitMemberIds.length} 人` : `平均分攤・${splitMemberIds.length} 人`;
+      const splitAvatars = splitMemberIds
+        .map((id) => avatarOrInitialHtml(findMember(id), 22))
+        .join('');
       return `
       <div class="expense-card" data-id="${exp.id}">
         <div class="expense-icon">${cat.icon}</div>
         <div class="expense-main">
           <div class="expense-title">${escapeHtml(exp.description || cat.name)}</div>
           <div class="expense-sub">${exp.date || ''}・${memberAvatarHtml(findMember(exp.paidBy))}${escapeHtml(memberName(exp.paidBy))} 付款・${splitLabel}</div>
+          ${splitAvatars ? `<div class="split-avatar-group">${splitAvatars}</div>` : ''}
         </div>
         ${exp.receipt ? `<img class="receipt-thumb" src="${exp.receipt}" data-action="view-receipt" data-id="${exp.id}" alt="收據" />` : ''}
         <div class="expense-amount">
