@@ -12,15 +12,31 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 let activeRates = null; // 目前旅程基準貨幣的即時匯率快取
 let pendingReceipt = null; // 新增/編輯花費時，暫存尚未儲存的收據 base64
 let currentFilterCategory = '';
+let pendingAvatarMemberId = null; // 目前正在上傳大頭貼的成員 id
+
+const CATEGORY_ICON_CHOICES = [
+  '🍽️', '🍜', '🍔', '🍰', '☕', '🍺', '🍣', '🥐',
+  '🏨', '⛺', '🏠', '🚌', '🚕', '🚄', '✈️', '🚢', '🚲',
+  '🎫', '🎡', '🎢', '🎭', '🎨', '🎣', '⚽', '🏖️', '🏔️',
+  '🛍️', '👗', '💄', '📱', '💻', '🔌', '📶',
+  '🏥', '💊', '🚑', '📚', '🎁', '💰', '💳', '🧳', '📷', '🎉', '🎶', '🐶', '🐱', '🏷️',
+];
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function memberAvatarHtml(member, sizeClass = 'expense-avatar') {
+  if (!member) return '';
+  if (member.avatar) return `<img class="${sizeClass}" src="${member.avatar}" alt="" />`;
+  return '';
 }
 
 // ---------------------------------------------------------------- 初始化
 
 async function init() {
   populateCurrencySelects();
+  populateCategoryIconChoices();
   wireGlobalEvents();
   renderSyncArea({ signedIn: false, available: isSyncAvailable() });
   await refreshAll();
@@ -81,6 +97,10 @@ function populateCurrencySelects() {
   const options = COMMON_CURRENCIES.map((c) => `<option value="${c}">${c}</option>`).join('');
   $('#trip-currency-input').innerHTML = options;
   $('#expense-currency-input').innerHTML = options;
+}
+
+function populateCategoryIconChoices() {
+  $('#new-category-icon').innerHTML = CATEGORY_ICON_CHOICES.map((icon) => `<option value="${icon}">${icon}</option>`).join('');
 }
 
 async function refreshAll() {
@@ -179,7 +199,8 @@ function renderCategoryFilterOptions(trip) {
 
 function renderExpenseList(trip) {
   const list = $('#expense-list');
-  const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
+  const findMember = (id) => trip.members.find((m) => m.id === id);
+  const memberName = (id) => findMember(id)?.name || '（已刪除成員）';
   const expenses = [...trip.expenses]
     .filter((e) => !currentFilterCategory || e.categoryId === currentFilterCategory)
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.createdAt - a.createdAt);
@@ -202,7 +223,7 @@ function renderExpenseList(trip) {
         <div class="expense-icon">${cat.icon}</div>
         <div class="expense-main">
           <div class="expense-title">${escapeHtml(exp.description || cat.name)}</div>
-          <div class="expense-sub">${exp.date || ''}・${escapeHtml(memberName(exp.paidBy))} 付款・${splitLabel}</div>
+          <div class="expense-sub">${exp.date || ''}・${memberAvatarHtml(findMember(exp.paidBy))}${escapeHtml(memberName(exp.paidBy))} 付款・${splitLabel}</div>
         </div>
         ${exp.receipt ? `<img class="receipt-thumb" src="${exp.receipt}" data-action="view-receipt" data-id="${exp.id}" alt="收據" />` : ''}
         <div class="expense-amount">
@@ -220,14 +241,15 @@ function renderExpenseList(trip) {
 
 function renderSplitTab(trip) {
   const { balances } = computeBalances(trip, activeRates);
-  const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
+  const findMember = (id) => trip.members.find((m) => m.id === id);
+  const memberName = (id) => findMember(id)?.name || '（已刪除成員）';
 
   $('#balances-summary').innerHTML = trip.members
     .map((m) => {
       const bal = balances[m.id] || 0;
       const cls = bal > 0.01 ? 'positive' : bal < -0.01 ? 'negative' : '';
       const text = bal > 0.01 ? `應收回 ${bal.toFixed(2)}` : bal < -0.01 ? `應付出 ${Math.abs(bal).toFixed(2)}` : '已結清';
-      return `<div class="balance-chip"><div class="name">${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency}</div></div>`;
+      return `<div class="balance-chip"><div class="name">${memberAvatarHtml(m)}${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency}</div></div>`;
     })
     .join('');
 
@@ -236,9 +258,9 @@ function renderSplitTab(trip) {
     ? transactions
         .map(
           (t) => `<div class="settle-row">
-            <strong>${escapeHtml(memberName(t.from))}</strong>
+            <strong>${memberAvatarHtml(findMember(t.from))}${escapeHtml(memberName(t.from))}</strong>
             <span class="arrow">應付給</span>
-            <strong>${escapeHtml(memberName(t.to))}</strong>
+            <strong>${memberAvatarHtml(findMember(t.to))}${escapeHtml(memberName(t.to))}</strong>
             <span class="amount">${t.amount.toFixed(2)} ${trip.baseCurrency}</span>
           </div>`
         )
@@ -267,8 +289,20 @@ function renderStatsTab(trip) {
 
 function renderMembersTab(trip) {
   $('#member-list').innerHTML =
-    trip.members.map((m) => `<li>${escapeHtml(m.name)} <button data-action="remove-member" data-id="${m.id}" title="移除">✕</button></li>`).join('') ||
-    '<li>尚無成員</li>';
+    trip.members
+      .map((m) => {
+        const avatar = m.avatar
+          ? `<img class="member-avatar" src="${m.avatar}" alt="" />`
+          : `<span class="member-avatar-placeholder">${escapeHtml((m.name || '?').slice(0, 1))}</span>`;
+        return `<li>
+          <div class="member-row-main">
+            <button type="button" class="member-avatar-btn" data-action="change-avatar" data-id="${m.id}" title="更換照片">${avatar}</button>
+            <span>${escapeHtml(m.name)}</span>
+          </div>
+          <button data-action="remove-member" data-id="${m.id}" title="移除">✕</button>
+        </li>`;
+      })
+      .join('') || '<li>尚無成員</li>';
   $('#category-list').innerHTML = trip.categories
     .map((c) => `<li>${c.icon} ${escapeHtml(c.name)} <button data-action="remove-category" data-id="${c.id}" title="移除">✕</button></li>`)
     .join('');
@@ -539,12 +573,36 @@ function wireGlobalEvents() {
     }
   });
   $('#member-list').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="remove-member"]');
-    if (!btn) return;
+    const removeBtn = e.target.closest('[data-action="remove-member"]');
+    if (removeBtn) {
+      const trip = store.getActiveTrip();
+      if (confirm('刪除此成員？相關花費的付款人/分攤設定會一併調整。')) {
+        store.removeMember(trip.id, removeBtn.dataset.id);
+        refreshAll();
+      }
+      return;
+    }
+    const avatarBtn = e.target.closest('[data-action="change-avatar"]');
+    if (avatarBtn) {
+      pendingAvatarMemberId = avatarBtn.dataset.id;
+      $('#member-avatar-input').click();
+    }
+  });
+
+  $('#member-avatar-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file || !pendingAvatarMemberId) return;
     const trip = store.getActiveTrip();
-    if (confirm('刪除此成員？相關花費的付款人/分攤設定會一併調整。')) {
-      store.removeMember(trip.id, btn.dataset.id);
+    try {
+      const dataUrl = await compressImage(file, { maxWidth: 300, quality: 0.7 });
+      store.setMemberAvatar(trip.id, pendingAvatarMemberId, dataUrl);
       refreshAll();
+    } catch (err) {
+      console.error(err);
+      alert('照片讀取失敗，請換一張圖片再試。');
+    } finally {
+      pendingAvatarMemberId = null;
     }
   });
 
@@ -552,11 +610,11 @@ function wireGlobalEvents() {
     e.preventDefault();
     const trip = store.getActiveTrip();
     const name = $('#new-category-name').value.trim();
-    const icon = $('#new-category-icon').value.trim() || '🏷️';
+    const icon = $('#new-category-icon').value || '🏷️';
     if (name) {
       store.addCategory(trip.id, { name, icon });
       $('#new-category-name').value = '';
-      $('#new-category-icon').value = '';
+      $('#new-category-icon').selectedIndex = 0;
       refreshAll();
     }
   });

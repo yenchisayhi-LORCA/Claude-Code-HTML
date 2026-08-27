@@ -157,6 +157,18 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
 .simple-list button { background: none; border: none; cursor: pointer; color: var(--text-muted); }
 .simple-list button:hover { color: var(--danger); }
 
+.member-row-main { display: flex; align-items: center; gap: 10px; }
+.member-avatar-btn { padding: 0; border: none; background: none; cursor: pointer; border-radius: 50%; line-height: 0; }
+.member-avatar, .member-avatar-placeholder {
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: inline-flex;
+  align-items: center; justify-content: center; background: #e2e8f0; color: var(--text-muted);
+  font-size: 0.85rem; font-weight: 600; flex-shrink: 0;
+}
+.expense-avatar {
+  width: 20px; height: 20px; border-radius: 50%; object-fit: cover; display: inline-block;
+  vertical-align: -4px; margin-right: 4px; background: #e2e8f0;
+}
+
 .inline-form { display: flex; gap: 8px; }
 
 .export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
