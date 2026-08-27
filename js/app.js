@@ -171,12 +171,31 @@ function renderTripView(trip) {
   const rateNote = activeRates ? '' : '（匯率暫時無法取得，換算金額可能不準）';
   $('#trip-meta').textContent = `${dateRange}　·　基準貨幣 ${trip.baseCurrency}　·　${trip.members.length} 位成員 ${rateNote}`;
 
+  renderTripCover(trip);
   renderBudgetBar(trip);
   renderCategoryFilterOptions(trip);
   renderExpenseList(trip);
   renderSplitTab(trip);
   renderStatsTab(trip);
   renderMembersTab(trip);
+}
+
+function renderTripCover(trip) {
+  const wrap = $('#trip-cover-wrap');
+  if (trip.coverPhoto) {
+    wrap.innerHTML = `
+      <div class="trip-cover-frame">
+        <button type="button" class="trip-cover-btn" data-action="change-cover" title="更換封面照片">
+          <img class="trip-cover-img" src="${trip.coverPhoto}" alt="" />
+        </button>
+        <button type="button" class="trip-cover-remove" data-action="remove-cover" title="移除封面照片">✕</button>
+      </div>`;
+  } else {
+    wrap.innerHTML = `
+      <button type="button" class="trip-cover-btn" data-action="change-cover" title="上傳封面照片">
+        <div class="trip-cover-placeholder"><span class="icon">📷</span><span>上傳這趟旅程的封面照片</span></div>
+      </button>`;
+  }
 }
 
 function totalSpent(trip) {
@@ -572,6 +591,33 @@ function wireGlobalEvents() {
     await loadRatesForTrip(trip, { force: true });
     ratesLoadedKey = `${trip.id}:${trip.baseCurrency}`;
     renderTripView(trip);
+  });
+
+  $('#trip-cover-wrap').addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('[data-action="remove-cover"]');
+    if (removeBtn) {
+      const trip = store.getActiveTrip();
+      store.updateTrip(trip.id, { coverPhoto: null });
+      refreshAll();
+      return;
+    }
+    if (e.target.closest('[data-action="change-cover"]')) {
+      $('#trip-cover-input').click();
+    }
+  });
+  $('#trip-cover-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const trip = store.getActiveTrip();
+    try {
+      const dataUrl = await compressImage(file, { maxWidth: 1000, quality: 0.65 });
+      store.updateTrip(trip.id, { coverPhoto: dataUrl });
+      refreshAll();
+    } catch (err) {
+      console.error(err);
+      alert('封面照片讀取失敗，請換一張圖片再試。');
+    }
   });
 
   $('#filter-category').addEventListener('change', (e) => {

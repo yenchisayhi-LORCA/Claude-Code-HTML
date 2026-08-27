@@ -147,6 +147,7 @@ export function createTrip({ name, baseCurrency, startDate, endDate, budgetTotal
     endDate: endDate || '',
     budgetTotal: budgetTotal || null,
     budgetDaily: budgetDaily || null,
+    coverPhoto: null,
     members: picked.length ? picked : [{ id: uid('member'), name: '我', avatar: null }],
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     expenses: [],
