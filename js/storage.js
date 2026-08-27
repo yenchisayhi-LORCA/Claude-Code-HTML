@@ -96,6 +96,15 @@ export function setPersonAvatar(personId, avatarDataUrl) {
   const person = state.people.find((p) => p.id === personId);
   if (!person) return;
   person.avatar = avatarDataUrl;
+  // 旅程成員在加入當下是複製姓名/照片過去的獨立資料（見 addTripMember/createTrip 的註解），
+  // 之後不會自動跟名單同步。這裡額外用姓名比對，把新照片同時套用到所有旅程裡「同名」的
+  // 成員身上，這樣改一次名單裡的大頭貼，之前已經加入各旅程的縮圖也會一起更新，不用逐一
+  // 進到每趟旅程手動改。跟 app.js 裡「旅程成員改照片時用姓名比對回寫名單」是同一個方向反過來。
+  Object.values(state.trips).forEach((trip) => {
+    trip.members.forEach((m) => {
+      if (m.name === person.name) m.avatar = avatarDataUrl;
+    });
+  });
   persist();
 }
 
