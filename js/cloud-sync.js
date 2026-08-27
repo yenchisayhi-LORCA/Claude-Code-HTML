@@ -20,6 +20,9 @@ let db = null;
 let auth = null;
 let unsubscribeSnapshot = null;
 let pushTimer = null;
+let pushScheduled = false; // 有本機變更排隊等 1200ms debounce 過後送出，還沒真的呼叫 setDoc()
+let pushInFlight = false; // 目前正有一個 setDoc() 呼叫還沒結束
+let pushAgainAfter = false; // pushInFlight 期間又有新的本機變更，要等這次做完後再補送一次最新的
 let lastSyncedJson = null; // 用來判斷「這筆變動是不是我們自己剛寫入/讀回的回音」，避免同步無限循環
 let onRemoteChangeCb = null;
 let onStatusChangeCb = null;
@@ -81,6 +84,10 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       currentUser = null;
       if (unsubscribeSnapshot) unsubscribeSnapshot();
       unsubscribeSnapshot = null;
+      clearTimeout(pushTimer);
+      pushScheduled = false;
+      pushInFlight = false;
+      pushAgainAfter = false;
       lastSyncedJson = null;
       setStatus({ signedIn: false, available: true });
     }
@@ -181,6 +188,15 @@ function listenToCloud(firestoreModule) {
   const { doc, onSnapshot } = firestoreModule;
   if (unsubscribeSnapshot) unsubscribeSnapshot();
   unsubscribeSnapshot = onSnapshot(doc(db, 'users', currentUser.uid), (snap) => {
+    // 本機還有變更正在排隊等送出、或正在送出中（pushScheduled / pushInFlight）時，
+    // 先不要套用這筆遠端快照。原本的問題（連續設定兩張大頭貼，前一張存好又消失）發生在：
+    // 第一筆變更送出後、伺服器還沒確認前，使用者又做了第二筆變更；這時候第一筆的回音送達，
+    // 內容比對只跟 lastSyncedJson 比對「是不是自己剛寫入的」，卻沒考慮到本機現在已經有
+    // 更新的、還沒送出去的資料——於是用這筆較舊的回音蓋掉了使用者剛做的新變更。
+    // 只要本機還有未確認送出的變更，就先不套用任何遠端資料（不管是自己的舊回音，還是剛好
+    // 同時間別的裝置寫入的資料），等本機這輪全部 push 完再處理；到時候 onSnapshot 本來就會
+    // 再送一次最新的文件內容過來，不會漏掉。
+    if (pushScheduled || pushInFlight) return;
     if (!snap.exists()) return;
     const json = snap.data().stateJson;
     if (json === lastSyncedJson) return; // 自己剛寫入或讀過的資料，略過避免無限循環
@@ -191,7 +207,25 @@ function listenToCloud(firestoreModule) {
 function schedulePush(firestoreModule) {
   if (!currentUser) return;
   clearTimeout(pushTimer);
-  pushTimer = setTimeout(() => pushNow(firestoreModule), 1200);
+  pushScheduled = true;
+  pushTimer = setTimeout(() => runPush(firestoreModule), 1200);
+}
+
+// 確保同一時間最多只有一個 setDoc() 在飛行中：如果排程要 push 時發現前一次還沒做完，
+// 就先記住「等它做完要再補送一次最新的」，而不是讓兩筆內容不同的寫入同時飛向伺服器
+// ——不然伺服器最後收到哪一筆是不確定的，較新的變更有可能反而被較舊的那筆蓋掉。
+async function runPush(firestoreModule) {
+  pushScheduled = false;
+  if (pushInFlight) {
+    pushAgainAfter = true;
+    return;
+  }
+  pushInFlight = true;
+  do {
+    pushAgainAfter = false;
+    await pushNow(firestoreModule);
+  } while (pushAgainAfter);
+  pushInFlight = false;
 }
 
 async function pushNow(firestoreModule, stateOverride) {

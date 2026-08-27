@@ -199,7 +199,8 @@ function renderTripView(trip) {
 function renderTripCover(trip) {
   const wrap = $('#trip-cover-wrap');
   if (trip.coverPhoto) {
-    const position = trip.coverPhotoPosition ?? 50;
+    // 沒有手動調整過的話，預設偏上方一點（大部分旅遊合照的人臉都在上半部，比正中間更常剛好）
+    const position = trip.coverPhotoPosition ?? 25;
     wrap.innerHTML = `
       <div class="trip-cover-frame">
         <button type="button" class="trip-cover-btn" data-action="change-cover" title="更換封面照片">
@@ -669,7 +670,8 @@ function wireGlobalEvents() {
     const trip = store.getActiveTrip();
     try {
       const dataUrl = await compressImage(file, { maxWidth: 1000, quality: 0.65 });
-      store.updateTrip(trip.id, { coverPhoto: dataUrl });
+      // 換照片時重設位置：舊照片手動調整過的上下位置套用在新照片上通常是錯的
+      store.updateTrip(trip.id, { coverPhoto: dataUrl, coverPhotoPosition: null });
       refreshAll();
     } catch (err) {
       console.error(err);
