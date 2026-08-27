@@ -492,6 +492,19 @@ function updateReceiptPreview() {
   $('#receipt-preview').innerHTML = pendingReceipt ? `<img src="${pendingReceipt}" alt="收據預覽" />` : '';
 }
 
+// 新增/編輯花費對話框的分類選擇：原生 <select> 沒辦法顯示彩色圖示徽章，改用一排可點的圓角按鈕，
+// 選到的分類寫進隱藏欄位 #expense-category-input，跟表單其他欄位一樣直接讀 .value 就好。
+function renderExpenseCategoryPicker(trip, selectedId) {
+  $('#expense-category-picker').innerHTML = trip.categories
+    .map(
+      (c) => `<button type="button" class="category-picker-item ${c.id === selectedId ? 'active' : ''}" data-category-id="${c.id}">
+        ${categoryBadgeHtml(c, 26)}<span>${escapeHtml(c.name)}</span>
+      </button>`
+    )
+    .join('');
+  $('#expense-category-input').value = selectedId;
+}
+
 function openExpenseDialog(expense) {
   const trip = store.getActiveTrip();
   if (!trip.members.length) {
@@ -503,8 +516,7 @@ function openExpenseDialog(expense) {
   $('#expense-dialog-title').textContent = expense ? '編輯花費' : '新增花費';
   $('#expense-id').value = expense ? expense.id : '';
   $('#expense-date-input').value = expense ? expense.date : new Date().toISOString().slice(0, 10);
-  $('#expense-category-input').innerHTML = trip.categories.map((c) => `<option value="${c.id}">${categoryVisual(c).icon} ${escapeHtml(c.name)}</option>`).join('');
-  $('#expense-category-input').value = expense ? expense.categoryId : trip.categories[0].id;
+  renderExpenseCategoryPicker(trip, expense ? expense.categoryId : trip.categories[0].id);
   $('#expense-desc-input').value = expense ? expense.description || '' : '';
   $('#expense-amount-input').value = expense ? expense.amount : '';
   $('#expense-currency-input').value = expense ? expense.currency : trip.baseCurrency;
@@ -656,6 +668,11 @@ function wireGlobalEvents() {
 
   $('#btn-add-expense').addEventListener('click', () => openExpenseDialog(null));
   $('#form-expense').addEventListener('submit', handleExpenseSubmit);
+  $('#expense-category-picker').addEventListener('click', (e) => {
+    const btn = e.target.closest('.category-picker-item');
+    if (!btn) return;
+    renderExpenseCategoryPicker(store.getActiveTrip(), btn.dataset.categoryId);
+  });
   $('#expense-amount-input').addEventListener('input', updateConvertedHint);
   $('#expense-currency-input').addEventListener('change', updateConvertedHint);
   $('#expense-receipt-input').addEventListener('change', handleReceiptChange);

@@ -226,6 +226,14 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
 .quick-add-chip:hover { border-color: var(--primary); color: var(--primary-dark); }
 .quick-add-chip .member-avatar, .quick-add-chip .member-avatar-placeholder { width: 22px; height: 22px; font-size: 0.7rem; }
 
+.category-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-picker-item {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px;
+  border: 1.5px solid var(--border); border-radius: 999px; background: var(--surface);
+  cursor: pointer; font-size: 0.85rem; color: var(--text);
+}
+.category-picker-item.active { border-color: var(--primary); background: #eef2ff; color: var(--primary-dark); font-weight: 600; }
+
 .export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 dialog { border: none; border-radius: var(--radius); padding: 0; width: min(480px, 92vw); }
