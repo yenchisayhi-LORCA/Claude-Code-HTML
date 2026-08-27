@@ -141,11 +141,11 @@
     <form id="form-expense" method="dialog" class="dialog-form">
       <h2 id="expense-dialog-title">新增花費</h2>
       <input type="hidden" id="expense-id" />
-      <div class="grid-2">
-        <label>日期 <input type="date" id="expense-date-input" required /></label>
-        <label>分類
-          <select id="expense-category-input"></select>
-        </label>
+      <label>日期 <input type="date" id="expense-date-input" required /></label>
+      <div>
+        <label>分類</label>
+        <div id="expense-category-picker" class="category-picker"></div>
+        <input type="hidden" id="expense-category-input" />
       </div>
       <label>說明 <input type="text" id="expense-desc-input" placeholder="例如：晚餐、地鐵票" /></label>
       <div class="grid-2">

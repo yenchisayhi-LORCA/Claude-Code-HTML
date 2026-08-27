@@ -89,7 +89,7 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
   display: block; width: 100%; padding: 0; border: none; background: none; cursor: pointer;
   border-radius: var(--radius); overflow: hidden;
 }
-.trip-cover-img { width: 100%; aspect-ratio: 3 / 1; object-fit: cover; display: block; }
+.trip-cover-img { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; display: block; }
 .trip-cover-placeholder {
   width: 100%; height: 110px; border: 2px dashed var(--border); border-radius: var(--radius);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
@@ -203,16 +203,11 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
   vertical-align: -4px; margin-right: 4px; background: #e2e8f0;
 }
 
-.split-avatar-group { display: flex; align-items: center; flex-shrink: 0; margin: 0 2px; }
+.split-avatar-group { display: flex; align-items: center; flex-shrink: 0; gap: 4px; margin: 0 2px; }
 .split-avatar-group img,
 .split-avatar-group .member-avatar-placeholder {
   border: 2px solid var(--surface);
-  margin-left: -10px;
   object-fit: cover;
-}
-.split-avatar-group img:first-child,
-.split-avatar-group .member-avatar-placeholder:first-child {
-  margin-left: 0;
 }
 
 .inline-form { display: flex; gap: 8px; }
@@ -225,6 +220,14 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
 }
 .quick-add-chip:hover { border-color: var(--primary); color: var(--primary-dark); }
 .quick-add-chip .member-avatar, .quick-add-chip .member-avatar-placeholder { width: 22px; height: 22px; font-size: 0.7rem; }
+
+.category-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-picker-item {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px;
+  border: 1.5px solid var(--border); border-radius: 999px; background: var(--surface);
+  cursor: pointer; font-size: 0.85rem; color: var(--text);
+}
+.category-picker-item.active { border-color: var(--primary); background: #eef2ff; color: var(--primary-dark); font-weight: 600; }
 
 .export-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
