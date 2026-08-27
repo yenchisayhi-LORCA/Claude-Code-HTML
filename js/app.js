@@ -2,7 +2,7 @@ import * as store from './storage.js';
 import { fetchRates, COMMON_CURRENCIES, convertToBase } from './currency.js';
 import { computeBalances, simplifyDebts } from './split.js';
 import { renderPieChart, renderBarChart } from './charts.js';
-import { exportExpensesCsv, buildPrintableReport, printReport } from './export.js';
+import { exportExpensesCsv, exportExpensesXlsx, buildPrintableReport, printReport } from './export.js';
 import { compressImage } from './image.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -515,6 +515,11 @@ function wireGlobalEvents() {
   });
 
   $('#btn-export-csv').addEventListener('click', () => exportExpensesCsv(store.getActiveTrip(), activeRates));
+  $('#btn-export-xlsx').addEventListener('click', () => {
+    const trip = store.getActiveTrip();
+    const { balances } = computeBalances(trip, activeRates);
+    exportExpensesXlsx(trip, activeRates, simplifyDebts(balances));
+  });
   $('#btn-print-report').addEventListener('click', () => {
     const trip = store.getActiveTrip();
     const { balances } = computeBalances(trip, activeRates);
