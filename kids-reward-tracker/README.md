@@ -39,8 +39,10 @@ python3 -m http.server 8080
 
 ```
 index.html          主頁面結構與所有彈窗（Dialog）
+manifest.json        PWA 設定（加到主畫面時的名稱/圖示/顯示模式）
 css/style.css        樣式（粉彩繽紛童趣風，跟根目錄旅遊記帳系統的沉穩風格完全獨立）
 sw.js                 離線快取（scope 限定在這個子資料夾，不影響根目錄的旅遊記帳系統）
+icons/                 加到主畫面用的 app 圖示（apple-touch-icon.png、icon-192.png、icon-512.png）
 js/
   app.js             主要邏輯：畫面渲染、事件綁定
   storage.js          localStorage 資料存取（小孩/作業/帳本/門檻/挑戰/商店/PIN 的 CRUD）
