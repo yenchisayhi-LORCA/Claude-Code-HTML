@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>小孩獎勵紀錄本</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23FFD166%22/><path d=%22M50 14 L60 38 L86 40 L66 57 L73 83 L50 68 L27 83 L34 57 L14 40 L40 38 Z%22 fill=%22%23FF6B9D%22/></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title"><span class="app-logo">🌟</span> 小孩獎勵紀錄本</div>
+    <div id="kid-switcher" class="kid-switcher"></div>
+  </header>
+
+  <main id="app-main">
+    <section id="empty-state" class="empty-state" hidden>
+      <p>還沒有任何小孩，先新增一個開始記錄吧！ 🎈</p>
+      <button id="btn-create-first-kid" class="btn btn-primary">➕ 新增第一個小孩</button>
+    </section>
+
+    <section id="kid-view" hidden>
+      <div id="balance-hero" class="balance-hero"></div>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="tasks">✅ 今日任務</button>
+        <button class="tab-btn" data-tab="exercise">🏃 運動回報</button>
+        <button class="tab-btn" data-tab="shop">🛍️ 星星商店</button>
+        <button class="tab-btn" data-tab="certificates">🏆 獎狀牆</button>
+        <button class="tab-btn" data-tab="calendar">📅 日曆紀錄</button>
+        <button class="tab-btn" data-tab="settings">⚙️ 家長設定</button>
+      </nav>
+
+      <section id="tab-tasks" class="tab-panel">
+        <div class="panel-toolbar">
+          <button id="btn-manual-adjust" class="btn btn-secondary">✏️ 手動調整星星</button>
+        </div>
+        <div id="task-list" class="task-list"></div>
+        <p class="hint" id="task-empty-hint" hidden>家長還沒有設定作業清單，到「家長設定」新增吧！</p>
+      </section>
+
+      <section id="tab-exercise" class="tab-panel" hidden>
+        <div class="grid-2">
+          <div>
+            <h3>🏃 回報今天的運動</h3>
+            <form id="form-exercise-submit" class="dialog-form">
+              <label>運動項目
+                <select id="exercise-kind-input"></select>
+              </label>
+              <label>數量 <input type="number" id="exercise-value-input" min="0" step="1" required /></label>
+              <div id="exercise-suggest-hint" class="hint"></div>
+              <button type="submit" class="btn btn-primary">送出，等家長審核</button>
+            </form>
+            <p class="hint" id="exercise-no-formula-hint" hidden>家長還沒設定運動換算公式，到「家長設定」新增吧！</p>
+          </div>
+          <div>
+            <h3>⏳ 待審核清單</h3>
+            <div id="exercise-pending-list" class="simple-list"></div>
+          </div>
+        </div>
+        <h3>📜 回報歷史</h3>
+        <div id="exercise-history-list" class="simple-list"></div>
+      </section>
+
+      <section id="tab-shop" class="tab-panel" hidden>
+        <div id="shop-grid" class="shop-grid"></div>
+        <p class="hint" id="shop-empty-hint" hidden>家長還沒有設定商店品項，到「家長設定」新增吧！</p>
+      </section>
+
+      <section id="tab-certificates" class="tab-panel" hidden>
+        <div id="cert-gallery" class="cert-gallery"></div>
+        <p class="hint" id="cert-empty-hint" hidden>還沒有解鎖任何獎狀，累積星星到門檻就會自動解鎖囉！</p>
+      </section>
+
+      <section id="tab-calendar" class="tab-panel" hidden>
+        <div id="streak-badge-wrap"></div>
+        <div class="cal-nav">
+          <button id="btn-cal-prev" class="btn btn-ghost" type="button">‹ 上個月</button>
+          <span id="cal-month-label" class="cal-month-label"></span>
+          <button id="btn-cal-next" class="btn btn-ghost" type="button">下個月 ›</button>
+        </div>
+        <div id="calendar-wrap"></div>
+      </section>
+
+      <section id="tab-settings" class="tab-panel" hidden>
+        <div class="settings-grid">
+          <div class="settings-block">
+            <h3>👦 小孩管理</h3>
+            <ul id="settings-kid-list" class="simple-list"></ul>
+            <button id="btn-add-kid" class="btn btn-secondary">➕ 新增小孩</button>
+          </div>
+          <div class="settings-block">
+            <h3>📋 作業清單</h3>
+            <ul id="settings-task-list" class="simple-list"></ul>
+            <button id="btn-add-task" class="btn btn-secondary">➕ 新增作業</button>
+          </div>
+          <div class="settings-block">
+            <h3>🏃 運動換算公式</h3>
+            <ul id="settings-formula-list" class="simple-list"></ul>
+            <button id="btn-add-formula" class="btn btn-secondary">➕ 新增公式</button>
+          </div>
+          <div class="settings-block">
+            <h3>🏆 獎狀門檻</h3>
+            <ul id="settings-tier-list" class="simple-list"></ul>
+            <button id="btn-add-tier" class="btn btn-secondary">➕ 新增門檻</button>
+          </div>
+          <div class="settings-block">
+            <h3>🐷 儲蓄挑戰</h3>
+            <ul id="settings-challenge-list" class="simple-list"></ul>
+            <button id="btn-add-challenge" class="btn btn-secondary">➕ 新增挑戰</button>
+          </div>
+          <div class="settings-block">
+            <h3>🛍️ 星星商店</h3>
+            <ul id="settings-shop-list" class="simple-list"></ul>
+            <button id="btn-add-shop-item" class="btn btn-secondary">➕ 新增品項</button>
+          </div>
+          <div class="settings-block">
+            <h3>🔒 家長 PIN</h3>
+            <p class="hint">設定後，這些設定和手動調整星星、審核回報、商店兌換都需要輸入 PIN。PIN 只是給小孩用的軟性門檻，不是真正的安全機制。</p>
+            <div id="pin-status" class="hint"></div>
+            <div class="settings-actions">
+              <button id="btn-set-pin" class="btn btn-secondary" type="button">設定 / 修改 PIN</button>
+              <button id="btn-clear-pin" class="btn btn-ghost" type="button">移除 PIN</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <!-- 新增/編輯小孩 -->
+  <dialog id="dialog-kid">
+    <form id="form-kid" method="dialog" class="dialog-form">
+      <h2 id="kid-dialog-title">新增小孩</h2>
+      <input type="hidden" id="kid-id-input" />
+      <label>姓名 <input type="text" id="kid-name-input" required placeholder="例如：小美" /></label>
+      <label>大頭貼（選填）
+        <input type="file" id="kid-avatar-input" accept="image/*" />
+      </label>
+      <div id="kid-avatar-preview" class="photo-preview"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 新增/編輯作業 -->
+  <dialog id="dialog-task">
+    <form id="form-task" method="dialog" class="dialog-form">
+      <h2 id="task-dialog-title">新增作業</h2>
+      <input type="hidden" id="task-id-input" />
+      <label>名稱 <input type="text" id="task-name-input" required placeholder="例如：練琴" /></label>
+      <label>圖示</label>
+      <div id="task-icon-picker" class="icon-picker"></div>
+      <input type="hidden" id="task-icon-input" />
+      <label>星星數 <input type="number" id="task-stars-input" min="1" step="1" required value="1" /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 手動調整星星 -->
+  <dialog id="dialog-manual-adjust">
+    <form id="form-manual-adjust" method="dialog" class="dialog-form">
+      <h2>✏️ 手動調整星星</h2>
+      <fieldset>
+        <legend>方向</legend>
+        <label class="inline-radio"><input type="radio" name="manual-direction" value="add" checked /> ➕ 加星星</label>
+        <label class="inline-radio"><input type="radio" name="manual-direction" value="subtract" /> ➖ 扣星星</label>
+      </fieldset>
+      <label>星星數 <input type="number" id="manual-amount-input" min="1" step="1" required /></label>
+      <label>原因 <input type="text" id="manual-reason-input" required placeholder="例如：主動幫忙做家事" /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 新增/編輯運動換算公式 -->
+  <dialog id="dialog-formula">
+    <form id="form-formula" method="dialog" class="dialog-form">
+      <h2 id="formula-dialog-title">新增運動換算公式</h2>
+      <input type="hidden" id="formula-id-input" />
+      <label>項目代碼（英文，例如 steps） <input type="text" id="formula-kind-input" required placeholder="steps" /></label>
+      <label>顯示名稱 <input type="text" id="formula-label-input" required placeholder="走路步數" /></label>
+      <label>換算比例（多少單位 = 1 顆星） <input type="number" id="formula-units-input" min="1" step="1" required placeholder="1000" /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 審核運動回報 -->
+  <dialog id="dialog-exercise-review">
+    <div class="dialog-form">
+      <h2>審核運動回報</h2>
+      <div id="exercise-review-detail" class="hint"></div>
+      <label>核准星星數 <input type="number" id="exercise-review-stars-input" min="0" step="1" /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="button" id="btn-exercise-reject" class="btn btn-danger">退回</button>
+        <button type="button" id="btn-exercise-approve" class="btn btn-primary">核准入帳</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 新增/編輯獎狀門檻 -->
+  <dialog id="dialog-tier">
+    <form id="form-tier" method="dialog" class="dialog-form">
+      <h2 id="tier-dialog-title">新增獎狀門檻</h2>
+      <input type="hidden" id="tier-id-input" />
+      <label>星星門檻 <input type="number" id="tier-threshold-input" min="1" step="1" required /></label>
+      <label>獎狀稱號 <input type="text" id="tier-title-input" required placeholder="例如：星星小達人" /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 新增/編輯儲蓄挑戰 -->
+  <dialog id="dialog-challenge">
+    <form id="form-challenge" method="dialog" class="dialog-form">
+      <h2 id="challenge-dialog-title">新增儲蓄挑戰</h2>
+      <input type="hidden" id="challenge-id-input" />
+      <label>挑戰名稱 <input type="text" id="challenge-name-input" required placeholder="例如：連續存錢挑戰" /></label>
+      <label>適用對象
+        <select id="challenge-scope-input"></select>
+      </label>
+      <label>需維持的最低餘額 <input type="number" id="challenge-min-balance-input" min="1" step="1" required /></label>
+      <label>連續天數 <input type="number" id="challenge-days-input" min="1" step="1" required /></label>
+      <label>達成獎勵星星數 <input type="number" id="challenge-bonus-input" min="1" step="1" required /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 新增/編輯商店品項 -->
+  <dialog id="dialog-shop-item">
+    <form id="form-shop-item" method="dialog" class="dialog-form">
+      <h2 id="shop-item-dialog-title">新增商店品項</h2>
+      <input type="hidden" id="shop-item-id-input" />
+      <label>名稱 <input type="text" id="shop-item-name-input" required placeholder="例如：多看30分鐘電視" /></label>
+      <label>圖示</label>
+      <div id="shop-icon-picker" class="icon-picker"></div>
+      <input type="hidden" id="shop-item-icon-input" />
+      <label>星星成本 <input type="number" id="shop-item-cost-input" min="1" step="1" required /></label>
+      <label>類型
+        <select id="shop-item-kind-input">
+          <option value="實體禮物">🎁 實體禮物</option>
+          <option value="現金">💵 現金</option>
+          <option value="特權">🎟️ 特權</option>
+        </select>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 獎狀預覽/產生 -->
+  <dialog id="dialog-cert-preview">
+    <div class="dialog-form">
+      <h2 id="cert-preview-title">🎉 解鎖新獎狀！</h2>
+      <div id="cert-canvas-wrap" class="cert-canvas-wrap"></div>
+      <label>上傳小孩照片放進獎狀（選填，不選就用小孩的大頭貼）
+        <input type="file" id="cert-photo-input" accept="image/*" />
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>關閉</button>
+        <button type="button" id="btn-cert-print" class="btn btn-secondary">🖨️ 列印</button>
+        <button type="button" id="btn-cert-download" class="btn btn-primary">⬇️ 下載 PNG</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- PIN 輸入（受保護操作前跳出） -->
+  <dialog id="dialog-pin">
+    <form id="form-pin" class="dialog-form">
+      <h2>🔒 請輸入家長 PIN</h2>
+      <label>PIN 碼 <input type="password" id="pin-input" inputmode="numeric" pattern="[0-9]*" required autocomplete="off" /></label>
+      <div id="pin-error" class="hint error" hidden>PIN 碼不對，再試一次</div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">確認</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 設定/修改 PIN -->
+  <dialog id="dialog-pin-setup">
+    <form id="form-pin-setup" method="dialog" class="dialog-form">
+      <h2>設定 / 修改 PIN</h2>
+      <label>新的 PIN 碼（4 位數字） <input type="text" id="pin-setup-input" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required autocomplete="off" /></label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
