@@ -38,6 +38,12 @@ body {
 
 .trip-switcher { display: flex; gap: 8px; align-items: center; }
 
+.sync-area { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); }
+.sync-area .sync-user { display: flex; align-items: center; gap: 6px; }
+.sync-area .sync-avatar { width: 22px; height: 22px; border-radius: 50%; }
+.sync-area .sync-status.error { color: var(--danger); }
+.sync-area .sync-status.ok { color: var(--success); }
+
 #app-main { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
 
 .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }

@@ -4,6 +4,7 @@ import { computeBalances, simplifyDebts } from './split.js';
 import { renderPieChart, renderBarChart } from './charts.js';
 import { exportExpensesCsv, exportExpensesXlsx, buildPrintableReport, printReport } from './export.js';
 import { compressImage } from './image.js';
+import { initCloudSync, isSyncAvailable, signIn, signOutOfSync } from './cloud-sync.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -21,7 +22,35 @@ function escapeHtml(str) {
 async function init() {
   populateCurrencySelects();
   wireGlobalEvents();
+  renderSyncArea({ signedIn: false, available: isSyncAvailable() });
   await refreshAll();
+  initCloudSync({
+    onRemoteChange: refreshAll,
+    onStatusChange: renderSyncArea,
+  });
+}
+
+function renderSyncArea(status) {
+  const el = $('#sync-area');
+  if (!status.available) {
+    el.innerHTML = '';
+    return;
+  }
+  if (!status.signedIn) {
+    const errorText = status.error ? `<span class="sync-status error">⚠️ ${escapeHtml(status.error)}</span>` : '';
+    el.innerHTML = `<button id="btn-sync-signin" class="btn btn-ghost" title="登入 Google 帳號，讓不同裝置同步旅程資料">☁️ 登入同步</button>${errorText}`;
+    $('#btn-sync-signin').addEventListener('click', signIn);
+    return;
+  }
+  const name = escapeHtml(status.user.displayName || status.user.email || '已登入');
+  const avatar = status.user.photoURL ? `<img class="sync-avatar" src="${status.user.photoURL}" alt="" />` : '';
+  const statusText = status.error ? `<span class="sync-status error">⚠️ ${escapeHtml(status.error)}</span>` : status.syncing ? '<span class="sync-status">同步中…</span>' : '<span class="sync-status ok">☁️ 已同步</span>';
+  el.innerHTML = `
+    <div class="sync-user">${avatar}<span>${name}</span></div>
+    ${statusText}
+    <button id="btn-sync-signout" class="btn btn-ghost">登出</button>
+  `;
+  $('#btn-sync-signout').addEventListener('click', signOutOfSync);
 }
 
 function populateCurrencySelects() {

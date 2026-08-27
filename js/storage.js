@@ -34,6 +34,16 @@ export function getState() {
   return state;
 }
 
+// 讓其他模組（例如雲端同步）能在資料變動時收到通知，storage.js 本身不需要知道是誰在監聽
+const listeners = new Set();
+export function subscribe(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+function notify() {
+  listeners.forEach((fn) => fn());
+}
+
 export function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -41,6 +51,19 @@ export function persist() {
     console.error('儲存本地資料失敗（可能是空間不足）', err);
     alert('儲存失敗：瀏覽器儲存空間可能已滿（常見原因是收據照片太多），請刪除部分收據照片或舊旅程。');
   }
+  notify();
+}
+
+// 只有 activeTripId + trips 需要跨裝置同步，ratesCache 只是本機快取，各裝置自己抓即可
+export function getSyncableState() {
+  return { activeTripId: state.activeTripId, trips: state.trips };
+}
+
+// 用雲端資料整批覆蓋本機的 activeTripId + trips（不動 ratesCache）
+export function applySyncedState(remote) {
+  state.activeTripId = remote.activeTripId ?? null;
+  state.trips = remote.trips || {};
+  persist();
 }
 
 export function uid(prefix = 'id') {
