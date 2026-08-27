@@ -34,7 +34,12 @@ body {
   gap: 10px;
 }
 
-.app-title { font-size: 1.25rem; font-weight: 700; }
+.app-title { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.app-logo {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5em; height: 1.5em; border-radius: 0.35em; flex-shrink: 0;
+  background: #f5bb4f; color: #5c3a1e; font-weight: 700; font-size: 0.9em;
+}
 
 .trip-switcher { display: flex; gap: 8px; align-items: center; }
 
