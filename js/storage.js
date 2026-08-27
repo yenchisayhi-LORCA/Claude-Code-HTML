@@ -3,15 +3,15 @@
 const STORAGE_KEY = 'travel-expense-tracker/v1';
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'food', name: '餐飲', icon: '🍽️', color: '#f97316' },
-  { id: 'stay', name: '住宿', icon: '🏨', color: '#6366f1' },
+  { id: 'food', name: '餐飲', icon: '🍲', color: '#f97316' },
+  { id: 'stay', name: '住宿', icon: '🏠', color: '#22c55e' },
   { id: 'transport', name: '交通', icon: '🚌', color: '#0ea5e9' },
   { id: 'ticket', name: '票券門票', icon: '🎫', color: '#a855f7' },
   { id: 'shopping', name: '購物', icon: '🛍️', color: '#ec4899' },
   { id: 'fun', name: '娛樂', icon: '🎉', color: '#f59e0b' },
   { id: 'comm', name: '通訊網路', icon: '📱', color: '#14b8a6' },
-  { id: 'medical', name: '醫療', icon: '🏥', color: '#ef4444' },
-  { id: 'other', name: '其他', icon: '📦', color: '#64748b' },
+  { id: 'medical', name: '醫療', icon: '🩺', color: '#ef4444' },
+  { id: 'other', name: '其他', icon: '•••', color: '#64748b' },
 ];
 
 function loadRaw() {

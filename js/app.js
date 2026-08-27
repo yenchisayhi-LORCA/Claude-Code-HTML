@@ -5,6 +5,7 @@ import { renderPieChart, renderBarChart } from './charts.js';
 import { exportExpensesCsv, exportExpensesXlsx, buildPrintableReport, printReport } from './export.js';
 import { compressImage } from './image.js';
 import { initCloudSync, isSyncAvailable, requestSignInLink, signOutOfSync } from './cloud-sync.js';
+import { downloadExpenseCard } from './image-card.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -16,12 +17,37 @@ let pendingAvatarMemberId = null; // 目前正在上傳大頭貼的成員 id（�
 let pendingAvatarPersonId = null; // 目前正在上傳大頭貼的成員 id（跨旅程名單）
 
 const CATEGORY_ICON_CHOICES = [
-  '🍽️', '🍜', '🍔', '🍰', '☕', '🍺', '🍣', '🥐',
+  '🍽️', '🍲', '🍜', '🍔', '🍰', '☕', '🍺', '🍣', '🥐',
   '🏨', '⛺', '🏠', '🚌', '🚕', '🚄', '✈️', '🚢', '🚲',
   '🎫', '🎡', '🎢', '🎭', '🎨', '🎣', '⚽', '🏖️', '🏔️',
   '🛍️', '👗', '💄', '📱', '💻', '🔌', '📶',
-  '🏥', '💊', '🚑', '📚', '🎁', '💰', '💳', '🧳', '📷', '🎉', '🎶', '🐶', '🐱', '🏷️',
+  '🏥', '🩺', '💊', '🚑', '📚', '🎁', '💰', '💳', '🧳', '📷', '🎉', '🎶', '🐶', '🐱', '🏷️', '•••',
 ];
+
+// 內建的 9 個預設分類（食、住、行...）一律套用最新的圖示/顏色設計，
+// 不管旅程資料建立當下存的是舊圖示，都用這份對照表覆蓋顯示，這樣舊旅程也會跟著更新。
+const DEFAULT_CATEGORY_STYLE = Object.fromEntries(store.DEFAULT_CATEGORIES.map((c) => [c.id, c]));
+
+function categoryVisual(category) {
+  if (!category) return { icon: '📦', name: '未分類', color: '#64748b' };
+  return DEFAULT_CATEGORY_STYLE[category.id] || category;
+}
+
+function lightenHex(hex, amount = 0.82) {
+  const c = (hex || '#64748b').replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  const mix = (ch) => Math.round(ch + (255 - ch) * amount);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
+function categoryBadgeHtml(category, size = 32) {
+  const vis = categoryVisual(category);
+  const bg = lightenHex(vis.color, 0.82);
+  const fontSize = Math.round(size * 0.5);
+  return `<span class="category-badge" style="width:${size}px;height:${size}px;background:${bg};font-size:${fontSize}px" title="${escapeHtml(vis.name || '')}">${vis.icon}</span>`;
+}
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -223,7 +249,7 @@ function renderBudgetBar(trip) {
 
 function renderCategoryFilterOptions(trip) {
   const sel = $('#filter-category');
-  sel.innerHTML = '<option value="">全部分類</option>' + trip.categories.map((c) => `<option value="${c.id}">${c.icon} ${escapeHtml(c.name)}</option>`).join('');
+  sel.innerHTML = '<option value="">全部分類</option>' + trip.categories.map((c) => `<option value="${c.id}">${categoryVisual(c).icon} ${escapeHtml(c.name)}</option>`).join('');
   sel.value = currentFilterCategory;
 }
 
@@ -252,7 +278,7 @@ function renderExpenseList(trip) {
         .join('');
       return `
       <div class="expense-card" data-id="${exp.id}">
-        <div class="expense-icon">${cat.icon}</div>
+        <div class="expense-icon">${categoryBadgeHtml(cat, 40)}</div>
         <div class="expense-main">
           <div class="expense-title">${escapeHtml(exp.description || cat.name)}</div>
           <div class="expense-sub">${exp.date || ''}・${memberAvatarHtml(findMember(exp.paidBy))}${escapeHtml(memberName(exp.paidBy))} 付款・${splitLabel}</div>
@@ -349,7 +375,12 @@ function renderMembersTab(trip) {
     .join('');
 
   $('#category-list').innerHTML = trip.categories
-    .map((c) => `<li>${c.icon} ${escapeHtml(c.name)} <button data-action="remove-category" data-id="${c.id}" title="移除">✕</button></li>`)
+    .map(
+      (c) => `<li>
+        <div class="member-row-main">${categoryBadgeHtml(c, 28)}<span>${escapeHtml(c.name)}</span></div>
+        <button data-action="remove-category" data-id="${c.id}" title="移除">✕</button>
+      </li>`
+    )
     .join('');
 }
 
@@ -482,7 +513,7 @@ function openExpenseDialog(expense) {
   $('#expense-dialog-title').textContent = expense ? '編輯花費' : '新增花費';
   $('#expense-id').value = expense ? expense.id : '';
   $('#expense-date-input').value = expense ? expense.date : new Date().toISOString().slice(0, 10);
-  $('#expense-category-input').innerHTML = trip.categories.map((c) => `<option value="${c.id}">${c.icon} ${escapeHtml(c.name)}</option>`).join('');
+  $('#expense-category-input').innerHTML = trip.categories.map((c) => `<option value="${c.id}">${categoryVisual(c).icon} ${escapeHtml(c.name)}</option>`).join('');
   $('#expense-category-input').value = expense ? expense.categoryId : trip.categories[0].id;
   $('#expense-desc-input').value = expense ? expense.description || '' : '';
   $('#expense-amount-input').value = expense ? expense.amount : '';
@@ -792,6 +823,21 @@ function wireGlobalEvents() {
     refreshAll();
   });
 
+  $('#btn-export-card').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const trip = store.getActiveTrip();
+    const { balances } = computeBalances(trip, activeRates);
+    const transactions = simplifyDebts(balances);
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = '產生圖卡中…';
+    try {
+      await downloadExpenseCard(trip, activeRates, balances, transactions);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
   $('#btn-export-csv').addEventListener('click', () => exportExpensesCsv(store.getActiveTrip(), activeRates));
   $('#btn-export-xlsx').addEventListener('click', () => {
     const trip = store.getActiveTrip();
