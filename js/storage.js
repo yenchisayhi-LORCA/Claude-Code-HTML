@@ -93,7 +93,7 @@ export function createTrip({ name, baseCurrency, startDate, endDate, budgetTotal
     endDate: endDate || '',
     budgetTotal: budgetTotal || null,
     budgetDaily: budgetDaily || null,
-    members: (members && members.length ? members : ['我']).map((n) => ({ id: uid('member'), name: n })),
+    members: (members && members.length ? members : ['我']).map((n) => ({ id: uid('member'), name: n, avatar: null })),
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     expenses: [],
     createdAt: Date.now(),
@@ -123,7 +123,7 @@ export function deleteTrip(tripId) {
 export function addMember(tripId, name) {
   const trip = state.trips[tripId];
   if (!trip) return;
-  const member = { id: uid('member'), name };
+  const member = { id: uid('member'), name, avatar: null };
   trip.members.push(member);
   persist();
   return member;
@@ -134,6 +134,14 @@ export function renameMember(tripId, memberId, name) {
   const member = trip && trip.members.find((m) => m.id === memberId);
   if (!member) return;
   member.name = name;
+  persist();
+}
+
+export function setMemberAvatar(tripId, memberId, avatarDataUrl) {
+  const trip = state.trips[tripId];
+  const member = trip && trip.members.find((m) => m.id === memberId);
+  if (!member) return;
+  member.avatar = avatarDataUrl;
   persist();
 }
 

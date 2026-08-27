@@ -80,13 +80,16 @@
             <h3>花費分類</h3>
             <ul id="category-list" class="simple-list"></ul>
             <form id="form-add-category" class="inline-form">
-              <input type="text" id="new-category-icon" placeholder="🏷️" maxlength="2" style="width:3.5em" />
+              <select id="new-category-icon" style="width:4.5em"></select>
               <input type="text" id="new-category-name" placeholder="新分類名稱" required />
               <button type="submit" class="btn btn-secondary">新增</button>
             </form>
           </div>
         </div>
       </section>
+
+      <input type="file" id="member-avatar-input" accept="image/*" hidden />
+
 
       <section id="tab-export" class="tab-panel" hidden>
         <p>匯出這趟旅程的完整花費紀錄：</p>
