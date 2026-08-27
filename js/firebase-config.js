@@ -6,12 +6,12 @@
 // 甚至公開在 GitHub 上；真正的存取權限控管是靠 Firestore 安全規則（Security Rules），
 // 不是靠隱藏這組設定值。
 export const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyCW8WyZ4fSwEDnrcXiJceOaVaYFyXzsQOM',
+  authDomain: 'papago-a4f14.firebaseapp.com',
+  projectId: 'papago-a4f14',
+  storageBucket: 'papago-a4f14.firebasestorage.app',
+  messagingSenderId: '241878517605',
+  appId: '1:241878517605:web:49ce55e31832b071c0c38c',
 };
 
 // 還沒設定好之前，雲端同步功能會自動停用（只用本機 localStorage），不影響其他功能。
