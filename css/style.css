@@ -58,6 +58,25 @@ body {
 
 .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
 
+/* 分享連結的唯讀檢視頁（js/share-view.js） */
+#share-view-main { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
+.share-login-box { max-width: 420px; margin: 60px auto; text-align: center; }
+.share-login-box .inline-form { justify-content: center; }
+.share-view-header { margin-bottom: 20px; }
+.share-view-footnote { margin-top: 16px; }
+.stat-box {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-top: 8px;
+}
+.stat-box span { font-size: 0.82rem; color: var(--text-muted); }
+.stat-box strong { font-size: 1.2rem; }
+
 select, input[type="text"], input[type="number"], input[type="date"], input[type="file"] {
   padding: 8px 10px;
   border: 1px solid var(--border);

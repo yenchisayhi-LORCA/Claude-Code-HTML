@@ -14,6 +14,7 @@
 - **收據照片**：可為每筆花費附上收據照片（會自動壓縮以節省儲存空間）。
 - **匯出報表**：一鍵匯出 Excel (.xlsx) 或 CSV，或列印/另存成 PDF 的花費報表。
 - **多裝置同步（選用）**：設定好 Firebase 後，可用 Email 登入（收信點連結，不用密碼），讓同一個帳號在電腦、手機等不同裝置間同步旅程資料。沒設定的話完全不影響其他功能，資料就只存在本機。
+- **分享單一旅程給同行者（選用，唯讀）**：需要先設定好多裝置同步。把同行者的 Email 加進某趟旅程的分享名單後，對方用同一個 Email 登入分享連結，就能唯讀檢視這一趟旅程的花費明細、統計圖表、分帳結算，看不到你的其他旅程或成員名單。
 
 ## 如何執行
 
@@ -47,7 +48,7 @@ npx serve .
 1. 到 [Firebase Console](https://console.firebase.google.com/) 建立一個新專案（可以關閉 Google Analytics，不需要）。
 2. 左側選單 **Build → Authentication → 開始使用 → Sign-in method**，啟用 **Email/Password** 這個項目，並把裡面的 **Email link (passwordless sign-in)** 選項也打開。
 3. 左側選單 **Build → Firestore Database → 建立資料庫**，選正式環境（production mode）、地區選離你近的（例如 asia-east1）。
-4. 到 Firestore 的 **規則（Rules）** 分頁，貼上以下規則後發布，讓每個人只能讀寫自己的資料：
+4. 到 Firestore 的 **規則（Rules）** 分頁，貼上以下規則後發布：
    ```
    rules_version = '2';
    service cloud.firestore {
@@ -55,9 +56,17 @@ npx serve .
        match /users/{userId} {
          allow read, write: if request.auth != null && request.auth.uid == userId;
        }
+       match /shared_trips/{tripId} {
+         allow get: if request.auth != null && request.auth.token.email_verified == true &&
+           (request.auth.uid == resource.data.ownerId || request.auth.token.email in resource.data.viewerEmails);
+         allow list: if false;
+         allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+         allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+       }
      }
    }
    ```
+   第一段（`users/{userId}`）讓每個人只能讀寫自己的整帳號同步資料；第二段（`shared_trips/{tripId}`）是給「分享單一旅程」用的，只有旅程擁有者本人、或被列在 `viewerEmails` 白名單裡的 Email，才能讀到那一份被分享出去的單一旅程內容，讀不到別人的其他旅程。
 5. 專案設定（齒輪圖示）→ 你的應用程式 → 點 `</>` 新增網頁應用程式 → 取名並註冊，會拿到一組 `firebaseConfig` 設定值。
 6. 把這組設定值貼到 `js/firebase-config.js` 取代裡面的預留值。
 7. **Authentication → Settings → 已授權網域**，把你網站的網域（例如 `your-name.github.io`）加進去，登入連結才會允許導回你的網站。
@@ -65,6 +74,17 @@ npx serve .
 設定完成後，重新整理網頁，右上角會出現「☁️ 登入同步」按鈕：輸入 Email、收信點連結，就能在其他裝置用同一個 Email 登入看到同一份資料。
 
 （技術背景：一開始用的是 Google 一鍵登入，但 Google 登入的彈出視窗/整頁導轉都需要瀏覽器允許本站跟 Firebase 的 authDomain 互相存取資料，而這種跨網域存取現在被 Safari／Firefox 封鎖、Chrome 也在跟進，在 GitHub Pages 這種跟 Firebase 網域不同的靜態網站上會直接失效。改用 Email 連結登入完全不需要跳出視窗或跨網域，不會受影響。）
+
+## 分享單一旅程給同行者（選用，唯讀）
+
+需要先完成上面的「設定多裝置同步」（分享功能是建立在同一套 Firebase 專案上的）。
+
+1. 登入雲端同步後，打開某趟旅程的「匯出報表」分頁，點「🔗 分享此旅程（唯讀）」。
+2. 輸入同行者的 Email 並「新增」，就會產生一個分享連結（`?share=<旅程ID>`），複製給對方。
+3. 同行者打開連結後，用**同一個 Email** 收登入連結、點開完成登入，就能唯讀檢視這趟旅程；之後你繼續記帳，對方畫面會自動即時更新，不用重新分享。
+4. 把某人的 Email 從名單移除、或清空整個名單，就會立刻收回他的存取權（清空名單等於直接刪除這份分享資料）。
+
+限制：唯讀檢視頁目前不會另外抓即時匯率，混合幣別的旅程只會把跟旅程基準貨幣相同的花費計入圖表/總計；分帳結算功能本來就是單機記帳性質（見上方「資料儲存與限制」），這個唯讀分享不會變成多人協作記帳。
 
 ## 專案結構
 
@@ -80,6 +100,7 @@ js/
   export.js          Excel / CSV 匯出、列印報表
   xlsx-writer.js     手刻最小可用 .xlsx 產生器，不依賴外部套件
   image.js           收據照片壓縮
-  cloud-sync.js      多裝置同步（Firebase Auth + Firestore，選用）
+  cloud-sync.js      多裝置同步（Firebase Auth + Firestore，選用）＋分享單一旅程的推送/檢視者登入邏輯
+  share-view.js      分享連結（?share=）的唯讀檢視頁，不會用到本機旅程資料
   firebase-config.js 雲端同步的 Firebase 設定值（預留值，需自行填入才會啟用）
 ```

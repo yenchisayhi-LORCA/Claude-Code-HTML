@@ -103,9 +103,15 @@
           <button id="btn-export-csv" class="btn btn-secondary">⬇️ 下載 CSV</button>
           <button id="btn-print-report" class="btn btn-secondary">🖨️ 列印 / 存成 PDF</button>
         </div>
+        <p>只想給同行者看這一趟旅程，不想讓他們看到你其他旅程：</p>
+        <div class="export-actions">
+          <button id="btn-share-trip" class="btn btn-secondary">🔗 分享此旅程（唯讀）</button>
+        </div>
       </section>
     </section>
   </main>
+
+  <main id="share-view-main" hidden></main>
 
   <!-- 新增/編輯旅程 -->
   <dialog id="dialog-trip">
@@ -196,6 +202,25 @@
       <div class="dialog-actions"><button type="button" class="btn btn-ghost" data-close>關閉</button></div>
     </div>
     <input type="file" id="person-avatar-input" accept="image/*" hidden />
+  </dialog>
+
+  <!-- 分享單一旅程（唯讀） -->
+  <dialog id="dialog-share">
+    <div class="dialog-form">
+      <h2>分享此旅程（唯讀）</h2>
+      <p class="hint">加入同行者的 Email，他用同一個 Email 登入分享連結後，就能唯讀檢視這趟旅程，看不到你其他旅程或成員名單。需要先登入雲端同步才能使用。</p>
+      <div id="share-status" class="hint"></div>
+      <div id="share-link-row" class="inline-form" hidden>
+        <input type="text" id="share-link-input" readonly />
+        <button type="button" id="btn-copy-share-link" class="btn btn-secondary">複製連結</button>
+      </div>
+      <ul id="share-viewer-list" class="simple-list"></ul>
+      <form id="form-add-viewer" class="inline-form">
+        <input type="email" id="new-viewer-email" placeholder="同行者的 Email" required />
+        <button type="submit" class="btn btn-secondary">新增</button>
+      </form>
+      <div class="dialog-actions"><button type="button" class="btn btn-ghost" data-close>關閉</button></div>
+    </div>
   </dialog>
 
   <!-- 登入同步（Email 連結登入） -->
