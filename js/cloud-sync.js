@@ -104,6 +104,18 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
     schedulePush(firestoreModule);
     scheduleShareSync();
   });
+
+  // 手機瀏覽器把分頁切到背景時常常很快就把它砍掉重來（不是「使用者關掉分頁」那種正常關閉），
+  // 排隊中、還沒送出去的變更如果還在等 1200ms 的 debounce，就會直接來不及送出、留在雲端的
+  // 還是舊資料——下次打開時 handleSignedIn() 讀到「雲端跟本機不一樣」，就是這樣來的。分頁一
+  // 被切到背景就立刻把排隊中的變更送出去（不用等 debounce），盡量縮小這個來不及送出的空窗。
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden') return;
+    if (pushScheduled) {
+      clearTimeout(pushTimer);
+      runPush(firestoreModule);
+    }
+  });
 }
 
 // 寄送登入連結到指定 email；使用者點信裡的連結回到本頁後，completeEmailLinkSignInIfPresent 會自動完成登入
@@ -143,12 +155,18 @@ export function signOutOfSync() {
   window.__cloudSyncAuth.signOut(auth);
 }
 
+// 這台瀏覽器/裝置是否曾經跟雲端成功同步過（跟目前登入哪個帳號無關，純粹是「這台裝置的本機
+// 資料是不是一直都有在跟某個帳號對話」的記號）。故意不放進 state 裡（不會被同步/覆蓋掉），
+// 只是這台裝置自己記住的旗標。
+const HAS_SYNCED_BEFORE_KEY = 'travel-expense-tracker/has-synced-before';
+
 async function handleSignedIn(firestoreModule) {
   const { doc, getDoc } = firestoreModule;
   const ref = doc(db, 'users', currentUser.uid);
   const local = getSyncableState();
   const localJson = JSON.stringify(local);
   const hasLocalTrips = Object.keys(local.trips).length > 0;
+  const hasSyncedBefore = window.localStorage.getItem(HAS_SYNCED_BEFORE_KEY) === '1';
 
   let snap;
   try {
@@ -163,8 +181,17 @@ async function handleSignedIn(firestoreModule) {
     const cloudJson = snap.data().stateJson;
     if (cloudJson === localJson) {
       lastSyncedJson = cloudJson;
-    } else if (!hasLocalTrips) {
-      applyRemoteJson(cloudJson);
+    } else if (!hasLocalTrips || hasSyncedBefore) {
+      // 這台裝置以前就跟這個帳號同步過（或本機根本沒有旅程資料）時，雲端和本機不一樣，
+      // 幾乎都是「本機剛做的變更、還沒送出去就被手機重新整理/背景關閉打斷」造成的落差
+      // ——例如剛存好封面照片，1200ms 的 debounce 還沒送出、頁面就被系統回收重新整理，
+      // 重新整理後這裡讀到的雲端資料自然還是舊的。原本這裡會跳出視窗要求選「用雲端」或
+      // 「用本機」，但選「用雲端」等於直接拿舊資料蓋掉使用者剛做的變更、永久遺失（回報
+      // 的「封面照片/成員縮圖不管選哪個都不見了」就是這樣來的）。既然這台裝置以前就同步
+      // 過，直接信任本機現在的內容送出去就好，不用跳出視窗冒著蓋掉剛做的變更的風險；
+      // 真的需要人來選「留哪一份」的情境，只保留給下面這個 else 分支（這台裝置從沒跟這
+      // 個帳號同步過，卻已經有自己的旅程資料，兩邊各自有獨立歷史紀錄，才需要問）。
+      await pushNow(firestoreModule, local);
     } else {
       const useCloud = confirm(
         '偵測到這個帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣。\n\n' +
@@ -181,6 +208,7 @@ async function handleSignedIn(firestoreModule) {
     await pushNow(firestoreModule, local);
   }
 
+  window.localStorage.setItem(HAS_SYNCED_BEFORE_KEY, '1');
   listenToCloud(firestoreModule);
 }
 
