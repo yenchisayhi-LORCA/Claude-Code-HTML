@@ -199,12 +199,18 @@ function renderTripView(trip) {
 function renderTripCover(trip) {
   const wrap = $('#trip-cover-wrap');
   if (trip.coverPhoto) {
+    const position = trip.coverPhotoPosition ?? 50;
     wrap.innerHTML = `
       <div class="trip-cover-frame">
         <button type="button" class="trip-cover-btn" data-action="change-cover" title="更換封面照片">
-          <img class="trip-cover-img" src="${trip.coverPhoto}" alt="" />
+          <img class="trip-cover-img" src="${trip.coverPhoto}" style="object-position: center ${position}%;" alt="" />
         </button>
         <button type="button" class="trip-cover-remove" data-action="remove-cover" title="移除封面照片">✕</button>
+      </div>
+      <div class="trip-cover-position-control">
+        <span title="上方">🔼</span>
+        <input type="range" id="trip-cover-position-input" min="0" max="100" value="${position}" title="拖曳調整照片上下位置" />
+        <span title="下方">🔽</span>
       </div>`;
   } else {
     wrap.innerHTML = `
@@ -638,13 +644,23 @@ function wireGlobalEvents() {
     const removeBtn = e.target.closest('[data-action="remove-cover"]');
     if (removeBtn) {
       const trip = store.getActiveTrip();
-      store.updateTrip(trip.id, { coverPhoto: null });
+      store.updateTrip(trip.id, { coverPhoto: null, coverPhotoPosition: null });
       refreshAll();
       return;
     }
     if (e.target.closest('[data-action="change-cover"]')) {
       $('#trip-cover-input').click();
     }
+  });
+  $('#trip-cover-wrap').addEventListener('input', (e) => {
+    if (e.target.id !== 'trip-cover-position-input') return;
+    const img = $('.trip-cover-img');
+    if (img) img.style.objectPosition = `center ${e.target.value}%`;
+  });
+  $('#trip-cover-wrap').addEventListener('change', (e) => {
+    if (e.target.id !== 'trip-cover-position-input') return;
+    const trip = store.getActiveTrip();
+    store.updateTrip(trip.id, { coverPhotoPosition: Number(e.target.value) });
   });
   $('#trip-cover-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
