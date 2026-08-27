@@ -59,14 +59,14 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   auth = authModule.getAuth(app);
   db = firestoreModule.getFirestore(app);
 
-  const { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } = authModule;
-  window.__cloudSyncAuth = { GoogleAuthProvider, signInWithRedirect, signOut, authModule };
+  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } = authModule;
+  window.__cloudSyncAuth = { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut };
 
   try {
-    await getRedirectResult(auth); // 從 Google 登入頁導回來後，把結果消化掉（觸發下面的 onAuthStateChanged）
+    await getRedirectResult(auth); // 如果是從 signInWithRedirect 導回來的，把結果消化掉（觸發下面的 onAuthStateChanged）
   } catch (err) {
-    console.error('Google 登入失敗', err);
-    setStatus({ signedIn: false, available: true, error: '登入失敗，請再試一次' });
+    console.error('Google 登入失敗（redirect）', err);
+    setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
   }
 
   onAuthStateChanged(auth, async (user) => {
@@ -87,10 +87,30 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   onLocalChange(() => schedulePush(firestoreModule));
 }
 
-export function signIn() {
+export async function signIn() {
   if (!auth || !window.__cloudSyncAuth) return;
-  const { GoogleAuthProvider, signInWithRedirect } = window.__cloudSyncAuth;
-  signInWithRedirect(auth, new GoogleAuthProvider());
+  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = window.__cloudSyncAuth;
+  const provider = new GoogleAuthProvider();
+
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
+      return; // 使用者自己關掉登入視窗，不用顯示錯誤
+    }
+    if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) {
+      // 彈出視窗被瀏覽器擋掉（常見於手機瀏覽器），改用整頁導轉登入
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (err2) {
+        console.error('Google 登入失敗（redirect）', err2);
+        setStatus({ signedIn: false, available: true, error: `登入失敗：${err2.code || err2.message}` });
+      }
+      return;
+    }
+    console.error('Google 登入失敗（popup）', err);
+    setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
+  }
 }
 
 export function signOutOfSync() {
