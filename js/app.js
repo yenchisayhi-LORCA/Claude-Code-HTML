@@ -4,7 +4,7 @@ import { computeBalances, simplifyDebts } from './split.js';
 import { renderPieChart, renderBarChart } from './charts.js';
 import { exportExpensesCsv, exportExpensesXlsx, buildPrintableReport, printReport } from './export.js';
 import { compressImage } from './image.js';
-import { initCloudSync, isSyncAvailable, signIn, signOutOfSync } from './cloud-sync.js';
+import { initCloudSync, isSyncAvailable, requestSignInLink, signOutOfSync } from './cloud-sync.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -38,8 +38,8 @@ function renderSyncArea(status) {
   }
   if (!status.signedIn) {
     const errorText = status.error ? `<span class="sync-status error">⚠️ ${escapeHtml(status.error)}</span>` : '';
-    el.innerHTML = `<button id="btn-sync-signin" class="btn btn-ghost" title="登入 Google 帳號，讓不同裝置同步旅程資料">☁️ 登入同步</button>${errorText}`;
-    $('#btn-sync-signin').addEventListener('click', signIn);
+    el.innerHTML = `<button id="btn-sync-signin" class="btn btn-ghost" title="用 Email 登入，讓不同裝置同步旅程資料">☁️ 登入同步</button>${errorText}`;
+    $('#btn-sync-signin').addEventListener('click', openEmailSignInDialog);
     return;
   }
   const name = escapeHtml(status.user.displayName || status.user.email || '已登入');
@@ -51,6 +51,30 @@ function renderSyncArea(status) {
     <button id="btn-sync-signout" class="btn btn-ghost">登出</button>
   `;
   $('#btn-sync-signout').addEventListener('click', signOutOfSync);
+}
+
+function openEmailSignInDialog() {
+  $('#signin-email-input').value = '';
+  $('#signin-email-status').textContent = '';
+  $('#dialog-email-signin').showModal();
+}
+
+async function handleEmailSignInSubmit(e) {
+  e.preventDefault();
+  const email = $('#signin-email-input').value.trim();
+  const statusEl = $('#signin-email-status');
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  statusEl.textContent = '傳送中…';
+  try {
+    await requestSignInLink(email);
+    statusEl.textContent = `登入連結已寄到 ${email}，請到信箱點連結完成登入（同一個瀏覽器點開最順利）。`;
+  } catch (err) {
+    console.error('寄送登入連結失敗', err);
+    statusEl.textContent = `寄送失敗：${err.code || err.message}`;
+  } finally {
+    submitBtn.disabled = false;
+  }
 }
 
 function populateCurrencySelects() {
@@ -438,6 +462,7 @@ function handleExpenseSubmit(e) {
 function wireGlobalEvents() {
   $$('.tab-btn').forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
   $$('[data-close]').forEach((btn) => btn.addEventListener('click', () => btn.closest('dialog').close()));
+  $('#form-email-signin').addEventListener('submit', handleEmailSignInSubmit);
 
   $('#trip-select').addEventListener('change', async (e) => {
     store.setActiveTrip(e.target.value);
