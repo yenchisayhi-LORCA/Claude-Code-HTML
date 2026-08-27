@@ -18,6 +18,7 @@ const EMAIL_STORAGE_KEY = 'travel-expense-tracker/pending-sign-in-email';
 let currentUser = null;
 let db = null;
 let auth = null;
+let firestoreModuleRef = null; // 存起來給分享功能用（setDoc/deleteDoc/serverTimestamp），不用重新動態載入一次
 let unsubscribeSnapshot = null;
 let pushTimer = null;
 let pushScheduled = false; // 有本機變更排隊等 1200ms debounce 過後送出，還沒真的呼叫 setDoc()
@@ -26,6 +27,9 @@ let pushAgainAfter = false; // pushInFlight 期間又有新的本機變更，要
 let lastSyncedJson = null; // 用來判斷「這筆變動是不是我們自己剛寫入/讀回的回音」，避免同步無限循環
 let onRemoteChangeCb = null;
 let onStatusChangeCb = null;
+
+let shareSyncTimer = null;
+const lastPushedShareJson = new Map(); // tripId -> 上次成功推到 shared_trips 的內容，避免沒變化也重推
 
 function setStatus(status) {
   if (onStatusChangeCb) onStatusChangeCb(status);
@@ -68,6 +72,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   const app = initializeApp(firebaseConfig);
   auth = authModule.getAuth(app);
   db = firestoreModule.getFirestore(app);
+  firestoreModuleRef = firestoreModule;
 
   const { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } = authModule;
   window.__cloudSyncAuth = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
@@ -89,11 +94,16 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       pushInFlight = false;
       pushAgainAfter = false;
       lastSyncedJson = null;
+      clearTimeout(shareSyncTimer);
+      lastPushedShareJson.clear();
       setStatus({ signedIn: false, available: true });
     }
   });
 
-  onLocalChange(() => schedulePush(firestoreModule));
+  onLocalChange(() => {
+    schedulePush(firestoreModule);
+    scheduleShareSync();
+  });
 }
 
 // 寄送登入連結到指定 email；使用者點信裡的連結回到本頁後，completeEmailLinkSignInIfPresent 會自動完成登入
@@ -249,4 +259,122 @@ async function pushNow(firestoreModule, stateOverride) {
       error: '同步失敗（資料量可能太大，常見原因是收據照片太多；本機資料仍安全保留）',
     });
   }
+}
+
+// ---------------------------------------------------------------- 分享單一旅程（唯讀）
+//
+// 跟整帳號同步（users/{uid}，一整包所有旅程）不同：分享出去的是 shared_trips/{tripId}
+// 這份「單一旅程」的獨立文件，只有被列在 viewerEmails 白名單裡的人（用 Email 連結登入後）
+// 才能讀到，讀不到其他旅程、也讀不到你的成員名單。清空 viewerEmails 等於直接刪除這份文件、
+// 收回所有人的存取權。詳見 README「分享單一旅程」一節要在 Firebase Console 貼的規則。
+
+// 把某趟旅程目前的內容同步推到 shared_trips/{trip.id}；viewers 是空陣列時改成直接刪除該文件。
+export async function pushSharedTrip(trip) {
+  if (!currentUser || !db || !firestoreModuleRef) return { ok: false, error: 'not-signed-in' };
+  const { shareViewers, ...tripSnapshot } = trip;
+  const viewers = shareViewers || [];
+  const json = JSON.stringify({ viewers, tripSnapshot });
+  if (lastPushedShareJson.get(trip.id) === json) return { ok: true, skipped: true };
+
+  const { doc, setDoc, deleteDoc, serverTimestamp } = firestoreModuleRef;
+  const ref = doc(db, 'shared_trips', trip.id);
+  try {
+    if (!viewers.length) {
+      await deleteDoc(ref);
+    } else {
+      await setDoc(ref, {
+        ownerId: currentUser.uid,
+        ownerEmail: currentUser.email || '',
+        viewerEmails: viewers,
+        trip: tripSnapshot,
+        updatedAt: serverTimestamp(),
+      });
+    }
+    lastPushedShareJson.set(trip.id, json);
+    return { ok: true };
+  } catch (err) {
+    console.error('分享旅程更新失敗', err);
+    return { ok: false, error: err.code || err.message };
+  }
+}
+
+function scheduleShareSync() {
+  if (!currentUser) return;
+  clearTimeout(shareSyncTimer);
+  shareSyncTimer = setTimeout(runShareSync, 1500);
+}
+
+// 旅程被分享後，之後每次記帳/改資料都會自動把最新內容補推給 shared_trips，
+// 同行者不用等你手動再分享一次就能看到新增的花費。
+async function runShareSync() {
+  if (!currentUser) return;
+  const trips = Object.values(getSyncableState().trips || {});
+  for (const trip of trips) {
+    if (!trip.shareViewers && !lastPushedShareJson.has(trip.id)) continue;
+    await pushSharedTrip(trip);
+  }
+}
+
+// ---------------------------------------------------------------- 分享連結的檢視者登入
+//
+// 同行者打開分享連結不需要、也不應該碰到整帳號同步（initCloudSync）：那會把他自己帳號底下
+// 所有旅程整批讀進這台裝置的本機資料，完全不是「唯讀檢視某一趟旅程」該做的事。這裡另外用
+// 同一個 Firebase 專案、同一套 Email 連結登入機制，做一個獨立、輕量、不碰本機旅程資料的
+// 登入流程，登入完只回傳 { auth, db, firestoreModule, user }，剩下的（讀取/訂閱 shared_trips
+// 文件、畫面渲染）交給呼叫者（js/share-view.js）自己處理。
+export async function initShareViewerAuth({ onUser, onError } = {}) {
+  if (!isFirebaseConfigured) {
+    onError && onError(new Error('not-configured'));
+    return null;
+  }
+  let initializeApp;
+  let authModule;
+  let firestoreModule;
+  try {
+    [{ initializeApp }, authModule, firestoreModule] = await Promise.all([
+      import(gstatic('app')),
+      import(gstatic('auth')),
+      import(gstatic('firestore')),
+    ]);
+  } catch (err) {
+    console.error('載入分享檢視所需套件失敗', err);
+    onError && onError(err);
+    return null;
+  }
+
+  const app = initializeApp(firebaseConfig);
+  const viewerAuth = authModule.getAuth(app);
+  const viewerDb = firestoreModule.getFirestore(app);
+  const { isSignInWithEmailLink, signInWithEmailLink, sendSignInLinkToEmail, onAuthStateChanged } = authModule;
+
+  if (isSignInWithEmailLink(viewerAuth, window.location.href)) {
+    let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
+    if (!email) email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
+    if (email) {
+      try {
+        await signInWithEmailLink(viewerAuth, email, window.location.href);
+        window.localStorage.removeItem(EMAIL_STORAGE_KEY);
+        // 清掉網址上 Firebase 附加的登入參數，但保留 ?share=tripId，不然重新整理就找不到要看哪趟旅程了
+        const shareId = new URLSearchParams(window.location.search).get('share');
+        const cleanUrl = window.location.pathname + (shareId ? `?share=${encodeURIComponent(shareId)}` : '');
+        window.history.replaceState({}, document.title, cleanUrl);
+      } catch (err) {
+        console.error('分享檢視登入失敗', err);
+        onError && onError(err);
+      }
+    }
+  }
+
+  onAuthStateChanged(viewerAuth, (user) => onUser && onUser(user));
+
+  return {
+    auth: viewerAuth,
+    db: viewerDb,
+    firestoreModule,
+    async requestLink(email) {
+      const actionCodeSettings = { url: window.location.href.split('#')[0], handleCodeInApp: true };
+      await sendSignInLinkToEmail(viewerAuth, email, actionCodeSettings);
+      window.localStorage.setItem(EMAIL_STORAGE_KEY, email);
+    },
+  };
 }

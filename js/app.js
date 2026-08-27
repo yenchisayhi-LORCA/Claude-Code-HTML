@@ -4,7 +4,7 @@ import { computeBalances, simplifyDebts } from './split.js';
 import { renderPieChart, renderBarChart } from './charts.js';
 import { exportExpensesCsv, exportExpensesXlsx } from './export.js';
 import { compressImage } from './image.js';
-import { initCloudSync, isSyncAvailable, requestSignInLink, signOutOfSync } from './cloud-sync.js';
+import { initCloudSync, isSyncAvailable, requestSignInLink, signOutOfSync, getCurrentUser, pushSharedTrip } from './cloud-sync.js';
 import { downloadExpenseReportCard } from './image-card.js';
 import { categoryBadgeHtml as svgCategoryBadgeHtml } from './category-icons.js';
 import { renderExpenseReport, buildReportData, printExpenseReport } from './expense-report.js';
@@ -864,6 +864,39 @@ function wireGlobalEvents() {
       btn.textContent = originalLabel;
     }
   });
+  $('#btn-share-trip').addEventListener('click', () => {
+    renderShareDialog(store.getActiveTrip());
+    $('#dialog-share').showModal();
+  });
+  $('#form-add-viewer').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const trip = store.getActiveTrip();
+    const input = $('#new-viewer-email');
+    const email = input.value.trim().toLowerCase();
+    if (!email) return;
+    const viewers = Array.from(new Set([...(trip.shareViewers || []), email]));
+    input.value = '';
+    await saveShareViewers(trip.id, viewers);
+  });
+  $('#share-viewer-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="remove-viewer"]');
+    if (!btn) return;
+    const trip = store.getActiveTrip();
+    const viewers = (trip.shareViewers || []).filter((email) => email !== btn.dataset.email);
+    await saveShareViewers(trip.id, viewers);
+  });
+  $('#btn-copy-share-link').addEventListener('click', async () => {
+    const input = $('#share-link-input');
+    input.select();
+    try {
+      await navigator.clipboard.writeText(input.value);
+      $('#share-status').textContent = '連結已複製！';
+    } catch (err) {
+      // clipboard API 在某些瀏覽器/環境下可能被拒絕，退回讓使用者自己手動複製選取好的文字
+      $('#share-status').textContent = '請手動複製上面選取好的連結。';
+    }
+  });
+
   $('#btn-export-csv').addEventListener('click', () => exportExpensesCsv(store.getActiveTrip(), activeRates));
   $('#btn-export-xlsx').addEventListener('click', () => {
     const trip = store.getActiveTrip();
@@ -879,6 +912,50 @@ function wireGlobalEvents() {
   });
 }
 
+function renderShareDialog(trip) {
+  const viewers = trip.shareViewers || [];
+  $('#share-viewer-list').innerHTML = viewers.length
+    ? viewers
+        .map(
+          (email) => `<li><span>${escapeHtml(email)}</span><button type="button" data-action="remove-viewer" data-email="${escapeHtml(email)}" title="移除">✕</button></li>`
+        )
+        .join('')
+    : '<li>還沒有加入任何同行者</li>';
+
+  const linkRow = $('#share-link-row');
+  const statusEl = $('#share-status');
+  const signedIn = isSyncAvailable() && !!getCurrentUser();
+  // 沒登入雲端同步時，新增/移除同行者這兩個動作一定會失敗（分享資料要寫進 Firestore），
+  // 與其讓使用者點了才看到錯誤訊息，不如直接把表單/按鈕鎖起來，引導先登入。
+  $('#form-add-viewer').querySelector('button[type="submit"]').disabled = !signedIn;
+  $$('#share-viewer-list [data-action="remove-viewer"]').forEach((btn) => (btn.disabled = !signedIn));
+  if (!signedIn) {
+    linkRow.hidden = true;
+    statusEl.textContent = '請先登入雲端同步（右上角「☁️ 登入同步」），才能使用分享功能。';
+    return;
+  }
+  if (viewers.length) {
+    linkRow.hidden = false;
+    $('#share-link-input').value = `${location.origin}${location.pathname}?share=${trip.id}`;
+    statusEl.textContent = '';
+  } else {
+    linkRow.hidden = true;
+    statusEl.textContent = '加入至少一位同行者的 Email 後，才會產生分享連結。';
+  }
+}
+
+async function saveShareViewers(tripId, viewers) {
+  store.setTripShareViewers(tripId, viewers);
+  const statusEl = $('#share-status');
+  statusEl.textContent = '更新中…';
+  const trip = store.getActiveTrip();
+  const result = await pushSharedTrip(trip);
+  renderShareDialog(trip);
+  if (!result.ok) {
+    $('#share-status').textContent = `更新分享失敗：${result.error || '未知錯誤'}，請確認已登入雲端同步後再試一次。`;
+  }
+}
+
 function switchTab(tab) {
   $$('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $$('.tab-panel').forEach((p) => {
@@ -886,7 +963,14 @@ function switchTab(tab) {
   });
 }
 
-init();
+// 網址帶 ?share=<tripId> 時，代表這是同行者打開的分享連結：整個切換成唯讀檢視模式，
+// 完全不執行一般的 init()（不碰本機旅程資料、不做整帳號同步），避免不小心洩漏分享者的其他旅程。
+const sharedTripId = new URLSearchParams(location.search).get('share');
+if (sharedTripId) {
+  import('./share-view.js').then((mod) => mod.initShareView(sharedTripId));
+} else {
+  init();
+}
 
 // 註冊 Service Worker，讓網頁打開過一次之後，離線也能重新打開（記帳資料本來就存在 localStorage，不受影響）
 if ('serviceWorker' in navigator) {

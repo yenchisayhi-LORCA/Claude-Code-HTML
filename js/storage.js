@@ -166,6 +166,14 @@ export function updateTrip(tripId, patch) {
   persist();
 }
 
+// 分享此旅程的唯讀連結給誰看（用 Email 清單當白名單）。清空清單等於停止分享。
+export function setTripShareViewers(tripId, emails) {
+  const trip = state.trips[tripId];
+  if (!trip) return;
+  trip.shareViewers = emails;
+  persist();
+}
+
 export function deleteTrip(tripId) {
   delete state.trips[tripId];
   if (state.activeTripId === tripId) {
