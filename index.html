@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>旅遊記帳系統</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧳</text></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title">🧳 旅遊記帳</div>
+    <div class="trip-switcher">
+      <select id="trip-select" aria-label="選擇旅程"></select>
+      <button id="btn-new-trip" class="btn btn-primary">＋ 新增旅程</button>
+    </div>
+  </header>
+
+  <main id="app-main">
+    <section id="empty-state" class="empty-state" hidden>
+      <p>還沒有任何旅程，建立第一趟旅程開始記帳吧！</p>
+      <button id="btn-create-first-trip" class="btn btn-primary">建立第一個旅程</button>
+    </section>
+
+    <section id="trip-view" hidden>
+      <div class="trip-infobar">
+        <div class="trip-infobar-main">
+          <h1 id="trip-name"></h1>
+          <div id="trip-meta" class="trip-meta"></div>
+        </div>
+        <div class="trip-infobar-actions">
+          <button id="btn-refresh-rates" class="btn btn-ghost" title="重新抓取即時匯率">🔄 匯率</button>
+          <button id="btn-edit-trip" class="btn btn-ghost">編輯旅程</button>
+          <button id="btn-delete-trip" class="btn btn-ghost btn-danger">刪除旅程</button>
+        </div>
+      </div>
+      <div id="budget-bar-wrap"></div>
+
+      <nav class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="expenses">支出紀錄</button>
+        <button class="tab-btn" data-tab="split">分帳結算</button>
+        <button class="tab-btn" data-tab="stats">統計圖表</button>
+        <button class="tab-btn" data-tab="members">成員與分類</button>
+        <button class="tab-btn" data-tab="export">匯出報表</button>
+      </nav>
+
+      <section id="tab-expenses" class="tab-panel">
+        <div class="panel-toolbar">
+          <select id="filter-category"><option value="">全部分類</option></select>
+          <button id="btn-add-expense" class="btn btn-primary">＋ 新增花費</button>
+        </div>
+        <div id="expense-list" class="expense-list"></div>
+      </section>
+
+      <section id="tab-split" class="tab-panel" hidden>
+        <div id="balances-summary" class="balances-summary"></div>
+        <h3>建議轉帳（最少次數結清）</h3>
+        <div id="settle-list" class="settle-list"></div>
+      </section>
+
+      <section id="tab-stats" class="tab-panel" hidden>
+        <h3>分類花費比例</h3>
+        <div id="chart-category"></div>
+        <h3>每日花費趨勢</h3>
+        <div id="chart-trend"></div>
+      </section>
+
+      <section id="tab-members" class="tab-panel" hidden>
+        <div class="grid-2">
+          <div>
+            <h3>成員</h3>
+            <ul id="member-list" class="simple-list"></ul>
+            <form id="form-add-member" class="inline-form">
+              <input type="text" id="new-member-name" placeholder="新成員名稱" required />
+              <button type="submit" class="btn btn-secondary">加入</button>
+            </form>
+          </div>
+          <div>
+            <h3>花費分類</h3>
+            <ul id="category-list" class="simple-list"></ul>
+            <form id="form-add-category" class="inline-form">
+              <input type="text" id="new-category-icon" placeholder="🏷️" maxlength="2" style="width:3.5em" />
+              <input type="text" id="new-category-name" placeholder="新分類名稱" required />
+              <button type="submit" class="btn btn-secondary">新增</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-export" class="tab-panel" hidden>
+        <p>匯出這趟旅程的完整花費紀錄：</p>
+        <div class="export-actions">
+          <button id="btn-export-csv" class="btn btn-secondary">⬇️ 下載 CSV</button>
+          <button id="btn-print-report" class="btn btn-secondary">🖨️ 列印 / 存成 PDF</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <!-- 新增/編輯旅程 -->
+  <dialog id="dialog-trip">
+    <form id="form-trip" method="dialog" class="dialog-form">
+      <h2 id="trip-dialog-title">新增旅程</h2>
+      <input type="hidden" id="trip-id" />
+      <label>旅程名稱 <input type="text" id="trip-name-input" required placeholder="例如：東京五日遊" /></label>
+      <label>基準貨幣（用來統計總花費）
+        <select id="trip-currency-input"></select>
+      </label>
+      <div class="grid-2">
+        <label>出發日 <input type="date" id="trip-start-input" /></label>
+        <label>回程日 <input type="date" id="trip-end-input" /></label>
+      </div>
+      <div class="grid-2">
+        <label>總預算（選填） <input type="number" id="trip-budget-total-input" min="0" step="0.01" /></label>
+        <label>每日預算（選填） <input type="number" id="trip-budget-daily-input" min="0" step="0.01" /></label>
+      </div>
+      <label id="trip-members-field">初始成員（用逗號分隔）
+        <input type="text" id="trip-members-input" placeholder="我, 小明, 小華" />
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 新增/編輯花費 -->
+  <dialog id="dialog-expense">
+    <form id="form-expense" method="dialog" class="dialog-form">
+      <h2 id="expense-dialog-title">新增花費</h2>
+      <input type="hidden" id="expense-id" />
+      <div class="grid-2">
+        <label>日期 <input type="date" id="expense-date-input" required /></label>
+        <label>分類
+          <select id="expense-category-input"></select>
+        </label>
+      </div>
+      <label>說明 <input type="text" id="expense-desc-input" placeholder="例如：晚餐、地鐵票" /></label>
+      <div class="grid-2">
+        <label>金額 <input type="number" id="expense-amount-input" min="0" step="0.01" required /></label>
+        <label>幣別
+          <select id="expense-currency-input"></select>
+        </label>
+      </div>
+      <div id="expense-converted-hint" class="hint"></div>
+      <label>付款人
+        <select id="expense-payer-input"></select>
+      </label>
+      <fieldset>
+        <legend>分攤方式</legend>
+        <label class="inline-radio"><input type="radio" name="split-type" value="equal" checked /> 平均分攤</label>
+        <label class="inline-radio"><input type="radio" name="split-type" value="custom" /> 自訂金額</label>
+        <div id="split-members-list" class="split-members-list"></div>
+      </fieldset>
+      <label>收據照片（選填）
+        <input type="file" id="expense-receipt-input" accept="image/*" />
+      </label>
+      <div id="receipt-preview"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 收據放大檢視 -->
+  <dialog id="dialog-image">
+    <div class="dialog-form">
+      <img id="dialog-image-img" style="max-width:100%; border-radius:8px;" />
+      <div class="dialog-actions"><button type="button" class="btn btn-ghost" data-close>關閉</button></div>
+    </div>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
