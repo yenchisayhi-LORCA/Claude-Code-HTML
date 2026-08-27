@@ -1,12 +1,19 @@
-// 多裝置同步：用 Firebase Authentication（Google 登入）辨識「你是誰」，
-// 用 Firestore 存放你的旅程資料，這樣同一個 Google 帳號在不同裝置登入時能看到同一份資料。
+// 多裝置同步：用 Firebase Authentication 的「Email 連結登入」(passwordless email link)
+// 辨識「你是誰」，用 Firestore 存放你的旅程資料，這樣同一個 Email 在不同裝置登入時能看到同一份資料。
 // 沒有設定 firebase-config.js 之前，這個模組完全不會啟用，其他功能不受影響。
+//
+// 之所以不用 Google 登入的彈出視窗/整頁導轉：兩者都需要瀏覽器允許我們的網站跟 Firebase 的
+// authDomain（*.firebaseapp.com）互相存取儲存空間或用 postMessage 溝通，而 Safari/Firefox 已經
+// 封鎖、Chrome 也在跟進封鎖這種「第三方儲存空間」存取（尤其是像 GitHub Pages 這種跟 Firebase
+// 網域不同的靜態網站）。Email 連結登入完全不需要跳出視窗或跨網域，直接靠信件裡的連結完成登入，
+// 不會受這個限制影響。詳見 https://firebase.google.com/docs/auth/web/redirect-best-practices
 
 import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js';
 import { getSyncableState, applySyncedState, subscribe as onLocalChange } from './storage.js';
 
 const FIREBASE_VERSION = '10.14.1';
 const gstatic = (pkg) => `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-${pkg}.js`;
+const EMAIL_STORAGE_KEY = 'travel-expense-tracker/pending-sign-in-email';
 
 let currentUser = null;
 let db = null;
@@ -59,15 +66,10 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   auth = authModule.getAuth(app);
   db = firestoreModule.getFirestore(app);
 
-  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } = authModule;
-  window.__cloudSyncAuth = { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut };
+  const { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } = authModule;
+  window.__cloudSyncAuth = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
 
-  try {
-    await getRedirectResult(auth); // 如果是從 signInWithRedirect 導回來的，把結果消化掉（觸發下面的 onAuthStateChanged）
-  } catch (err) {
-    console.error('Google 登入失敗（redirect）', err);
-    setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
-  }
+  await completeEmailLinkSignInIfPresent(authModule);
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -87,28 +89,34 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   onLocalChange(() => schedulePush(firestoreModule));
 }
 
-export async function signIn() {
-  if (!auth || !window.__cloudSyncAuth) return;
-  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = window.__cloudSyncAuth;
-  const provider = new GoogleAuthProvider();
+// 寄送登入連結到指定 email；使用者點信裡的連結回到本頁後，completeEmailLinkSignInIfPresent 會自動完成登入
+export async function requestSignInLink(email) {
+  if (!auth || !window.__cloudSyncAuth) throw new Error('雲端同步尚未就緒，請稍後再試');
+  const { sendSignInLinkToEmail } = window.__cloudSyncAuth;
+  const actionCodeSettings = {
+    url: window.location.href.split('#')[0].split('?')[0],
+    handleCodeInApp: true,
+  };
+  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+  window.localStorage.setItem(EMAIL_STORAGE_KEY, email);
+}
+
+async function completeEmailLinkSignInIfPresent(authModule) {
+  const { isSignInWithEmailLink, signInWithEmailLink } = authModule;
+  if (!isSignInWithEmailLink(auth, window.location.href)) return;
+
+  let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
+  if (!email) {
+    email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
+  }
+  if (!email) return;
 
   try {
-    await signInWithPopup(auth, provider);
+    await signInWithEmailLink(auth, email, window.location.href);
+    window.localStorage.removeItem(EMAIL_STORAGE_KEY);
+    window.history.replaceState({}, document.title, window.location.pathname); // 清掉網址上的登入參數
   } catch (err) {
-    if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
-      return; // 使用者自己關掉登入視窗，不用顯示錯誤
-    }
-    if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) {
-      // 彈出視窗被瀏覽器擋掉（常見於手機瀏覽器），改用整頁導轉登入
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (err2) {
-        console.error('Google 登入失敗（redirect）', err2);
-        setStatus({ signedIn: false, available: true, error: `登入失敗：${err2.code || err2.message}` });
-      }
-      return;
-    }
-    console.error('Google 登入失敗（popup）', err);
+    console.error('Email 連結登入失敗', err);
     setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
   }
 }
@@ -142,7 +150,7 @@ async function handleSignedIn(firestoreModule) {
       applyRemoteJson(cloudJson);
     } else {
       const useCloud = confirm(
-        '偵測到這個 Google 帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣。\n\n' +
+        '偵測到這個帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣。\n\n' +
           '按「確定」= 改用雲端資料（會覆蓋這台裝置目前顯示的旅程）\n' +
           '按「取消」= 用這台裝置目前的資料覆蓋雲端'
       );

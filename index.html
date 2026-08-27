@@ -173,6 +173,20 @@
     </div>
   </dialog>
 
+  <!-- 登入同步（Email 連結登入） -->
+  <dialog id="dialog-email-signin">
+    <form id="form-email-signin" class="dialog-form">
+      <h2>登入同步</h2>
+      <p class="hint">輸入 Email，我們會寄一封登入連結給你，點連結即可完成登入（不需要密碼）。</p>
+      <label>Email <input type="email" id="signin-email-input" required placeholder="you@example.com" /></label>
+      <div id="signin-email-status" class="hint"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">傳送登入連結</button>
+      </div>
+    </form>
+  </dialog>
+
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
