@@ -1,5 +1,5 @@
 import * as store from './storage.js';
-import { fetchRates, COMMON_CURRENCIES, convertToBase } from './currency.js';
+import { fetchRates, COMMON_CURRENCIES, convertToBase, convertToTWD, baseAmountToTWD } from './currency.js';
 import { computeBalances, simplifyDebts } from './split.js';
 import { renderPieChart, renderBarChart } from './charts.js';
 import { exportExpensesCsv, exportExpensesXlsx, buildPrintableReport, printReport } from './export.js';
@@ -202,6 +202,7 @@ function totalSpent(trip) {
   return trip.expenses.reduce((sum, e) => sum + (convertToBase(e.amount, e.currency, trip.baseCurrency, activeRates) || 0), 0);
 }
 
+
 function renderBudgetBar(trip) {
   const wrap = $('#budget-bar-wrap');
   if (!trip.budgetTotal) {
@@ -243,6 +244,7 @@ function renderExpenseList(trip) {
     .map((exp) => {
       const cat = trip.categories.find((c) => c.id === exp.categoryId) || { icon: '📦', name: '未分類' };
       const converted = convertToBase(exp.amount, exp.currency, trip.baseCurrency, activeRates);
+      const convertedTWD = convertToTWD(exp.amount, exp.currency, trip.baseCurrency, activeRates);
       const splitMemberIds = exp.splitType === 'custom' ? Object.keys(exp.splitCustom || {}) : exp.splitMembers || [];
       const splitLabel = exp.splitType === 'custom' ? `自訂分攤・${splitMemberIds.length} 人` : `平均分攤・${splitMemberIds.length} 人`;
       const splitAvatars = splitMemberIds
@@ -260,6 +262,7 @@ function renderExpenseList(trip) {
         <div class="expense-amount">
           ${exp.amount} ${exp.currency}
           ${converted !== null && exp.currency !== trip.baseCurrency ? `<span class="converted">≈ ${converted.toFixed(0)} ${trip.baseCurrency}</span>` : ''}
+          ${convertedTWD !== null && exp.currency !== 'TWD' ? `<span class="converted">≈ ${convertedTWD.toFixed(0)} TWD</span>` : ''}
         </div>
         <div class="expense-actions">
           <button data-action="edit-expense" data-id="${exp.id}" title="編輯">✏️</button>
@@ -275,12 +278,17 @@ function renderSplitTab(trip) {
   const findMember = (id) => trip.members.find((m) => m.id === id);
   const memberName = (id) => findMember(id)?.name || '（已刪除成員）';
 
+  const twdNote = (baseAmount) => {
+    const twd = baseAmountToTWD(baseAmount, trip.baseCurrency, activeRates);
+    return twd !== null ? `<span class="converted">≈ ${twd.toFixed(0)} TWD</span>` : '';
+  };
+
   $('#balances-summary').innerHTML = trip.members
     .map((m) => {
       const bal = balances[m.id] || 0;
       const cls = bal > 0.01 ? 'positive' : bal < -0.01 ? 'negative' : '';
       const text = bal > 0.01 ? `應收回 ${bal.toFixed(2)}` : bal < -0.01 ? `應付出 ${Math.abs(bal).toFixed(2)}` : '已結清';
-      return `<div class="balance-chip"><div class="name">${memberAvatarHtml(m)}${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency}</div></div>`;
+      return `<div class="balance-chip"><div class="name">${memberAvatarHtml(m)}${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency} ${twdNote(Math.abs(bal))}</div></div>`;
     })
     .join('');
 
@@ -292,7 +300,7 @@ function renderSplitTab(trip) {
             <strong>${memberAvatarHtml(findMember(t.from))}${escapeHtml(memberName(t.from))}</strong>
             <span class="arrow">應付給</span>
             <strong>${memberAvatarHtml(findMember(t.to))}${escapeHtml(memberName(t.to))}</strong>
-            <span class="amount">${t.amount.toFixed(2)} ${trip.baseCurrency}</span>
+            <span class="amount">${t.amount.toFixed(2)} ${trip.baseCurrency} ${twdNote(t.amount)}</span>
           </div>`
         )
         .join('')

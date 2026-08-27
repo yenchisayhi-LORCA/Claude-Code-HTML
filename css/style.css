@@ -135,7 +135,8 @@ select, input[type="text"], input[type="number"], input[type="date"], input[type
 .expense-title { font-weight: 600; }
 .expense-sub { font-size: 0.82rem; color: var(--text-muted); }
 .expense-amount { text-align: right; font-weight: 700; white-space: nowrap; }
-.expense-amount .converted { display: block; font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+.converted { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+.expense-amount .converted { display: block; }
 .expense-actions { display: flex; gap: 4px; }
 .expense-actions button { background: none; border: none; cursor: pointer; font-size: 1rem; }
 .receipt-thumb { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; cursor: pointer; }

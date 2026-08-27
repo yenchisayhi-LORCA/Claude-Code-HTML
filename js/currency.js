@@ -71,3 +71,20 @@ export function getRate(fromCurrency, ratesCache) {
   if (from === ratesCache.base) return 1;
   return ratesCache.rates[from] || null;
 }
+
+// amount 已經是「基準貨幣」金額時，換算成台幣（基準貨幣本身就是 TWD 時回傳 null，不用重複顯示同一個數字）
+export function baseAmountToTWD(amount, baseCurrency, ratesCache) {
+  if (baseCurrency.toUpperCase() === 'TWD') return null;
+  const rate = ratesCache && ratesCache.rates ? ratesCache.rates['TWD'] : null;
+  if (!rate) return null;
+  return amount * rate;
+}
+
+// 不管基準貨幣是什麼，都額外算出台幣金額當參考，方便台灣使用者換算
+export function convertToTWD(amount, fromCurrency, baseCurrency, ratesCache) {
+  if (baseCurrency.toUpperCase() === 'TWD') return null;
+  if (fromCurrency.toUpperCase() === 'TWD') return amount;
+  const inBase = convertToBase(amount, fromCurrency, baseCurrency, ratesCache);
+  if (inBase === null) return null;
+  return baseAmountToTWD(inBase, baseCurrency, ratesCache);
+}
