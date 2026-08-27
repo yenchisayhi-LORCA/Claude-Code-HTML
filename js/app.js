@@ -336,7 +336,7 @@ function renderStatsTab(trip) {
     byCategory[e.categoryId] = (byCategory[e.categoryId] || 0) + (convertToBase(e.amount, e.currency, trip.baseCurrency, activeRates) || 0);
   });
   const slices = trip.categories.map((c) => ({ label: c.name, value: byCategory[c.id] || 0, color: c.color }));
-  $('#chart-category').innerHTML = renderPieChart(slices);
+  $('#chart-category').innerHTML = renderPieChart(slices, { currency: trip.baseCurrency });
 
   const byDate = {};
   trip.expenses.forEach((e) => {
@@ -346,7 +346,7 @@ function renderStatsTab(trip) {
   const points = Object.entries(byDate)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([label, value]) => ({ label: label.length > 5 ? label.slice(5) : label, value }));
-  $('#chart-trend').innerHTML = renderBarChart(points);
+  $('#chart-trend').innerHTML = renderBarChart(points, { currency: trip.baseCurrency });
 }
 
 function renderMembersTab(trip) {
