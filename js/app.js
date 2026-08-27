@@ -264,7 +264,7 @@ function renderExpenseList(trip) {
       const splitMemberIds = exp.splitType === 'custom' ? Object.keys(exp.splitCustom || {}) : exp.splitMembers || [];
       const splitLabel = exp.splitType === 'custom' ? `自訂分攤・${splitMemberIds.length} 人` : `平均分攤・${splitMemberIds.length} 人`;
       const splitAvatars = splitMemberIds
-        .map((id) => avatarOrInitialHtml(findMember(id), 22))
+        .map((id) => avatarOrInitialHtml(findMember(id), 28))
         .join('');
       return `
       <div class="expense-card" data-id="${exp.id}">
@@ -272,9 +272,9 @@ function renderExpenseList(trip) {
         <div class="expense-main">
           <div class="expense-title">${escapeHtml(exp.description || cat.name)}</div>
           <div class="expense-sub">${exp.date || ''}・${memberAvatarHtml(findMember(exp.paidBy))}${escapeHtml(memberName(exp.paidBy))} 付款・${splitLabel}</div>
-          ${splitAvatars ? `<div class="split-avatar-group">${splitAvatars}</div>` : ''}
         </div>
         ${exp.receipt ? `<img class="receipt-thumb" src="${exp.receipt}" data-action="view-receipt" data-id="${exp.id}" alt="收據" />` : ''}
+        ${splitAvatars ? `<div class="split-avatar-group" title="分攤成員">${splitAvatars}</div>` : ''}
         <div class="expense-amount">
           ${exp.amount} ${exp.currency}
           ${converted !== null && exp.currency !== trip.baseCurrency ? `<span class="converted">≈ ${converted.toFixed(0)} ${trip.baseCurrency}</span>` : ''}
