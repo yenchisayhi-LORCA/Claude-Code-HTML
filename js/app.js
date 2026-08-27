@@ -2,10 +2,12 @@ import * as store from './storage.js';
 import { fetchRates, COMMON_CURRENCIES, convertToBase, convertToTWD, baseAmountToTWD } from './currency.js';
 import { computeBalances, simplifyDebts } from './split.js';
 import { renderPieChart, renderBarChart } from './charts.js';
-import { exportExpensesCsv, exportExpensesXlsx, buildPrintableReport, printReport } from './export.js';
+import { exportExpensesCsv, exportExpensesXlsx } from './export.js';
 import { compressImage } from './image.js';
 import { initCloudSync, isSyncAvailable, requestSignInLink, signOutOfSync } from './cloud-sync.js';
-import { downloadExpenseCard } from './image-card.js';
+import { downloadExpenseReportCard } from './image-card.js';
+import { categoryBadgeHtml as svgCategoryBadgeHtml } from './category-icons.js';
+import { renderExpenseReport, buildReportData, printExpenseReport } from './expense-report.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -33,20 +35,8 @@ function categoryVisual(category) {
   return DEFAULT_CATEGORY_STYLE[category.id] || category;
 }
 
-function lightenHex(hex, amount = 0.82) {
-  const c = (hex || '#64748b').replace('#', '');
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  const mix = (ch) => Math.round(ch + (255 - ch) * amount);
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
-}
-
 function categoryBadgeHtml(category, size = 32) {
-  const vis = categoryVisual(category);
-  const bg = lightenHex(vis.color, 0.82);
-  const fontSize = Math.round(size * 0.5);
-  return `<span class="category-badge" style="width:${size}px;height:${size}px;background:${bg};font-size:${fontSize}px" title="${escapeHtml(vis.name || '')}">${vis.icon}</span>`;
+  return svgCategoryBadgeHtml(category, size);
 }
 
 function escapeHtml(str) {
@@ -828,11 +818,12 @@ function wireGlobalEvents() {
     const trip = store.getActiveTrip();
     const { balances } = computeBalances(trip, activeRates);
     const transactions = simplifyDebts(balances);
+    const reportData = buildReportData(trip, activeRates, transactions);
     btn.disabled = true;
     const originalLabel = btn.textContent;
     btn.textContent = '產生圖卡中…';
     try {
-      await downloadExpenseCard(trip, activeRates, balances, transactions);
+      await downloadExpenseReportCard(reportData, `${trip.name}-花費報表.png`);
     } finally {
       btn.disabled = false;
       btn.textContent = originalLabel;
@@ -848,7 +839,8 @@ function wireGlobalEvents() {
     const trip = store.getActiveTrip();
     const { balances } = computeBalances(trip, activeRates);
     const transactions = simplifyDebts(balances);
-    printReport(buildPrintableReport(trip, activeRates, balances, transactions));
+    const reportData = buildReportData(trip, activeRates, transactions);
+    printExpenseReport(renderExpenseReport(reportData));
   });
 }
 
