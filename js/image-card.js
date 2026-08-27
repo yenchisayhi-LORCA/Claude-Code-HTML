@@ -159,19 +159,35 @@ function drawLogoMark(ctx, x, y, size) {
   ctx.textAlign = 'left';
 }
 
+const ROW_H = 60;
+const ROW_H_WITH_TWD = 76; // 多一行「≈ X TWD」參考金額
+const SETTLE_ROW_H = 62;
+const SETTLE_ROW_H_WITH_TWD = 82;
+const ROW_GAP = 10;
+
+function rowHeightFor(exp) {
+  return exp.twdAmount != null ? ROW_H_WITH_TWD : ROW_H;
+}
+function settleRowHeightFor(s) {
+  return s.twdAmount != null ? SETTLE_ROW_H_WITH_TWD : SETTLE_ROW_H;
+}
+
 export function buildReportCanvas(data) {
-  const rowH = 60;
-  const settleRowH = 62;
-  const rowGap = 10;
+  const rowGap = ROW_GAP;
   const sectionGap = 30;
 
   const expenses = data.expenses || [];
   const settlements = data.settlements || [];
-  const expenseAreaH = expenses.length ? expenses.length * (rowH + rowGap) - rowGap : 30;
-  const settleAreaH = settlements.length ? settlements.length * (settleRowH + rowGap) - rowGap : settleRowH;
+  const expenseAreaH = expenses.length
+    ? expenses.reduce((sum, e) => sum + rowHeightFor(e), 0) + (expenses.length - 1) * rowGap
+    : 30;
+  const settleAreaH = settlements.length
+    ? settlements.reduce((sum, s) => sum + settleRowHeightFor(s), 0) + (settlements.length - 1) * rowGap
+    : SETTLE_ROW_H;
 
   const headerH = 56 + 20; // logo 高度 + 跟下面統計卡的間距
-  const statH = 108; // 50*2 + 8
+  const statBoxH = 68; // padding 16 + 標籤 13 + 間距 6 + 數值 16 + padding 16，四捨五入
+  const statH = data.totalTwd != null ? statBoxH + 20 : statBoxH; // 總花費有台幣參考時多一行，三張卡等高（對齊瀏覽器 flex 預設 stretch 行為）
   const H = H_PAD + headerH + statH + sectionGap + 30 + expenseAreaH + sectionGap + 30 + settleAreaH + 40 + 48;
 
   const scale = 2;
@@ -205,37 +221,45 @@ export function buildReportCanvas(data) {
 
   y += headerH + 20;
 
-  // 統計卡：旅行期間 / 基準貨幣（左側疊兩張）+ 總花費（右側高亮）
+  // 統計卡：旅行期間 / 基準貨幣 / 總花費，三張並排同高（跟設計稿一樣是同一個 flex row，
+  // 不是左邊疊兩張、右邊一張——瀏覽器 flex 預設 align-items:stretch 會讓三張卡自動等高，
+  // 這裡用「總花費卡是否需要多印一行台幣參考金額」決定這一整排卡片的高度）。
   const cur = data.currency || 'TWD';
-  const leftW = CONTENT_W * ((CONTENT_W - 14) / CONTENT_W) * 0.42;
-  const boxH = 50;
-  const rightX = SIDE_PAD + leftW + 14;
-  const rightW = CONTENT_W - leftW - 14;
+  const gapX = 14;
+  const flexUnit = (CONTENT_W - gapX * 2) / 3.4;
+  const box1W = flexUnit;
+  const box2W = flexUnit;
+  const box3W = flexUnit * 1.4;
+  const box1X = SIDE_PAD;
+  const box2X = box1X + box1W + gapX;
+  const box3X = box2X + box2W + gapX;
 
-  roundRect(ctx, SIDE_PAD, y, leftW, boxH, 20); ctx.fillStyle = '#FFFFFF'; ctx.fill();
-  ctx.strokeStyle = '#F2E3D2'; ctx.lineWidth = 2; roundRect(ctx, SIDE_PAD, y, leftW, boxH, 20); ctx.stroke();
-  ctx.fillStyle = '#A08C7D'; ctx.font = `700 12.5px ${FONT}`; ctx.fillText('旅行期間', SIDE_PAD + 20, y + 22);
+  roundRect(ctx, box1X, y, box1W, statH, 20); ctx.fillStyle = '#FFFFFF'; ctx.fill();
+  ctx.strokeStyle = '#F2E3D2'; ctx.lineWidth = 2; roundRect(ctx, box1X, y, box1W, statH, 20); ctx.stroke();
+  ctx.fillStyle = '#A08C7D'; ctx.font = `700 12.5px ${FONT}`; ctx.fillText('旅行期間', box1X + 20, y + 22);
   ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
-  ctx.fillText(`${fmtMD(data.startDate)} – ${fmtMD(data.endDate)}`, SIDE_PAD + 20, y + 42);
+  ctx.fillText(`${fmtMD(data.startDate)} – ${fmtMD(data.endDate)}`, box1X + 20, y + 42);
 
-  const y2 = y + boxH + 8;
-  roundRect(ctx, SIDE_PAD, y2, leftW, boxH, 20); ctx.fillStyle = '#FFFFFF'; ctx.fill();
-  ctx.strokeStyle = '#F2E3D2'; roundRect(ctx, SIDE_PAD, y2, leftW, boxH, 20); ctx.stroke();
-  ctx.fillStyle = '#A08C7D'; ctx.font = `700 12.5px ${FONT}`; ctx.fillText('基準貨幣', SIDE_PAD + 20, y2 + 22);
-  ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`; ctx.fillText(cur, SIDE_PAD + 20, y2 + 42);
+  roundRect(ctx, box2X, y, box2W, statH, 20); ctx.fillStyle = '#FFFFFF'; ctx.fill();
+  ctx.strokeStyle = '#F2E3D2'; roundRect(ctx, box2X, y, box2W, statH, 20); ctx.stroke();
+  ctx.fillStyle = '#A08C7D'; ctx.font = `700 12.5px ${FONT}`; ctx.fillText('基準貨幣', box2X + 20, y + 22);
+  ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`; ctx.fillText(cur, box2X + 20, y + 42);
 
-  const totalH = boxH * 2 + 8;
-  roundRect(ctx, rightX, y, rightW, totalH, 20);
+  roundRect(ctx, box3X, y, box3W, statH, 20);
   ctx.fillStyle = '#F79256'; ctx.fill();
-  ctx.fillStyle = '#FFEBD9'; ctx.font = `700 12.5px ${FONT}`; ctx.fillText('總花費', rightX + 20, y + 24);
+  ctx.fillStyle = '#FFEBD9'; ctx.font = `700 12.5px ${FONT}`; ctx.fillText('總花費', box3X + 20, y + 24);
   ctx.fillStyle = '#FFFDF8'; ctx.font = `900 22px ${FONT}`;
   const totalText = Number(data.total || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
-  ctx.fillText(totalText, rightX + 20, y + 56);
+  ctx.fillText(totalText, box3X + 20, y + 51);
   const totalWidth = ctx.measureText(totalText).width;
   ctx.font = `900 14px ${FONT}`;
-  ctx.fillText(cur, rightX + 20 + totalWidth + 5, y + 56);
+  ctx.fillText(cur, box3X + 20 + totalWidth + 5, y + 51);
+  if (data.totalTwd != null) {
+    ctx.fillStyle = '#FFEBD9'; ctx.font = `700 12px ${FONT}`;
+    ctx.fillText(`≈ ${Number(data.totalTwd).toLocaleString('en-US', { maximumFractionDigits: 2 })} TWD`, box3X + 20, y + 66);
+  }
 
-  y += totalH + sectionGap;
+  y += statH + sectionGap;
 
   // 花費明細
   const sectionHeader = (label, dotColor) => {
@@ -255,6 +279,7 @@ export function buildReportCanvas(data) {
     y += 30;
   } else {
     for (const exp of expenses) {
+      const rowH = rowHeightFor(exp);
       roundRect(ctx, SIDE_PAD, y, CONTENT_W, rowH, 20);
       ctx.fillStyle = '#FFFFFF'; ctx.fill();
       ctx.strokeStyle = '#F2E3D2'; ctx.lineWidth = 2; roundRect(ctx, SIDE_PAD, y, CONTENT_W, rowH, 20); ctx.stroke();
@@ -271,12 +296,13 @@ export function buildReportCanvas(data) {
       ctx.font = `900 12px ${FONT}`;
       const curW = ctx.measureText(curLabel).width;
 
+      const textTopY = y + rowH / 2 - 15;
       ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
-      ctx.fillText(truncate(ctx, exp.title || '', CONTENT_W - 40 - badgeSize - 16 - amountW - curW - 20), textX, y + 26);
+      ctx.fillText(truncate(ctx, exp.title || '', CONTENT_W - 40 - badgeSize - 16 - amountW - curW - 20), textX, textTopY + 10);
 
       ctx.font = `700 12.5px ${FONT}`;
       let mx = textX;
-      const my = y + 44;
+      const my = textTopY + 28;
       ctx.fillStyle = '#9A8A7D'; ctx.fillText(exp.date || '', mx, my);
       mx += ctx.measureText(exp.date || '').width + 8;
       ctx.fillStyle = '#D6C6B6'; ctx.beginPath(); ctx.arc(mx, my - 4, 1.5, 0, Math.PI * 2); ctx.fill(); mx += 9;
@@ -290,11 +316,16 @@ export function buildReportCanvas(data) {
       ctx.font = `700 12.5px ${FONT}`;
       ctx.fillStyle = '#9A8A7D'; ctx.fillText(`${exp.payer || ''} 付款`, mx, my);
 
+      const amountCenterY = exp.twdAmount != null ? y + rowH / 2 - 8 : y + rowH / 2 + 6;
       ctx.textAlign = 'right';
       ctx.fillStyle = '#3B3330'; ctx.font = `900 19px ${FONT}`;
-      ctx.fillText(amountText, SIDE_PAD + CONTENT_W - 20 - curW - 4, y + rowH / 2 + 6);
+      ctx.fillText(amountText, SIDE_PAD + CONTENT_W - 20 - curW - 4, amountCenterY);
       ctx.fillStyle = '#A08C7D'; ctx.font = `900 12px ${FONT}`;
-      ctx.fillText(curLabel, SIDE_PAD + CONTENT_W - 20, y + rowH / 2 + 6);
+      ctx.fillText(curLabel, SIDE_PAD + CONTENT_W - 20, amountCenterY);
+      if (exp.twdAmount != null) {
+        ctx.fillStyle = '#B0A093'; ctx.font = `700 11.5px ${FONT}`;
+        ctx.fillText(`≈ ${Number(exp.twdAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })} TWD`, SIDE_PAD + CONTENT_W - 20, amountCenterY + 18);
+      }
       ctx.textAlign = 'left';
 
       y += rowH + rowGap;
@@ -307,14 +338,15 @@ export function buildReportCanvas(data) {
   y += 30;
 
   if (!settlements.length) {
-    roundRect(ctx, SIDE_PAD, y, CONTENT_W, settleRowH, 20);
+    roundRect(ctx, SIDE_PAD, y, CONTENT_W, SETTLE_ROW_H, 20);
     ctx.fillStyle = '#FFFFFF'; ctx.fill();
     ctx.fillStyle = '#5FBFA8'; ctx.font = `900 14px ${FONT}`; ctx.textAlign = 'center';
-    ctx.fillText('已全部結清 🎉', W / 2, y + settleRowH / 2 + 5);
+    ctx.fillText('已全部結清 🎉', W / 2, y + SETTLE_ROW_H / 2 + 5);
     ctx.textAlign = 'left';
-    y += settleRowH;
+    y += SETTLE_ROW_H;
   } else {
     for (const s of settlements) {
+      const settleRowH = settleRowHeightFor(s);
       roundRect(ctx, SIDE_PAD, y, CONTENT_W, settleRowH, 20);
       ctx.fillStyle = '#FFFFFF'; ctx.fill();
       ctx.setLineDash([5, 4]);
@@ -322,28 +354,32 @@ export function buildReportCanvas(data) {
       roundRect(ctx, SIDE_PAD, y, CONTENT_W, settleRowH, 20); ctx.stroke();
       ctx.setLineDash([]);
 
-      const cy = y + settleRowH / 2;
+      const rowCenterY = s.twdAmount != null ? y + settleRowH / 2 - 9 : y + settleRowH / 2;
       let cx = SIDE_PAD + 24;
-      cx = drawSettleChip(ctx, cx, cy, s.from, '#FBE3CF', '#C4703A');
+      cx = drawSettleChip(ctx, cx, rowCenterY, s.from, '#FBE3CF', '#C4703A');
 
       ctx.strokeStyle = '#5FBFA8'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(cx + 6, cy); ctx.lineTo(cx + 40, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 6, rowCenterY); ctx.lineTo(cx + 40, rowCenterY); ctx.stroke();
       ctx.fillStyle = '#5FBFA8';
-      ctx.beginPath(); ctx.moveTo(cx + 40, cy - 6); ctx.lineTo(cx + 40, cy + 6); ctx.lineTo(cx + 49, cy); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx + 40, rowCenterY - 6); ctx.lineTo(cx + 40, rowCenterY + 6); ctx.lineTo(cx + 49, rowCenterY); ctx.closePath(); ctx.fill();
       cx += 55;
 
-      cx = drawSettleChip(ctx, cx, cy, s.to, '#DCEFE6', '#3F8B76');
+      cx = drawSettleChip(ctx, cx, rowCenterY, s.to, '#DCEFE6', '#3F8B76');
 
       const amt = `${Number(s.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${s.currency || cur}`;
       ctx.font = `900 17px ${FONT}`;
       const pillW = ctx.measureText(amt).width + 36;
       const pillH = 40;
       const pillX = SIDE_PAD + CONTENT_W - 24 - pillW;
-      const pillY = cy - pillH / 2;
+      const pillY = rowCenterY - pillH / 2;
       roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
       ctx.fillStyle = '#5FBFA8'; ctx.fill();
       ctx.fillStyle = '#FFFDF8'; ctx.textAlign = 'center';
       ctx.fillText(amt, pillX + pillW / 2, pillY + pillH / 2 + 6);
+      if (s.twdAmount != null) {
+        ctx.fillStyle = '#B0A093'; ctx.font = `700 11.5px ${FONT}`;
+        ctx.fillText(`≈ ${Number(s.twdAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })} TWD`, pillX + pillW / 2, pillY + pillH + 14);
+      }
       ctx.textAlign = 'left';
 
       y += settleRowH + rowGap;

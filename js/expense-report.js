@@ -3,7 +3,7 @@
 // 資料轉成這份樣板要的 ReportData 格式。
 
 import { ICONS, iconKeyFor } from './category-icons.js';
-import { convertToBase } from './currency.js';
+import { convertToBase, convertToTWD, baseAmountToTWD } from './currency.js';
 
 function _esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -38,8 +38,11 @@ export function renderExpenseReport(data) {
             '<span>' + _esc(e.payer) + ' 付款</span>' +
           '</div>' +
         '</div>' +
-        '<div style="font-size:19px; font-weight:900; white-space:nowrap;">' + _num(e.amount) +
-          '<span style="font-size:12px; color:#A08C7D; margin-left:4px;">' + _esc(e.currency || cur) + '</span></div>' +
+        '<div style="text-align:right;">' +
+          '<div style="font-size:19px; font-weight:900; white-space:nowrap;">' + _num(e.amount) +
+            '<span style="font-size:12px; color:#A08C7D; margin-left:4px;">' + _esc(e.currency || cur) + '</span></div>' +
+          (e.twdAmount != null ? '<div style="font-size:11.5px; color:#B0A093; font-weight:700; white-space:nowrap;">≈ ' + _num(e.twdAmount) + ' TWD</div>' : '') +
+        '</div>' +
       '</div>';
   }).join('');
 
@@ -58,7 +61,10 @@ export function renderExpenseReport(data) {
           '<div style="width:38px; height:38px; border-radius:999px; background:#DCEFE6; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:900; color:#3F8B76;">' + _esc(String(s.to || '').slice(-1)) + '</div>' +
           '<div style="font-size:16px; font-weight:900;">' + _esc(s.to) + '</div>' +
         '</div>' +
-        '<div style="margin-left:auto; background:#5FBFA8; color:#FFFDF8; border-radius:999px; padding:9px 18px; font-size:17px; font-weight:900; box-shadow:0 3px 0 #4AA48E; white-space:nowrap;">' + _num(s.amount) + ' ' + _esc(s.currency || cur) + '</div>' +
+        '<div style="margin-left:auto; text-align:right;">' +
+          '<div style="background:#5FBFA8; color:#FFFDF8; border-radius:999px; padding:9px 18px; font-size:17px; font-weight:900; box-shadow:0 3px 0 #4AA48E; white-space:nowrap; display:inline-block;">' + _num(s.amount) + ' ' + _esc(s.currency || cur) + '</div>' +
+          (s.twdAmount != null ? '<div style="font-size:11.5px; color:#B0A093; font-weight:700; margin-top:4px;">≈ ' + _num(s.twdAmount) + ' TWD</div>' : '') +
+        '</div>' +
       '</div>';
   }).join('');
 
@@ -91,7 +97,9 @@ export function renderExpenseReport(data) {
         '<div style="flex:1.4; background:#F79256; border:2px solid #F79256; border-radius:20px; padding:16px 20px; display:flex; flex-direction:column; gap:6px; box-shadow:0 4px 0 #E0762F;">' +
           '<div style="font-size:12.5px; font-weight:700; color:#FFEBD9;">總花費</div>' +
           '<div style="font-size:22px; font-weight:900; color:#FFFDF8; line-height:1;">' + _num(total) +
-            '<span style="font-size:14px; margin-left:5px;">' + _esc(cur) + '</span></div></div>' +
+            '<span style="font-size:14px; margin-left:5px;">' + _esc(cur) + '</span></div>' +
+          (data.totalTwd != null ? '<div style="font-size:12px; color:#FFEBD9; font-weight:700;">≈ ' + _num(data.totalTwd) + ' TWD</div>' : '') +
+        '</div>' +
       '</div>' +
 
       '<div style="display:flex; flex-direction:column; gap:12px;">' +
@@ -124,11 +132,13 @@ export function renderExpenseReport(data) {
 export function buildReportData(trip, ratesCache, transactions) {
   const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
   const categoryOf = (id) => trip.categories.find((c) => c.id === id);
+  const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
 
   const total = trip.expenses.reduce(
     (sum, e) => sum + (convertToBase(e.amount, e.currency, trip.baseCurrency, ratesCache) || 0),
     0
   );
+  const totalTwd = needsTwd ? baseAmountToTWD(total, trip.baseCurrency, ratesCache) : null;
 
   const start = trip.startDate || '';
   const titleDate = start ? `${start.slice(0, 4)}/${Number(start.slice(5, 7))}` : '';
@@ -137,6 +147,7 @@ export function buildReportData(trip, ratesCache, transactions) {
     .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.createdAt || 0) - (b.createdAt || 0))
     .map((exp) => {
       const cat = categoryOf(exp.categoryId);
+      const showTwd = needsTwd && exp.currency.toUpperCase() !== 'TWD';
       return {
         date: exp.date || '',
         type: iconKeyFor(cat ? cat.id : 'other'),
@@ -144,6 +155,7 @@ export function buildReportData(trip, ratesCache, transactions) {
         title: exp.description || (cat ? cat.name : '未分類'),
         amount: exp.amount,
         currency: exp.currency,
+        twdAmount: showTwd ? convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache) : null,
         payer: memberName(exp.paidBy),
       };
     });
@@ -153,6 +165,7 @@ export function buildReportData(trip, ratesCache, transactions) {
     to: memberName(t.to),
     amount: t.amount,
     currency: trip.baseCurrency,
+    twdAmount: needsTwd ? baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache) : null,
   }));
 
   return {
@@ -161,6 +174,7 @@ export function buildReportData(trip, ratesCache, transactions) {
     endDate: trip.endDate,
     currency: trip.baseCurrency,
     total,
+    totalTwd,
     expenses,
     settlements,
   };
