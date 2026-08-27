@@ -12,8 +12,12 @@ function arcPath(cx, cy, r, startAngle, endAngle) {
   return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`;
 }
 
+function formatAmount(n) {
+  return Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
 // slices: [{ label, value, color }]
-export function renderPieChart(slices, { size = 220 } = {}) {
+export function renderPieChart(slices, { size = 220, currency = '' } = {}) {
   const total = slices.reduce((sum, s) => sum + s.value, 0);
   if (!total) return '<p class="empty-hint">尚無資料可顯示</p>';
 
@@ -26,7 +30,7 @@ export function renderPieChart(slices, { size = 220 } = {}) {
     .map((s) => {
       // 整圓（360 度）的弧線起訖點會重合變成看不見的形狀，改畫正圓
       const sweep = (s.value / total) * 360;
-      const title = `<title>${escapeXml(s.label)}: ${s.value.toFixed(2)}</title>`;
+      const title = `<title>${escapeXml(s.label)}: ${formatAmount(s.value)}${currency ? ' ' + escapeXml(currency) : ''}</title>`;
       if (nonZero.length === 1 || sweep >= 359.99) {
         return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${s.color}">${title}</circle>`;
       }
@@ -42,7 +46,7 @@ export function renderPieChart(slices, { size = 220 } = {}) {
       (s) => `<div class="legend-item">
         <span class="legend-dot" style="background:${s.color}"></span>
         <span class="legend-label">${escapeHtml(s.label)}</span>
-        <span class="legend-value">${((s.value / total) * 100).toFixed(1)}%</span>
+        <span class="legend-value">${formatAmount(s.value)}${currency ? ' ' + escapeHtml(currency) : ''} · ${((s.value / total) * 100).toFixed(1)}%</span>
       </div>`
     )
     .join('');
@@ -55,22 +59,27 @@ export function renderPieChart(slices, { size = 220 } = {}) {
 }
 
 // points: [{ label, value }]
-export function renderBarChart(points, { width = 480, height = 200, color = '#6366f1' } = {}) {
+export function renderBarChart(points, { width = 480, height = 200, color = '#6366f1', currency = '' } = {}) {
   if (!points.length) return '<p class="empty-hint">尚無資料可顯示</p>';
   const max = Math.max(...points.map((p) => p.value), 1);
   const padding = 24;
+  const topPadding = 18; // 幫長條上方的金額文字留空間
   const barGap = 6;
   const barWidth = Math.max(6, (width - padding) / points.length - barGap);
+  // 長條太窄時金額文字會互相重疊，這種情況只靠 <title> 滑鼠提示，不硬塞進圖裡
+  const showValueLabels = barWidth >= 16;
 
   const bars = points
     .map((p, idx) => {
-      const barHeight = (p.value / max) * (height - padding - 16);
+      const barHeight = (p.value / max) * (height - padding - topPadding);
       const x = padding + idx * (barWidth + barGap);
       const y = height - padding - barHeight;
+      const valueText = formatAmount(p.value);
       return `<g>
         <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" fill="${color}" rx="3">
-          <title>${escapeXml(p.label)}: ${p.value.toFixed(2)}</title>
+          <title>${escapeXml(p.label)}: ${valueText}${currency ? ' ' + escapeXml(currency) : ''}</title>
         </rect>
+        ${showValueLabels ? `<text x="${x + barWidth / 2}" y="${Math.max(10, y - 4)}" font-size="9" text-anchor="middle" fill="var(--text-muted)">${escapeXml(valueText)}</text>` : ''}
       </g>`;
     })
     .join('');
