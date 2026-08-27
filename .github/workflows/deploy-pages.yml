@@ -22,6 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Cache-bust module imports and asset links
+        run: |
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          sed -i -E "s#(src=\"js/app\.js)\"#\1?v=${SHA_SHORT}\"#" index.html
+          sed -i -E "s#(href=\"css/style\.css)\"#\1?v=${SHA_SHORT}\"#" index.html
+          find js -name '*.js' -exec sed -i -E "s#(from '\./[A-Za-z0-9_-]+\.js)'#\1?v=${SHA_SHORT}'#g" {} +
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
