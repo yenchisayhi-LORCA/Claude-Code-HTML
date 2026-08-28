@@ -120,6 +120,13 @@
           <button id="btn-cal-next" class="btn btn-ghost" type="button">下個月 ›</button>
         </div>
         <div id="calendar-wrap"></div>
+
+        <h3><svg class="heading-icon"><use href="#ic-bed"></use></svg>睡眠紀錄</h3>
+        <p class="hint">點日期輸入睡覺時間，越早睡星星越多（10 點 1 顆星，每提早 30 分鐘再加 1 顆），送出立即入帳不用審核</p>
+        <div id="sleep-calendar-wrap"></div>
+
+        <h3>星星歷程</h3>
+        <div id="sleep-history-list" class="simple-list"></div>
       </section>
 
       <section id="tab-settings" class="tab-panel" hidden>
@@ -247,6 +254,22 @@
         <button type="button" id="btn-exercise-approve" class="btn btn-primary">核准入帳</button>
       </div>
     </div>
+  </dialog>
+
+  <!-- 睡眠回報 -->
+  <dialog id="dialog-sleep">
+    <form id="form-sleep" method="dialog" class="dialog-form">
+      <h2><svg class="heading-icon"><use href="#ic-bed"></use></svg>睡眠回報</h2>
+      <input type="hidden" id="sleep-date-input" />
+      <div id="sleep-date-label" class="hint"></div>
+      <label>睡覺時間 <input type="time" id="sleep-time-value-input" required /></label>
+      <div id="sleep-suggest-hint" class="hint"></div>
+      <div class="dialog-actions">
+        <button type="button" id="btn-sleep-clear" class="btn btn-danger" hidden>清除這天的紀錄</button>
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">送出，立即入帳</button>
+      </div>
+    </form>
   </dialog>
 
   <!-- 新增/編輯獎狀門檻 -->

@@ -6,6 +6,7 @@ import {
   getState,
   persist,
   pushLedgerEntryRaw,
+  removeLedgerEntryRaw,
   getKid,
   getCertificateTiers,
   addAwardedCertificate,
@@ -23,6 +24,12 @@ export function getBalance(kidId) {
   return getState()
     .ledger.filter((e) => e.kidId === kidId)
     .reduce((sum, e) => sum + e.amount, 0);
+}
+
+// 修正已入帳的紀錄用（例如睡眠回報同一天重新輸入）：直接移除，不做任何衍生判斷。
+// 呼叫端接著通常會再呼叫 addLedgerEntry() 補一筆新的，讓門檻/儲蓄挑戰判斷照常跑一次。
+export function removeLedgerEntry(id) {
+  removeLedgerEntryRaw(id);
 }
 
 // 內部用：只把帳本紀錄寫進去，不 persist、不做任何衍生判斷（給遞迴呼叫用，避免重複觸發）
