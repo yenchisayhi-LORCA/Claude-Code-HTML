@@ -13,7 +13,6 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 let activeRates = null; // 目前旅程基準貨幣的即時匯率快取
-let pendingReceipt = null; // 新增/編輯花費時，暫存尚未儲存的收據 base64
 let currentFilterCategory = '';
 let pendingAvatarMemberId = null; // 目前正在上傳大頭貼的成員 id（旅程內的成員）
 let pendingAvatarPersonId = null; // 目前正在上傳大頭貼的成員 id（跨旅程名單）
@@ -219,51 +218,12 @@ function renderTripView(trip) {
     ? `每人平均 ${Math.round(total / trip.members.length).toLocaleString('en-US')} ${trip.baseCurrency}`
     : '';
 
-  renderTripCover(trip);
   renderBudgetBar(trip);
   renderCategoryFilterOptions(trip);
   renderExpenseList(trip);
   renderSplitTab(trip);
   renderStatsTab(trip);
   renderMembersTab(trip);
-}
-
-function renderTripCover(trip) {
-  const wrap = $('#trip-cover-wrap');
-  if (trip.coverPhoto) {
-    // 沒有手動調整過的話，預設偏上方一點（大部分旅遊合照的人臉都在上半部，比正中間更常剛好）
-    const position = trip.coverPhotoPosition ?? 25;
-    wrap.innerHTML = `
-      <div class="trip-cover-frame">
-        <button type="button" class="trip-cover-btn" data-action="change-cover" title="更換封面照片">
-          <img class="trip-cover-img" src="${trip.coverPhoto}" style="object-position: center ${position}%;" alt="" />
-        </button>
-        <button type="button" class="trip-cover-adjust" data-action="toggle-position-slider" title="調整照片位置">⇕</button>
-        <button type="button" class="trip-cover-remove" data-action="remove-cover" title="移除封面照片">✕</button>
-      </div>
-      <div class="trip-cover-position-control">
-        <span title="上方">🔼</span>
-        <input type="range" id="trip-cover-position-input" min="0" max="100" value="${position}" title="拖曳調整照片上下位置" />
-        <span title="下方">🔽</span>
-      </div>`;
-    // 這個滑桿不常用，平常不用一直佔畫面空間：一段時間沒動作就自動收起來，
-    // 點旁邊的「⇕」再叫出來就好（拖曳中會不斷重設這個計時器，不會拖到一半自己收起來）。
-    scheduleCoverPositionAutoHide();
-  } else {
-    wrap.innerHTML = `
-      <button type="button" class="trip-cover-btn" data-action="change-cover" title="上傳封面照片">
-        <div class="trip-cover-placeholder"><span class="icon">📷</span><span>上傳這趟旅程的封面照片</span></div>
-      </button>`;
-  }
-}
-
-let coverPositionHideTimer = null;
-function scheduleCoverPositionAutoHide() {
-  clearTimeout(coverPositionHideTimer);
-  coverPositionHideTimer = setTimeout(() => {
-    const control = $('.trip-cover-position-control');
-    if (control) control.classList.add('hidden');
-  }, 2500);
 }
 
 function totalSpent(trip) {
@@ -540,10 +500,6 @@ function updateConvertedHint() {
   hint.textContent = converted !== null ? `≈ ${converted.toFixed(2)} ${trip.baseCurrency}（依即時匯率換算）` : '目前查無此幣別的匯率資料';
 }
 
-function updateReceiptPreview() {
-  $('#receipt-preview').innerHTML = pendingReceipt ? `<img src="${pendingReceipt}" alt="收據預覽" />` : '';
-}
-
 // 新增/編輯花費對話框的分類選擇：原生 <select> 沒辦法顯示彩色圖示徽章，改用一排可點的圓角按鈕，
 // 選到的分類寫進隱藏欄位 #expense-category-input，跟表單其他欄位一樣直接讀 .value 就好。
 function renderExpenseCategoryPicker(trip, selectedId) {
@@ -563,8 +519,6 @@ function openExpenseDialog(expense) {
     alert('請先在「成員與分類」新增至少一位成員，才能記錄花費。');
     return;
   }
-  pendingReceipt = expense ? expense.receipt || null : null;
-
   $('#expense-dialog-title').textContent = expense ? '編輯花費' : '新增花費';
   $('#expense-id').value = expense ? expense.id : '';
   $('#expense-date-input').value = expense ? expense.date : new Date().toISOString().slice(0, 10);
@@ -581,23 +535,9 @@ function openExpenseDialog(expense) {
   });
 
   renderSplitMembersList(trip, expense);
-  updateReceiptPreview();
   updateConvertedHint();
-  $('#expense-receipt-input').value = '';
 
   $('#dialog-expense').showModal();
-}
-
-async function handleReceiptChange(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    pendingReceipt = await compressImage(file);
-    updateReceiptPreview();
-  } catch (err) {
-    console.error(err);
-    alert('收據照片讀取失敗，請換一張圖片再試。');
-  }
 }
 
 function handleExpenseSubmit(e) {
@@ -633,6 +573,8 @@ function handleExpenseSubmit(e) {
     }
   }
 
+  // 收據照片上傳功能已移除，編輯既有花費時保留原本可能已經存在的收據，不會因為拿掉上傳欄位就洗掉舊資料
+  const existing = id ? trip.expenses.find((exp) => exp.id === id) : null;
   const payload = {
     date: $('#expense-date-input').value,
     categoryId: $('#expense-category-input').value,
@@ -643,7 +585,7 @@ function handleExpenseSubmit(e) {
     splitType,
     splitMembers,
     splitCustom,
-    receipt: pendingReceipt,
+    receipt: existing ? existing.receipt || null : null,
   };
 
   if (id) store.updateExpense(trip.id, id, payload);
@@ -686,50 +628,6 @@ function wireGlobalEvents() {
     renderTripView(trip);
   });
 
-  $('#trip-cover-wrap').addEventListener('click', (e) => {
-    const removeBtn = e.target.closest('[data-action="remove-cover"]');
-    if (removeBtn) {
-      const trip = store.getActiveTrip();
-      store.updateTrip(trip.id, { coverPhoto: null, coverPhotoPosition: null });
-      refreshAll();
-      return;
-    }
-    if (e.target.closest('[data-action="toggle-position-slider"]')) {
-      const control = $('.trip-cover-position-control');
-      if (control) control.classList.remove('hidden');
-      scheduleCoverPositionAutoHide();
-      return;
-    }
-    if (e.target.closest('[data-action="change-cover"]')) {
-      $('#trip-cover-input').click();
-    }
-  });
-  $('#trip-cover-wrap').addEventListener('input', (e) => {
-    if (e.target.id !== 'trip-cover-position-input') return;
-    const img = $('.trip-cover-img');
-    if (img) img.style.objectPosition = `center ${e.target.value}%`;
-    scheduleCoverPositionAutoHide(); // 拖曳中持續重設計時器，不會拖到一半自己收起來
-  });
-  $('#trip-cover-wrap').addEventListener('change', (e) => {
-    if (e.target.id !== 'trip-cover-position-input') return;
-    const trip = store.getActiveTrip();
-    store.updateTrip(trip.id, { coverPhotoPosition: Number(e.target.value) });
-  });
-  $('#trip-cover-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    const trip = store.getActiveTrip();
-    try {
-      const dataUrl = await compressImage(file, { maxWidth: 1000, quality: 0.65 });
-      // 換照片時重設位置：舊照片手動調整過的上下位置套用在新照片上通常是錯的
-      store.updateTrip(trip.id, { coverPhoto: dataUrl, coverPhotoPosition: null });
-      refreshAll();
-    } catch (err) {
-      console.error(err);
-      alert('封面照片讀取失敗，請換一張圖片再試。');
-    }
-  });
 
   $('#filter-category').addEventListener('change', (e) => {
     currentFilterCategory = e.target.value;
@@ -745,7 +643,6 @@ function wireGlobalEvents() {
   });
   $('#expense-amount-input').addEventListener('input', updateConvertedHint);
   $('#expense-currency-input').addEventListener('change', updateConvertedHint);
-  $('#expense-receipt-input').addEventListener('change', handleReceiptChange);
   $$('input[name="split-type"]').forEach((r) =>
     r.addEventListener('change', () => {
       const trip = store.getActiveTrip();
