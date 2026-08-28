@@ -5,7 +5,7 @@
 import * as storage from './storage.js';
 import { getBalance, getStreak, getMonthCalendar, todayStr } from './ledger.js';
 import { completeTask, hasCompletedTaskToday, manualAdjust } from './tasks.js';
-import { submitExercise, approveExercise, rejectExercise } from './exercise.js';
+import { computeSuggestedStars, submitExercise, approveExercise, rejectExercise } from './exercise.js';
 import { canRedeem, redeemShopItem } from './shop.js';
 import { renderCertificateCanvas, downloadCertificatePng, printCertificateImage } from './certificate.js';
 import { formatMonthLabel, renderCalendarGrid, renderStreakBadge } from './calendar.js';
@@ -165,7 +165,7 @@ function renderExerciseTab(kid) {
   const prevValue = select.value;
   select.innerHTML = formulas.map((f) => `<option value="${f.id}">${esc(f.label)}</option>`).join('');
   if (formulas.some((f) => f.id === prevValue)) select.value = prevValue;
-  renderExerciseTierOptions();
+  updateExerciseSuggestHint();
 
   const pending = storage.getExerciseSubmissions(kid.id).filter((s) => s.status === 'pending');
   document.getElementById('exercise-pending-list').innerHTML =
@@ -190,32 +190,12 @@ function renderExerciseHistory(kid) {
       .join('') || '<li class="hint">還沒有回報歷史</li>';
 }
 
-function currentExerciseFormula() {
-  const select = document.getElementById('exercise-kind-input');
-  return storage.getExerciseFormulas().find((f) => f.id === select.value);
-}
-
-function renderExerciseTierOptions() {
-  const formula = currentExerciseFormula();
-  const tierSelect = document.getElementById('exercise-tier-input');
-  const tiers = formula ? formula.tiers : [];
-  tierSelect.innerHTML = tiers.map((t, i) => `<option value="${i}">${t.value}（${t.stars} 顆星）</option>`).join('');
-  document.getElementById('form-exercise-submit').querySelector('button[type="submit"]').disabled = tiers.length === 0;
-  updateExerciseSuggestHint();
-}
-
 function updateExerciseSuggestHint() {
-  const formula = currentExerciseFormula();
-  const tiers = formula ? formula.tiers : [];
+  const select = document.getElementById('exercise-kind-input');
+  const formula = storage.getExerciseFormulas().find((f) => f.id === select.value);
+  const value = Number(document.getElementById('exercise-value-input').value) || 0;
   const hint = document.getElementById('exercise-suggest-hint');
-  if (!formula) {
-    hint.textContent = '';
-  } else if (tiers.length === 0) {
-    hint.textContent = '家長還沒設定這個項目的選項';
-  } else {
-    const tier = tiers[Number(document.getElementById('exercise-tier-input').value) || 0];
-    hint.textContent = `預估可得 ${tier.stars} 顆星（家長審核後才會入帳）`;
-  }
+  hint.textContent = formula ? `預估可得 ${computeSuggestedStars(formula, value)} 顆星（家長審核後才會入帳）` : '';
 }
 
 function openExerciseReview(submissionId) {
@@ -414,7 +394,7 @@ function renderSettingsFormulaList() {
   document.getElementById('settings-formula-list').innerHTML =
     list
       .map(
-        (f) => `<li><div class="item-main">${iconChip(EXERCISE_ICON, `sform-${f.id}`, { size: 40, iconSize: 22 })}${esc(f.label)} <span class="hint">(${esc(f.kind)})・${f.tiers.length ? f.tiers.map((t) => `${t.value}→${t.stars}顆`).join('、') : '還沒設定選項'}</span></div>
+        (f) => `<li><div class="item-main">${iconChip(EXERCISE_ICON, `sform-${f.id}`, { size: 40, iconSize: 22 })}${esc(f.label)} <span class="hint">(${esc(f.kind)})・每${f.unitsPerStar}=1顆</span></div>
           ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', f.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有運動換算公式</li>';
@@ -538,27 +518,12 @@ function openTaskDialog(task = null) {
 
 // ================================================================== 運動換算公式 新增/編輯 dialog
 
-function addFormulaTierRow(tier) {
-  const row = document.createElement('div');
-  row.className = 'tier-row';
-  row.dataset.tierRow = '';
-  row.innerHTML = `
-    <input type="number" class="tier-value-input" min="1" step="1" placeholder="數量，例如 9000" value="${tier ? tier.value : ''}" required />
-    <span class="tier-arrow">→</span>
-    <input type="number" class="tier-stars-input" min="0" step="1" placeholder="星星數，例如 1" value="${tier ? tier.stars : ''}" required />
-    <button type="button" class="btn-remove-tier" aria-label="刪除這個選項">✕</button>
-  `;
-  document.getElementById('formula-tiers-list').appendChild(row);
-}
-
 function openFormulaDialog(formula = null) {
   document.getElementById('formula-dialog-title').textContent = formula ? '編輯運動換算公式' : '新增運動換算公式';
   document.getElementById('formula-id-input').value = formula ? formula.id : '';
   document.getElementById('formula-kind-input').value = formula ? formula.kind : '';
   document.getElementById('formula-label-input').value = formula ? formula.label : '';
-  document.getElementById('formula-tiers-list').innerHTML = '';
-  const tiers = formula && formula.tiers.length > 0 ? formula.tiers : [null];
-  tiers.forEach(addFormulaTierRow);
+  document.getElementById('formula-units-input').value = formula ? formula.unitsPerStar : '';
   document.getElementById('dialog-formula').showModal();
 }
 
@@ -719,17 +684,18 @@ function initEventListeners() {
   });
 
   // 運動回報
-  document.getElementById('exercise-kind-input').addEventListener('change', renderExerciseTierOptions);
-  document.getElementById('exercise-tier-input').addEventListener('change', updateExerciseSuggestHint);
+  document.getElementById('exercise-kind-input').addEventListener('change', updateExerciseSuggestHint);
+  document.getElementById('exercise-value-input').addEventListener('input', updateExerciseSuggestHint);
 
   document.getElementById('form-exercise-submit').addEventListener('submit', (e) => {
     e.preventDefault();
-    const formula = currentExerciseFormula();
-    const tier = formula ? formula.tiers[Number(document.getElementById('exercise-tier-input').value) || 0] : null;
+    const formula = storage.getExerciseFormulas().find((f) => f.id === document.getElementById('exercise-kind-input').value);
+    const value = Number(document.getElementById('exercise-value-input').value);
     const kid = getActiveKid();
-    if (!formula || !kid || !tier) return;
-    submitExercise(kid.id, formula, tier);
-    renderExerciseTierOptions();
+    if (!formula || !kid || !(value >= 0)) return;
+    submitExercise(kid.id, formula, value);
+    document.getElementById('exercise-value-input').value = '';
+    updateExerciseSuggestHint();
   });
 
   document.getElementById('exercise-pending-list').addEventListener('click', (e) => {
@@ -813,23 +779,15 @@ function initEventListeners() {
 
   // 家長設定：運動換算公式
   document.getElementById('btn-add-formula').addEventListener('click', withPinGate(() => openFormulaDialog(null)));
-  document.getElementById('btn-add-formula-tier').addEventListener('click', () => addFormulaTierRow(null));
-  document.getElementById('formula-tiers-list').addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-remove-tier');
-    if (btn) btn.closest('[data-tier-row]').remove();
-  });
   document.getElementById('form-formula').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('formula-id-input').value;
     const kind = document.getElementById('formula-kind-input').value.trim();
     const label = document.getElementById('formula-label-input').value.trim();
-    const tiers = Array.from(document.querySelectorAll('#formula-tiers-list [data-tier-row]')).map((row) => ({
-      value: Number(row.querySelector('.tier-value-input').value),
-      stars: Number(row.querySelector('.tier-stars-input').value),
-    }));
-    if (!kind || !label || tiers.length === 0) return;
-    if (id) storage.updateExerciseFormula(id, { kind, label, tiers });
-    else storage.addExerciseFormula({ kind, label, tiers });
+    const unitsPerStar = Number(document.getElementById('formula-units-input').value);
+    if (!kind || !label || !unitsPerStar) return;
+    if (id) storage.updateExerciseFormula(id, { kind, label, unitsPerStar });
+    else storage.addExerciseFormula({ kind, label, unitsPerStar });
     document.getElementById('dialog-formula').close();
   });
   document.getElementById('settings-formula-list').addEventListener('click', (e) => {

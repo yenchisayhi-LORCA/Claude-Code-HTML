@@ -86,9 +86,7 @@
               <label>運動項目
                 <select id="exercise-kind-input"></select>
               </label>
-              <label>回報的量
-                <select id="exercise-tier-input"></select>
-              </label>
+              <label>數量 <input type="number" id="exercise-value-input" min="0" step="1" required /></label>
               <div id="exercise-suggest-hint" class="hint"></div>
               <button type="submit" class="btn btn-primary">送出，等家長審核</button>
             </form>
@@ -229,9 +227,7 @@
       <input type="hidden" id="formula-id-input" />
       <label>項目代碼（英文，例如 steps） <input type="text" id="formula-kind-input" required placeholder="steps" /></label>
       <label>顯示名稱 <input type="text" id="formula-label-input" required placeholder="走路步數" /></label>
-      <label>選項（達到這個數量，就給這麼多顆星星）</label>
-      <div id="formula-tiers-list"></div>
-      <button type="button" id="btn-add-formula-tier" class="btn btn-secondary">＋ 新增選項</button>
+      <label>換算比例（多少單位 = 1 顆星，無條件捨去） <input type="number" id="formula-units-input" min="1" step="1" required placeholder="1000" /></label>
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>取消</button>
         <button type="submit" class="btn btn-primary">儲存</button>

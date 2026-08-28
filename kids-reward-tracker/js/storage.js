@@ -42,9 +42,6 @@ function sanitize(s) {
   if (!Array.isArray(s.taskTemplates)) s.taskTemplates = [];
   if (!Array.isArray(s.ledger)) s.ledger = [];
   if (!Array.isArray(s.exerciseFormulas)) s.exerciseFormulas = [];
-  for (const f of s.exerciseFormulas) {
-    if (!Array.isArray(f.tiers)) f.tiers = [];
-  }
   if (!Array.isArray(s.exerciseSubmissions)) s.exerciseSubmissions = [];
   if (!Array.isArray(s.certificateTiers)) s.certificateTiers = [];
   if (!Array.isArray(s.awardedCertificates)) s.awardedCertificates = [];
@@ -178,15 +175,8 @@ export function getExerciseFormulas() {
   return state.exerciseFormulas;
 }
 
-function normalizeTiers(tiers) {
-  return (tiers || [])
-    .map((t) => ({ value: Number(t.value), stars: Number(t.stars) }))
-    .filter((t) => t.value > 0 && t.stars >= 0)
-    .sort((a, b) => a.value - b.value);
-}
-
-export function addExerciseFormula({ kind, label, tiers }) {
-  const f = { id: uid(), kind: kind.trim(), label: label.trim(), tiers: normalizeTiers(tiers) };
+export function addExerciseFormula({ kind, label, unitsPerStar }) {
+  const f = { id: uid(), kind: kind.trim(), label: label.trim(), unitsPerStar: Number(unitsPerStar) };
   state.exerciseFormulas.push(f);
   persist();
   return f;
@@ -196,7 +186,6 @@ export function updateExerciseFormula(id, patch) {
   const f = state.exerciseFormulas.find((x) => x.id === id);
   if (!f) return;
   Object.assign(f, patch);
-  if (patch.tiers) f.tiers = normalizeTiers(patch.tiers);
   persist();
 }
 
