@@ -13,6 +13,7 @@ import { celebrate } from './confetti.js';
 import { initPin, withPinGate } from './pin.js';
 import { compressImage } from './image.js';
 import { TASK_ICONS, SHOP_ICONS, EXERCISE_ICONS } from './icons.js';
+import { initCloudSync, requestSignInLink, signOutOfSync } from './cloud-sync.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -29,6 +30,7 @@ let certQueue = [];
 let certDialogOpen = false;
 let reviewingSubmissionId = null;
 let currentCertCanvas = null;
+let syncStatus = { available: false };
 
 function getActiveKid() {
   const s = storage.getState();
@@ -59,6 +61,23 @@ function renderKidSwitcher(kids) {
         return `<button type="button" class="kid-tab ${k.id === activeId ? 'active' : ''}" data-kid-id="${k.id}">${avatar}<span><div>${esc(k.name)}</div><div class="kid-tab-balance">⭐ ${balance}</div></span></button>`;
       })
       .join('') + `<button type="button" class="btn-add-kid" id="btn-switcher-add-kid">➕</button>`;
+}
+
+function renderSyncArea() {
+  const el = document.getElementById('sync-area');
+  if (!syncStatus || !syncStatus.available) {
+    el.innerHTML = '';
+    return;
+  }
+  if (!syncStatus.signedIn) {
+    el.innerHTML = `<button type="button" id="btn-sync-login" class="btn btn-ghost">☁️ 登入同步</button>`;
+    if (syncStatus.error) el.innerHTML += `<span class="sync-status error">${esc(syncStatus.error)}</span>`;
+    return;
+  }
+  const statusLabel = syncStatus.error
+    ? `<span class="sync-status error">${esc(syncStatus.error)}</span>`
+    : `<span class="sync-status ${syncStatus.syncing ? '' : 'ok'}">${syncStatus.syncing ? '同步中…' : '☁️ 已同步'}</span>`;
+  el.innerHTML = `<span class="sync-user"><span class="sync-email">${esc(syncStatus.user?.email || '')}</span>${statusLabel}<button type="button" id="btn-sync-logout" class="btn btn-ghost">登出</button></span>`;
 }
 
 function renderBalanceHero(kid) {
@@ -356,6 +375,7 @@ function renderSettingsTab() {
 // ================================================================== 主渲染入口
 
 function render() {
+  renderSyncArea();
   const kids = storage.getKids();
   renderKidSwitcher(kids);
   const emptyState = document.getElementById('empty-state');
@@ -485,6 +505,30 @@ function initEventListeners() {
 
   document.getElementById('dialog-cert-preview').addEventListener('close', () => {
     if (certDialogOpen) showNextCertFromQueue();
+  });
+
+  // 雲端同步
+  document.getElementById('sync-area').addEventListener('click', (e) => {
+    if (e.target.closest('#btn-sync-login')) {
+      document.getElementById('signin-email-status').textContent = '';
+      document.getElementById('form-email-signin').reset();
+      document.getElementById('dialog-email-signin').showModal();
+    }
+    if (e.target.closest('#btn-sync-logout')) {
+      signOutOfSync();
+    }
+  });
+  document.getElementById('form-email-signin').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('signin-email-input').value.trim();
+    const statusEl = document.getElementById('signin-email-status');
+    if (!email) return;
+    try {
+      await requestSignInLink(email);
+      statusEl.textContent = `已寄出登入連結到 ${email}，去信箱點連結完成登入（這個分頁不用關）。`;
+    } catch (err) {
+      statusEl.textContent = `寄送失敗：${err.code || err.message}`;
+    }
   });
 
   // 小孩切換器
@@ -759,6 +803,14 @@ initPin();
 initEventListeners();
 storage.subscribe(render);
 render();
+
+initCloudSync({
+  onRemoteChange: render,
+  onStatusChange: (status) => {
+    syncStatus = status;
+    renderSyncArea();
+  },
+});
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});

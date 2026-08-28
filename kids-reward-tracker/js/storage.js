@@ -77,6 +77,20 @@ export function persist() {
   notify();
 }
 
+// ---------------------------------------------------------------- 多裝置同步（選用）
+
+// 這裡沒有任何「只存在本機、不用同步」的欄位（不像旅遊記帳系統的 ratesCache 那樣），
+// 所以整個 state 就是可同步的內容。
+export function getSyncableState() {
+  return state;
+}
+
+// 用雲端資料整批覆蓋本機狀態（cloud-sync.js 收到遠端快照時呼叫）。
+export function applySyncedState(remote) {
+  state = sanitize(remote);
+  persist();
+}
+
 // ---------------------------------------------------------------- 小孩
 
 export function getKids() {
