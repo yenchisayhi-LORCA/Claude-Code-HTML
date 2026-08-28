@@ -89,10 +89,17 @@ function wireBackupRestoreLink() {
     if (!confirm(`確定要還原成被覆蓋前的本機資料嗎？（裡面有 ${count} 趟旅程）\n\n這會覆蓋掉你「現在」看到的旅程資料，改回覆蓋前的版本。`)) return;
     store.restoreLocalBackup();
     refreshAll();
+    // restoreLocalBackup() 還原後會把備份刪掉（用過即丟，避免使用者搞不清楚狀態、對著同一份
+    // 舊備份重複按），但 refreshAll() 只重繪旅程本身的畫面，不會重新畫這個同步狀態列——如果不
+    // 補這一行，按鈕會一直留在畫面上，讓使用者誤以為「還原沒有真的生效」而重複點擊。
+    renderSyncArea(lastSyncStatus);
   });
 }
 
+let lastSyncStatus = { signedIn: false, available: false };
+
 function renderSyncArea(status) {
+  lastSyncStatus = status;
   const el = $('#sync-area');
   const restoreLink = renderBackupRestoreLink();
   if (!status.available) {

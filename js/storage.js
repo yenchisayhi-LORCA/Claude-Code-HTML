@@ -98,7 +98,11 @@ export function getLocalBackup() {
   }
 }
 
-// 把備份的內容還原成目前的本機資料（不會自動刪掉備份本身，避免還原後手滑又被蓋一次就真的找不回來）
+// 把備份的內容還原成目前的本機資料。還原後就把這份備份刪掉：一開始設計成「用過也留著」是
+// 想避免使用者還原後手滑又被蓋一次、備份也跟著不見，但實際使用下來發現這個按鈕一直留在畫面上
+// 反而更容易造成誤會——使用者搞不清楚「按鈕還在＝還沒還原成功」還是「按鈕還在＝可以重複按」，
+// 結果對著同一份舊備份重複按下去，把還原之後才新增的旅程又蓋掉一次。改成用過就刪，真的需要
+// 再救援時，下一次任何一次「即將覆蓋本機資料」的同步都會重新產生一份最新的備份，不會少這個保護。
 export function restoreLocalBackup() {
   const backup = getLocalBackup();
   if (!backup) return false;
@@ -106,6 +110,11 @@ export function restoreLocalBackup() {
   state.trips = backup.trips || {};
   state.people = backup.people || [];
   persist();
+  try {
+    localStorage.removeItem(BACKUP_KEY);
+  } catch (err) {
+    console.error('清除本機備份失敗', err);
+  }
   return true;
 }
 
