@@ -214,7 +214,6 @@ async function handleSignedIn(firestoreModule) {
     await pushNow(firestoreModule, local);
   }
 
-  window.localStorage.setItem(HAS_SYNCED_BEFORE_KEY, '1');
   listenToCloud(firestoreModule);
 }
 
