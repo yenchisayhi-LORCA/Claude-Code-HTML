@@ -16,6 +16,7 @@
 <body>
   <header class="app-header">
     <div class="app-title"><span class="app-logo">🌟</span> 小孩獎勵紀錄本</div>
+    <div id="sync-area" class="sync-area"></div>
     <div id="kid-switcher" class="kid-switcher"></div>
   </header>
 
@@ -309,6 +310,20 @@
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>取消</button>
         <button type="submit" class="btn btn-primary">儲存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 登入同步（Email 連結登入） -->
+  <dialog id="dialog-email-signin">
+    <form id="form-email-signin" class="dialog-form">
+      <h2>☁️ 登入同步</h2>
+      <p class="hint">輸入 Email，我們會寄一封登入連結給你，點連結即可完成登入（不需要密碼）。手機、平板都用同一個 Email 登入，資料就會即時同步。</p>
+      <label>Email <input type="email" id="signin-email-input" required placeholder="you@example.com" /></label>
+      <div id="signin-email-status" class="hint"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-ghost" data-close>取消</button>
+        <button type="submit" class="btn btn-primary">傳送登入連結</button>
       </div>
     </form>
   </dialog>

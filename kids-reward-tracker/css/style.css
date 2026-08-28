@@ -54,6 +54,14 @@ h1, h2, h3 { font-weight: 800; }
 .app-title { font-size: 1.4rem; font-weight: 900; display: flex; align-items: center; gap: 8px; color: var(--pink-dark); }
 .app-logo { font-size: 1.6rem; }
 
+.sync-area { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.sync-area .btn { padding: 8px 14px; font-size: 0.85rem; }
+.sync-user { display: flex; align-items: center; gap: 8px; }
+.sync-email { color: var(--text-muted); font-weight: 700; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sync-status { color: var(--text-muted); }
+.sync-status.ok { color: var(--green-dark); font-weight: 700; }
+.sync-status.error { color: var(--danger-dark); font-weight: 700; }
+
 .kid-switcher { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 .kid-tab {
