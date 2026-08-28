@@ -186,9 +186,19 @@ async function handleSignedIn(firestoreModule) {
     const cloudJson = snap.data().stateJson;
     if (cloudJson === localJson) {
       lastSyncedJson = cloudJson;
-    } else if (!hasLocalKids || !justCompletedEmailLinkSignIn) {
-      // 本機沒有小孩資料、或這次只是重新整理（不是剛點信件連結登入）：直接信任本機、送出去，
-      // 不跳視窗冒險蓋掉使用者剛做的變更。理由跟根目錄旅遊記帳系統同一份檔案的說明一樣。
+    } else if (!hasLocalKids) {
+      // 本機根本沒有小孩資料（例如換了新裝置、清過瀏覽器資料）：雲端有資料的話直接拉下來用，
+      // 絕不能把這個「空的」本機狀態推上去蓋掉雲端——那樣會把小孩過去所有星星紀錄永久刪除，
+      // 是最嚴重的一種資料遺失。理由同根目錄旅遊記帳系統同一份檔案的說明。
+      const cloudData = JSON.parse(cloudJson);
+      if (Object.keys(cloudData.kids || {}).length > 0) {
+        applyRemoteJson(cloudJson);
+      } else {
+        await pushNow(firestoreModule, local);
+      }
+    } else if (!justCompletedEmailLinkSignIn) {
+      // 本機確實有小孩資料、這次只是重新整理（不是剛點信件連結登入）：直接信任本機、送出去，
+      // 不跳視窗冒險蓋掉使用者剛做的變更。理由同根目錄旅遊記帳系統同一份檔案的說明。
       await pushNow(firestoreModule, local);
     } else {
       const useCloud = confirm(
