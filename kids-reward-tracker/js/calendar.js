@@ -20,7 +20,8 @@ export function renderCalendarGrid(cells) {
       const classes = ['cal-cell'];
       if (cell.hasActivity) classes.push('cal-active');
       if (cell.dateStr === todayKey) classes.push('cal-today');
-      return `<div class="${classes.join(' ')}"><span class="cal-day-num">${cell.day}</span>${cell.hasActivity ? '<span class="cal-star">⭐</span>' : ''}</div>`;
+      const star = cell.hasActivity ? '<svg class="cal-star"><use href="#ic-star"></use></svg>' : '';
+      return `<div class="${classes.join(' ')}"><span class="cal-day-num">${cell.day}</span>${star}</div>`;
     })
     .join('');
 
@@ -29,6 +30,7 @@ export function renderCalendarGrid(cells) {
 
 export function renderStreakBadge(streak) {
   if (streak <= 0) return `<div class="streak-badge streak-none">還沒開始連續紀錄，今天完成一項任務開始吧！</div>`;
-  const flames = streak >= 30 ? '🔥🔥🔥' : streak >= 14 ? '🔥🔥' : '🔥';
-  return `<div class="streak-badge"><span class="streak-flames">${flames}</span> 連續 <strong>${streak}</strong> 天都有完成任務！</div>`;
+  const sparkleCount = streak >= 30 ? 3 : streak >= 14 ? 2 : 1;
+  const sparkles = '<svg class="streak-flames"><use href="#ic-sparkle"></use></svg>'.repeat(sparkleCount);
+  return `<div class="streak-badge">${sparkles} 連續 <strong>${streak}</strong> 天都有完成任務！</div>`;
 }
