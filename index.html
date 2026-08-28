@@ -10,10 +10,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="旅遊記帳" />
-<meta name="theme-color" content="#4f46e5" />
+<meta name="theme-color" content="#3B4CB8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <div class="bg-blobs" aria-hidden="true">
+    <div class="bg-blob bg-blob-teal-top"></div>
+    <div class="bg-blob bg-blob-red"></div>
+    <div class="bg-blob bg-blob-yellow"></div>
+    <div class="bg-blob bg-blob-teal-side"></div>
+  </div>
+
   <header class="app-header">
     <div class="app-title"><span class="app-logo-mark"><span class="app-logo-handle"></span><span class="app-logo-body">琪</span></span> 旅遊記帳</div>
     <div class="trip-switcher">
@@ -31,89 +41,101 @@
     </section>
 
     <section id="trip-view" hidden>
-      <div id="trip-cover-wrap" class="trip-cover-wrap"></div>
-      <input type="file" id="trip-cover-input" accept="image/*" hidden />
-      <div class="trip-infobar">
-        <div class="trip-infobar-main">
-          <h1 id="trip-name"></h1>
-          <div id="trip-meta" class="trip-meta"></div>
-        </div>
-        <div class="trip-infobar-actions">
-          <button id="btn-refresh-rates" class="btn btn-ghost" title="重新抓取即時匯率">🔄 匯率</button>
-          <button id="btn-edit-trip" class="btn btn-ghost">編輯旅程</button>
-          <button id="btn-delete-trip" class="btn btn-ghost btn-danger">刪除旅程</button>
-        </div>
+      <div class="trip-layout">
+        <aside class="trip-sidebar">
+          <div class="trip-cover-card">
+            <div id="trip-cover-wrap" class="trip-cover-wrap"></div>
+            <input type="file" id="trip-cover-input" accept="image/*" hidden />
+          </div>
+
+          <div class="trip-info-card">
+            <h1 id="trip-name"></h1>
+            <div id="trip-meta" class="trip-meta"></div>
+            <div class="trip-info-divider"></div>
+            <div class="trip-total-stat">
+              <span class="label">總支出</span>
+              <span id="trip-total-amount" class="amount"></span>
+              <span id="trip-avg-amount" class="sub"></span>
+            </div>
+            <div id="budget-bar-wrap"></div>
+            <div class="trip-infobar-actions">
+              <button id="btn-refresh-rates" class="btn btn-outline-teal" title="重新抓取即時匯率">🔄 匯率</button>
+              <button id="btn-edit-trip" class="btn btn-outline-primary">編輯旅程</button>
+              <button id="btn-delete-trip" class="btn btn-outline-danger">刪除旅程</button>
+            </div>
+          </div>
+        </aside>
+
+        <main class="trip-main-card">
+          <nav class="tabs" role="tablist">
+            <button class="tab-btn active" data-tab="expenses">支出紀錄</button>
+            <button class="tab-btn" data-tab="split">分帳結算</button>
+            <button class="tab-btn" data-tab="stats">統計圖表</button>
+            <button class="tab-btn" data-tab="members">成員與分類</button>
+            <button class="tab-btn" data-tab="export">匯出報表</button>
+          </nav>
+
+          <section id="tab-expenses" class="tab-panel">
+            <div class="panel-toolbar">
+              <select id="filter-category"><option value="">全部分類</option></select>
+              <button id="btn-add-expense" class="btn btn-primary">＋ 新增花費</button>
+            </div>
+            <div id="expense-list" class="expense-list"></div>
+          </section>
+
+          <section id="tab-split" class="tab-panel" hidden>
+            <div id="balances-summary" class="balances-summary"></div>
+            <h3>建議轉帳（最少次數結清）</h3>
+            <div id="settle-list" class="settle-list"></div>
+          </section>
+
+          <section id="tab-stats" class="tab-panel" hidden>
+            <h3>分類花費比例</h3>
+            <div id="chart-category"></div>
+            <h3>每日花費趨勢</h3>
+            <div id="chart-trend"></div>
+          </section>
+
+          <section id="tab-members" class="tab-panel" hidden>
+            <div class="grid-2">
+              <div>
+                <h3>成員</h3>
+                <ul id="member-list" class="simple-list"></ul>
+                <div id="member-quick-add" class="quick-add-list"></div>
+                <form id="form-add-member" class="inline-form">
+                  <input type="text" id="new-member-name" placeholder="新成員名稱" required />
+                  <button type="submit" class="btn btn-secondary">加入</button>
+                </form>
+              </div>
+              <div>
+                <h3>花費分類</h3>
+                <ul id="category-list" class="simple-list"></ul>
+                <form id="form-add-category" class="inline-form">
+                  <select id="new-category-icon" style="width:4.5em"></select>
+                  <input type="text" id="new-category-name" placeholder="新分類名稱" required />
+                  <button type="submit" class="btn btn-secondary">新增</button>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <input type="file" id="member-avatar-input" accept="image/*" hidden />
+
+          <section id="tab-export" class="tab-panel" hidden>
+            <p>匯出這趟旅程的完整花費紀錄：</p>
+            <div class="export-actions">
+              <button id="btn-export-card" class="btn btn-secondary">🖼️ 匯出圖卡</button>
+              <button id="btn-export-xlsx" class="btn btn-secondary">📊 下載 Excel (.xlsx)</button>
+              <button id="btn-export-csv" class="btn btn-secondary">⬇️ 下載 CSV</button>
+              <button id="btn-print-report" class="btn btn-secondary">🖨️ 列印 / 存成 PDF</button>
+            </div>
+            <p>只想給同行者看這一趟旅程，不想讓他們看到你其他旅程：</p>
+            <div class="export-actions">
+              <button id="btn-share-trip" class="btn btn-secondary">🔗 分享此旅程（唯讀）</button>
+            </div>
+          </section>
+        </main>
       </div>
-      <div id="budget-bar-wrap"></div>
-
-      <nav class="tabs" role="tablist">
-        <button class="tab-btn active" data-tab="expenses">支出紀錄</button>
-        <button class="tab-btn" data-tab="split">分帳結算</button>
-        <button class="tab-btn" data-tab="stats">統計圖表</button>
-        <button class="tab-btn" data-tab="members">成員與分類</button>
-        <button class="tab-btn" data-tab="export">匯出報表</button>
-      </nav>
-
-      <section id="tab-expenses" class="tab-panel">
-        <div class="panel-toolbar">
-          <select id="filter-category"><option value="">全部分類</option></select>
-          <button id="btn-add-expense" class="btn btn-primary">＋ 新增花費</button>
-        </div>
-        <div id="expense-list" class="expense-list"></div>
-      </section>
-
-      <section id="tab-split" class="tab-panel" hidden>
-        <div id="balances-summary" class="balances-summary"></div>
-        <h3>建議轉帳（最少次數結清）</h3>
-        <div id="settle-list" class="settle-list"></div>
-      </section>
-
-      <section id="tab-stats" class="tab-panel" hidden>
-        <h3>分類花費比例</h3>
-        <div id="chart-category"></div>
-        <h3>每日花費趨勢</h3>
-        <div id="chart-trend"></div>
-      </section>
-
-      <section id="tab-members" class="tab-panel" hidden>
-        <div class="grid-2">
-          <div>
-            <h3>成員</h3>
-            <ul id="member-list" class="simple-list"></ul>
-            <div id="member-quick-add" class="quick-add-list"></div>
-            <form id="form-add-member" class="inline-form">
-              <input type="text" id="new-member-name" placeholder="新成員名稱" required />
-              <button type="submit" class="btn btn-secondary">加入</button>
-            </form>
-          </div>
-          <div>
-            <h3>花費分類</h3>
-            <ul id="category-list" class="simple-list"></ul>
-            <form id="form-add-category" class="inline-form">
-              <select id="new-category-icon" style="width:4.5em"></select>
-              <input type="text" id="new-category-name" placeholder="新分類名稱" required />
-              <button type="submit" class="btn btn-secondary">新增</button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <input type="file" id="member-avatar-input" accept="image/*" hidden />
-
-
-      <section id="tab-export" class="tab-panel" hidden>
-        <p>匯出這趟旅程的完整花費紀錄：</p>
-        <div class="export-actions">
-          <button id="btn-export-card" class="btn btn-secondary">🖼️ 匯出圖卡</button>
-          <button id="btn-export-xlsx" class="btn btn-secondary">📊 下載 Excel (.xlsx)</button>
-          <button id="btn-export-csv" class="btn btn-secondary">⬇️ 下載 CSV</button>
-          <button id="btn-print-report" class="btn btn-secondary">🖨️ 列印 / 存成 PDF</button>
-        </div>
-        <p>只想給同行者看這一趟旅程，不想讓他們看到你其他旅程：</p>
-        <div class="export-actions">
-          <button id="btn-share-trip" class="btn btn-secondary">🔗 分享此旅程（唯讀）</button>
-        </div>
-      </section>
     </section>
   </main>
 
