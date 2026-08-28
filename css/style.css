@@ -327,6 +327,35 @@ input:focus, select:focus { outline: none; border-color: var(--teal); }
 }
 .category-picker-item.active { border-color: var(--primary); background: var(--primary-tint); color: var(--primary-dark); }
 
+/* 花費紀錄分頁的「分類篩選」：原生 <select> 放不進彩色 SVG 圖示，改用按鈕＋自訂下拉選單，
+   視覺上跟新增花費對話框的分類選擇器（.category-picker）用同一套 categoryBadgeHtml() 圖示。 */
+.category-filter { position: relative; }
+.category-filter-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border: 2.5px solid var(--border-strong); border-radius: 13px;
+  background: var(--surface); color: var(--primary); font-weight: 700; font-size: 0.95rem;
+  font-family: 'Noto Sans TC', sans-serif; cursor: pointer;
+}
+.category-filter-btn:hover { border-color: var(--teal); }
+.category-filter-all-icon { font-size: 1.1rem; line-height: 1; }
+.category-filter-caret { color: var(--text-muted-2); font-size: 0.8rem; margin-left: 2px; }
+.category-filter-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 5;
+  background: var(--surface); border: 2.5px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 10px 0 rgba(24, 32, 80, .18);
+  padding: 8px; display: flex; flex-direction: column; gap: 4px;
+  min-width: 200px; max-height: 320px; overflow-y: auto;
+}
+.category-filter-menu.hidden { display: none; }
+.category-filter-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; width: 100%;
+  border: none; border-radius: 10px; background: none; cursor: pointer;
+  font-size: 0.9rem; font-weight: 700; color: var(--text); text-align: left;
+  font-family: 'Noto Sans TC', sans-serif;
+}
+.category-filter-item:hover { background: var(--primary-tint); }
+.category-filter-item.active { background: var(--primary-tint); color: var(--primary-dark); }
+
 .export-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .export-actions .btn { flex: 1 1 200px; }
 
