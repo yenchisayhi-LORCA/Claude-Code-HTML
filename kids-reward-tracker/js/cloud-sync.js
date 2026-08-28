@@ -121,6 +121,23 @@ export async function requestSignInLink(email) {
   };
   await sendSignInLinkToEmail(auth, email, actionCodeSettings);
   window.localStorage.setItem(EMAIL_STORAGE_KEY, email);
+  armReloadOnReturn();
+}
+
+// iOS「加到主畫面」的獨立模式下，Mail App 點連結一律用 Safari 開，不會直接跳回這個獨立模式
+// 分頁——登入是在 Safari 那邊完成的，切回這個分頁只是從背景恢復，不是真的重新整理，不會自動
+// 注意到登入已經完成。這裡記住「剛剛寄出過登入連結、還在等」，下次這個分頁重新變成可見時就
+// 強制重新整理一次，讓它重新走一次登入狀態檢查（只掛一次，避免每次切換分頁都重整）。
+let reloadOnReturnArmed = false;
+function armReloadOnReturn() {
+  if (reloadOnReturnArmed) return;
+  reloadOnReturnArmed = true;
+  const handler = () => {
+    if (document.visibilityState !== 'visible') return;
+    document.removeEventListener('visibilitychange', handler);
+    window.location.reload();
+  };
+  document.addEventListener('visibilitychange', handler);
 }
 
 async function completeEmailLinkSignInIfPresent(authModule) {
