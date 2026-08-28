@@ -25,15 +25,6 @@ const CATEGORY_ICON_CHOICES = [
   '🏥', '🩺', '💊', '🚑', '📚', '🎁', '💰', '💳', '🧳', '📷', '🎉', '🎶', '🐶', '🐱', '🏷️', '•••',
 ];
 
-// 內建的 9 個預設分類（食、住、行...）一律套用最新的圖示/顏色設計，
-// 不管旅程資料建立當下存的是舊圖示，都用這份對照表覆蓋顯示，這樣舊旅程也會跟著更新。
-const DEFAULT_CATEGORY_STYLE = Object.fromEntries(store.DEFAULT_CATEGORIES.map((c) => [c.id, c]));
-
-function categoryVisual(category) {
-  if (!category) return { icon: '📦', name: '未分類', color: '#64748b' };
-  return DEFAULT_CATEGORY_STYLE[category.id] || category;
-}
-
 function categoryBadgeHtml(category, size = 32) {
   return svgCategoryBadgeHtml(category, size);
 }
@@ -256,10 +247,31 @@ function renderBudgetBar(trip) {
     </div>`;
 }
 
+// 「全部分類」篩選原本是原生 <select>，但 <option> 放不進彩色 SVG 圖示徽章，只能退回顯示
+// 純文字 emoji，跟新增花費對話框那個可以顯示彩色圖示的分類選擇器不一致。改成一顆按鈕
+// ＋自訂下拉選單，視覺上跟其他地方統一都用 categoryBadgeHtml() 畫的圖示。
 function renderCategoryFilterOptions(trip) {
-  const sel = $('#filter-category');
-  sel.innerHTML = '<option value="">全部分類</option>' + trip.categories.map((c) => `<option value="${c.id}">${categoryVisual(c).icon} ${escapeHtml(c.name)}</option>`).join('');
-  sel.value = currentFilterCategory;
+  const btn = $('#category-filter-btn');
+  const menu = $('#category-filter-menu');
+  const selected = trip.categories.find((c) => c.id === currentFilterCategory);
+
+  const allIcon = '<span class="category-filter-all-icon">🗂️</span>';
+  btn.innerHTML = selected
+    ? `${categoryBadgeHtml(selected, 24)}<span>${escapeHtml(selected.name)}</span><span class="category-filter-caret">▾</span>`
+    : `${allIcon}<span>全部分類</span><span class="category-filter-caret">▾</span>`;
+
+  menu.innerHTML = `
+    <button type="button" class="category-filter-item ${!currentFilterCategory ? 'active' : ''}" data-category-id="">
+      ${allIcon}<span>全部分類</span>
+    </button>
+    ${trip.categories
+      .map(
+        (c) => `<button type="button" class="category-filter-item ${c.id === currentFilterCategory ? 'active' : ''}" data-category-id="${c.id}">
+          ${categoryBadgeHtml(c, 24)}<span>${escapeHtml(c.name)}</span>
+        </button>`
+      )
+      .join('')}
+  `;
 }
 
 function renderExpenseList(trip) {
@@ -636,9 +648,20 @@ function wireGlobalEvents() {
   });
 
 
-  $('#filter-category').addEventListener('change', (e) => {
-    currentFilterCategory = e.target.value;
+  $('#category-filter-btn').addEventListener('click', () => {
+    $('#category-filter-menu').classList.toggle('hidden');
+  });
+  $('#category-filter-menu').addEventListener('click', (e) => {
+    const item = e.target.closest('.category-filter-item');
+    if (!item) return;
+    currentFilterCategory = item.dataset.categoryId;
+    renderCategoryFilterOptions(store.getActiveTrip());
     renderExpenseList(store.getActiveTrip());
+    $('#category-filter-menu').classList.add('hidden');
+  });
+  document.addEventListener('click', (e) => {
+    const wrap = $('#category-filter');
+    if (wrap && !wrap.contains(e.target)) $('#category-filter-menu').classList.add('hidden');
   });
 
   $('#btn-add-expense').addEventListener('click', () => openExpenseDialog(null));

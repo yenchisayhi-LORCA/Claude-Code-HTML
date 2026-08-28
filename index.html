@@ -72,7 +72,10 @@
 
           <section id="tab-expenses" class="tab-panel">
             <div class="panel-toolbar">
-              <select id="filter-category"><option value="">全部分類</option></select>
+              <div class="category-filter" id="category-filter">
+                <button type="button" id="category-filter-btn" class="category-filter-btn"></button>
+                <div id="category-filter-menu" class="category-filter-menu hidden"></div>
+              </div>
               <button id="btn-add-expense" class="btn btn-primary">＋ 新增花費</button>
             </div>
             <div id="expense-list" class="expense-list"></div>
