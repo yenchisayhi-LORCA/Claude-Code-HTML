@@ -42,7 +42,7 @@ npx serve .
 
 - 所有資料預設存在瀏覽器的 `localStorage`，**只存在於目前這個瀏覽器/裝置**，換瀏覽器或清除瀏覽器資料會遺失紀錄，請定期使用「匯出報表」備份。設定好雲端同步（見下方）後，同一個帳號的資料會額外保存一份在 Firestore，換裝置登入就能拿回來。
 - 分帳功能是「單機計算器」性質：所有人的花費由同一台裝置的使用者輸入紀錄，並非每個朋友各自登入即時協作的系統；雲端同步解決的是「同一個人的資料跨裝置同步」，不是多人協作。
-- localStorage 通常有 5MB 左右的容量限制，收據照片會自動壓縮，但仍建議定期清理不需要的舊旅程或照片。雲端同步的 Firestore 單一文件也有約 1MB 上限，收據照片太多可能導致同步失敗（本機資料不受影響，畫面上會顯示同步失敗的提示）。
+- localStorage 通常有 5MB 左右的容量限制，收據照片會自動壓縮，但仍建議定期清理不需要的舊旅程或照片。雲端同步每趟旅程各自存成一份 Firestore 文件，單一份文件約有 1MB 上限——單一趟旅程的照片太多可能導致「那一趟旅程」同步失敗（本機資料不受影響，其他旅程仍會正常同步，畫面上也會清楚顯示是哪一趟旅程超過上限）。
 - 匯率為即時抓取的當日匯率（非交易當下的歷史匯率），僅供旅遊記帳估算使用。
 
 ## 設定多裝置同步（選用）
@@ -59,6 +59,9 @@ npx serve .
      match /databases/{database}/documents {
        match /users/{userId} {
          allow read, write: if request.auth != null && request.auth.uid == userId;
+         match /trips/{tripId} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
        }
        match /shared_trips/{tripId} {
          allow get: if request.auth != null && request.auth.token.email_verified == true &&
@@ -70,7 +73,9 @@ npx serve .
      }
    }
    ```
-   第一段（`users/{userId}`）讓每個人只能讀寫自己的整帳號同步資料；第二段（`shared_trips/{tripId}`）是給「分享單一旅程」用的，只有旅程擁有者本人、或被列在 `viewerEmails` 白名單裡的 Email，才能讀到那一份被分享出去的單一旅程內容，讀不到別人的其他旅程。
+   第一段（`users/{userId}`）讓每個人只能讀寫自己的帳號同步資料（目前登入的旅程 ID、成員名單），底下巢狀的 `trips/{tripId}` 是每一趟旅程各自一份的文件（這樣單一趟旅程的照片再多，也不會拖累其他旅程的同步，也不會撞到 Firestore 單一文件 1MB 的上限就整個帳號都同步不了）；第二段（`shared_trips/{tripId}`）是給「分享單一旅程」用的，只有旅程擁有者本人、或被列在 `viewerEmails` 白名單裡的 Email，才能讀到那一份被分享出去的單一旅程內容，讀不到別人的其他旅程。
+
+   > **既有專案要升級請注意**：如果你的 Firebase 專案是舊版就建立的，Firestore 規則分頁裡可能還是只有 `users/{userId}` 那一段、沒有巢狀的 `trips/{tripId}`。請照上面整段規則重新貼上、發布，不然雲端同步會被全部拒絕（畫面上會出現「同步失敗：雲端資料庫拒絕存取」的提示）。既有帳號的舊資料會在下次登入時自動搬到新的儲存結構，不用手動搬移。
 5. 專案設定（齒輪圖示）→ 你的應用程式 → 點 `</>` 新增網頁應用程式 → 取名並註冊，會拿到一組 `firebaseConfig` 設定值。
 6. 把這組設定值貼到 `js/firebase-config.js` 取代裡面的預留值。
 7. **Authentication → Settings → 已授權網域**，把你網站的網域（例如 `your-name.github.io`）加進去，登入連結才會允許導回你的網站。
