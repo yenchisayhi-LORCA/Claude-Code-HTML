@@ -113,6 +113,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       cachedCloudTrips = {};
       cachedCloudAccount = { activeTripId: null, people: [] };
       alertedTooLargeForSync = false;
+      listeningForUid = null;
       clearTimeout(shareSyncTimer);
       lastPushedShareJson.clear();
       justCompletedEmailLinkSignIn = false;
@@ -366,10 +367,39 @@ function handleIncomingCloudSnapshot() {
   const state = currentCachedCloudState();
   const json = JSON.stringify(state);
   if (json === lastSyncedJson) return; // 自己剛寫入或讀過的資料，略過避免無限循環
+
+  // 多一道保險：即時更新的訂閱理論上一個 session 只會建立一次（見 listenToCloud 的
+  // listeningForUid 防呆），但這裡還是不相信「這筆遠端快照，比本機少了幾趟本機現有的
+  // 旅程」這種訊號——這種落差幾乎都是訂閱剛建立瞬間、真正的內容還沒完全載入完成前的
+  // 暫時性不完整結果（不管是完全沒有旅程，還是只是缺了其中幾趟），而不是真的有人在
+  // 別的裝置上把這些旅程都刪掉了（那種操作本來就少見，而且如果是這台裝置自己刪的，
+  // 根本不會走到這個監聽分支，走的是本機刪除→pushNow 那條路）。發現任何本機有、
+  // 這筆遠端快照卻沒有的旅程，就整筆跳過不套用，寧可這次不同步，也不要冒險把本機
+  // 還有的旅程清掉——真的是別的裝置刪除的話，下次重新登入時的完整讀取仍然抓得到。
+  const localTripIds = Object.keys(getSyncableState().trips);
+  const remoteTripIds = new Set(Object.keys(state.trips));
+  if (localTripIds.some((id) => !remoteTripIds.has(id))) {
+    console.warn('忽略一筆遠端快照：本機有的旅程，這筆快照卻沒有，避免誤判成雲端把旅程刪掉了');
+    return;
+  }
   applyRemoteState(state);
 }
 
+// 正常情況下，一整個登入 session 只需要訂閱一次即時更新；但 Firebase Auth 在某些瀏覽器
+// （目前確認 Safari 會發生）偶爾會在同一個使用者、根本沒有真的登出/登入的情況下，無緣無故
+// 讓 onAuthStateChanged 又觸發一次，導致 handleSignedIn() 重新執行一遍，包含結尾這裡的
+// listenToCloud()。如果讓它真的重新訂閱一次：舊的訂閱被取消、新的訂閱剛建立那一瞬間，
+// Firestore SDK 對 trips 子集合的第一次回呼有可能先送一次「目前還沒有任何本地快取資料」
+// 的空結果（0 份文件），比真正的內容早到——這個空結果會被誤判成「雲端旅程被清空了」，
+// 直接把本機的旅程資料整批覆蓋成空的（使用者回報的「Safari 切換旅程時旅程通通不見」
+// 極可能就是這樣來的）。既然同一個使用者只需要訂閱一次，這裡用一個旗標擋掉多餘的重新訂閱，
+// 從根本避免這個「重新訂閱瞬間收到不完整快照」的競爭情況。
+let listeningForUid = null;
+
 function listenToCloud(firestoreModule) {
+  if (listeningForUid === currentUser.uid) return;
+  listeningForUid = currentUser.uid;
+
   const { doc, collection, onSnapshot } = firestoreModule;
   if (unsubscribeSnapshot) unsubscribeSnapshot();
 
