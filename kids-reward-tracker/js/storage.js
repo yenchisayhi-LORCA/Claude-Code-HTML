@@ -38,6 +38,7 @@ function sanitize(s) {
   if (!s.kids || typeof s.kids !== 'object') s.kids = {};
   for (const kid of Object.values(s.kids)) {
     if (!kid.challengeProgress || typeof kid.challengeProgress !== 'object') kid.challengeProgress = {};
+    if (!kid.sleepRecords || typeof kid.sleepRecords !== 'object') kid.sleepRecords = {};
   }
   if (!Array.isArray(s.taskTemplates)) s.taskTemplates = [];
   if (!Array.isArray(s.ledger)) s.ledger = [];
@@ -103,7 +104,7 @@ export function getKid(kidId) {
 
 export function addKid({ name, avatar = null }) {
   const id = uid();
-  state.kids[id] = { id, name: name.trim(), avatar, createdAt: Date.now(), challengeProgress: {} };
+  state.kids[id] = { id, name: name.trim(), avatar, createdAt: Date.now(), challengeProgress: {}, sleepRecords: {} };
   if (!state.activeKidId) state.activeKidId = id;
   persist();
   return state.kids[id];
@@ -167,6 +168,24 @@ export function getLedger(kidId) {
 export function pushLedgerEntryRaw(entry) {
   state.ledger.push(entry);
   return entry;
+}
+
+export function removeLedgerEntryRaw(id) {
+  state.ledger = state.ledger.filter((e) => e.id !== id);
+}
+
+// ---------------------------------------------------------------- 睡眠回報（掛在小孩身上，同一天可覆蓋修正）
+
+export function getSleepRecord(kidId, dateStr) {
+  const kid = state.kids[kidId];
+  return (kid && kid.sleepRecords[dateStr]) || null;
+}
+
+export function setSleepRecord(kidId, dateStr, record) {
+  const kid = state.kids[kidId];
+  if (!kid) return;
+  if (record) kid.sleepRecords[dateStr] = record;
+  else delete kid.sleepRecords[dateStr];
 }
 
 // ---------------------------------------------------------------- 運動換算公式 + 回報

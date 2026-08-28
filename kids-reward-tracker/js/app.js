@@ -8,10 +8,11 @@ import { completeTask, hasCompletedTaskToday, manualAdjust } from './tasks.js';
 import { computeSuggestedStars, submitExercise, approveExercise, rejectExercise } from './exercise.js';
 import { canRedeem, redeemShopItem } from './shop.js';
 import { renderCertificateCanvas, downloadCertificatePng, printCertificateImage } from './certificate.js';
-import { formatMonthLabel, renderCalendarGrid, renderStreakBadge } from './calendar.js';
+import { formatMonthLabel, renderCalendarGrid, renderSleepCalendarGrid, renderStreakBadge } from './calendar.js';
 import { celebrate } from './confetti.js';
 import { initPin, withPinGate } from './pin.js';
 import { compressImage } from './image.js';
+import { computeSleepStars, submitSleep, clearSleep, getSleepMonthCalendar, getSleepHistory } from './sleep.js';
 import { TASK_ICONS, SHOP_ICONS, EXERCISE_ICON, CHIP_COLORS, MASCOT_COLORS } from './icons.js';
 import { initCloudSync, requestSignInLink, signOutOfSync } from './cloud-sync.js';
 
@@ -355,6 +356,36 @@ function renderCalendarTab(kid) {
   const cells = getMonthCalendar(kid.id, calYear, calMonth);
   document.getElementById('calendar-wrap').innerHTML = renderCalendarGrid(cells);
   document.getElementById('streak-badge-wrap').innerHTML = renderStreakBadge(getStreak(kid.id));
+
+  const sleepCells = getSleepMonthCalendar(kid.id, calYear, calMonth);
+  document.getElementById('sleep-calendar-wrap').innerHTML = renderSleepCalendarGrid(sleepCells, todayStr());
+  renderSleepHistory(kid);
+}
+
+function renderSleepHistory(kid) {
+  const history = getSleepHistory(kid.id);
+  document.getElementById('sleep-history-list').innerHTML =
+    history
+      .map((e) => `<li><div class="item-main">${iconChip('ic-bed', `sleep-${e.id}`, { size: 40, iconSize: 22 })}${e.date}：${e.label.replace('睡眠回報：', '')}</div><span class="badge badge-approved">+${e.amount}</span></li>`)
+      .join('') || '<li class="hint">還沒有睡眠紀錄</li>';
+}
+
+function openSleepDialog(dateStr) {
+  const kid = getActiveKid();
+  if (!kid) return;
+  const existing = storage.getSleepRecord(kid.id, dateStr);
+  document.getElementById('sleep-date-input').value = dateStr;
+  document.getElementById('sleep-date-label').textContent = dateStr;
+  document.getElementById('sleep-time-value-input').value = existing ? existing.bedtime : '';
+  document.getElementById('btn-sleep-clear').hidden = !existing;
+  updateSleepSuggestHint();
+  document.getElementById('dialog-sleep').showModal();
+}
+
+function updateSleepSuggestHint() {
+  const value = document.getElementById('sleep-time-value-input').value;
+  const hint = document.getElementById('sleep-suggest-hint');
+  hint.textContent = value ? `預估可得 ${computeSleepStars(value)} 顆星（送出立即入帳）` : '';
 }
 
 // ================================================================== render：家長設定
@@ -755,6 +786,33 @@ function initEventListeners() {
     }
     const kid = getActiveKid();
     if (kid) renderCalendarTab(kid);
+  });
+
+  // 睡眠回報
+  document.getElementById('sleep-calendar-wrap').addEventListener('click', (e) => {
+    const cell = e.target.closest('.cal-sleep-cell');
+    if (cell && !cell.disabled) openSleepDialog(cell.dataset.date);
+  });
+  document.getElementById('sleep-time-value-input').addEventListener('input', updateSleepSuggestHint);
+  document.getElementById('form-sleep').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const kid = getActiveKid();
+    const dateStr = document.getElementById('sleep-date-input').value;
+    const bedtime = document.getElementById('sleep-time-value-input').value;
+    if (!kid || !dateStr || !bedtime) return;
+    const result = submitSleep(kid.id, dateStr, bedtime);
+    document.getElementById('dialog-sleep').close();
+    if (result.entry.amount > 0) {
+      celebrate();
+      handleNewCertificates(result.newlyUnlockedTiers);
+    }
+  });
+  document.getElementById('btn-sleep-clear').addEventListener('click', () => {
+    const kid = getActiveKid();
+    const dateStr = document.getElementById('sleep-date-input').value;
+    if (!kid || !dateStr) return;
+    clearSleep(kid.id, dateStr);
+    document.getElementById('dialog-sleep').close();
   });
 
   // 家長設定：作業清單
