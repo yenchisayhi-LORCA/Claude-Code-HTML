@@ -336,6 +336,7 @@ dialog::backdrop { background: rgba(38, 34, 97, .45); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
 
 .icon-picker { display: flex; flex-wrap: wrap; gap: 10px; }
+
 .icon-option {
   width: 46px; height: 46px; padding: 0; border-radius: var(--radius-input); border: none;
   background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ink-navy);

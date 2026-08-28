@@ -1,5 +1,5 @@
-// 運動自主回報：小孩送出數字 → 依家長設定的換算公式算出建議星星數 → 進待審核佇列 →
-// 家長核准（可調整星星數）才真正寫進帳本。
+// 運動自主回報：小孩送出實際數字（例如今天走了幾步）→ 依家長設定的換算比例
+// 自動算出建議星星數（無條件捨去）→ 進待審核佇列 → 家長核准（可調整星星數）才真正寫進帳本。
 
 import { addExerciseSubmission, getExerciseSubmission, updateExerciseSubmission } from './storage.js';
 import { addLedgerEntry, todayStr } from './ledger.js';
