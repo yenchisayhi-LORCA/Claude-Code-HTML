@@ -336,6 +336,18 @@ dialog::backdrop { background: rgba(38, 34, 97, .45); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
 
 .icon-picker { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.tier-row { display: flex; align-items: center; gap: 8px; }
+.tier-row input[type="number"] {
+  font: inherit; font-size: 16px; font-weight: 700; color: var(--ink-navy); padding: 10px 12px; border-radius: var(--radius-input); border: none;
+  background: var(--white); flex: 1; min-width: 0;
+}
+.tier-row input:focus { outline: 3px solid var(--sun-yellow); outline-offset: 1px; }
+.tier-row .tier-arrow { font-weight: 900; color: var(--text-muted); flex-shrink: 0; }
+.tier-row .btn-remove-tier {
+  flex-shrink: 0; width: 34px; height: 34px; border: none; border-radius: 50%; background: var(--surface-disabled); color: var(--tomato-red);
+  font-weight: 900; font-size: 16px; cursor: pointer;
+}
 .icon-option {
   width: 46px; height: 46px; padding: 0; border-radius: var(--radius-input); border: none;
   background: var(--white); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ink-navy);

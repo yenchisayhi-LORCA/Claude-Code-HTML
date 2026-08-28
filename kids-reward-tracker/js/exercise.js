@@ -1,21 +1,15 @@
-// 運動自主回報：小孩送出數字 → 依家長設定的換算公式算出建議星星數 → 進待審核佇列 →
-// 家長核准（可調整星星數）才真正寫進帳本。
+// 運動自主回報：小孩從家長預設的門檻選項中挑一個（例如「9000 步 → 1 顆星」）→
+// 進待審核佇列 → 家長核准（可調整星星數）才真正寫進帳本。
 
 import { addExerciseSubmission, getExerciseSubmission, updateExerciseSubmission } from './storage.js';
 import { addLedgerEntry, todayStr } from './ledger.js';
 
-export function computeSuggestedStars(formula, reportedValue) {
-  if (!formula || !formula.unitsPerStar) return 0;
-  return Math.floor(Number(reportedValue) / formula.unitsPerStar);
-}
-
-export function submitExercise(kidId, formula, reportedValue) {
-  const suggestedStars = computeSuggestedStars(formula, reportedValue);
+export function submitExercise(kidId, formula, tier) {
   return addExerciseSubmission({
     kidId,
     kind: formula.kind,
-    reportedValue,
-    suggestedStars,
+    reportedValue: tier.value,
+    suggestedStars: tier.stars,
     date: todayStr(),
   });
 }
