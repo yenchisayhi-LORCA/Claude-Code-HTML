@@ -187,6 +187,12 @@ function renderTripView(trip) {
   const rateNote = activeRates ? '' : '（匯率暫時無法取得，換算金額可能不準）';
   $('#trip-meta').textContent = `${dateRange}　·　基準貨幣 ${trip.baseCurrency}　·　${trip.members.length} 位成員 ${rateNote}`;
 
+  const total = totalSpent(trip);
+  $('#trip-total-amount').textContent = `${total.toLocaleString('en-US', { maximumFractionDigits: 0 })} ${trip.baseCurrency}`;
+  $('#trip-avg-amount').textContent = trip.members.length
+    ? `每人平均 ${Math.round(total / trip.members.length).toLocaleString('en-US')} ${trip.baseCurrency}`
+    : '';
+
   renderTripCover(trip);
   renderBudgetBar(trip);
   renderCategoryFilterOptions(trip);
