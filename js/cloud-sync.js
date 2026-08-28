@@ -92,9 +92,13 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
     if (user) {
       currentUser = user;
       setStatus({ signedIn: true, user, syncing: true });
-      await handleSignedIn(firestoreModule);
+      const ok = await handleSignedIn(firestoreModule);
       justCompletedEmailLinkSignIn = false; // 只在「剛登入那一次」的判斷裡有效，用過就消耗掉
-      setStatus({ signedIn: true, user, syncing: false });
+      // handleSignedIn() 失敗時（讀取雲端資料失敗、權限被拒、容量超過上限……）已經自己用
+      // setStatus() 設好會顯示在畫面上的錯誤訊息；這裡如果不分青紅皂白地再蓋一次「已同步、
+      // 沒有錯誤」的乾淨狀態，剛剛那個錯誤就會在同一輪事件循環裡被立刻蓋掉，畫面上只會看到
+      // 錯誤文字一閃即逝，使用者根本來不及看清楚是什麼問題（實際上同步可能整個沒有成功）。
+      if (ok) setStatus({ signedIn: true, user, syncing: false });
     } else {
       currentUser = null;
       if (unsubscribeSnapshot) unsubscribeSnapshot();
@@ -261,8 +265,16 @@ async function handleSignedIn(firestoreModule) {
     ({ state: cloudState, legacyAccountFormat } = await readCloudState(firestoreModule));
   } catch (err) {
     console.error('讀取雲端資料失敗', err);
-    setStatus({ signedIn: true, user: currentUser, syncing: false, error: '讀取雲端資料失敗，暫時只使用本機資料' });
-    return;
+    const isPermissionError = err && err.code === 'permission-denied';
+    setStatus({
+      signedIn: true,
+      user: currentUser,
+      syncing: false,
+      error: isPermissionError
+        ? '讀取雲端資料失敗：雲端資料庫拒絕存取，請確認 Firebase Console 的 Firestore 安全規則已更新（見 README），暫時只使用本機資料'
+        : '讀取雲端資料失敗，暫時只使用本機資料',
+    });
+    return false;
   }
   const cloudJson = JSON.stringify(cloudState);
 
@@ -281,6 +293,7 @@ async function handleSignedIn(firestoreModule) {
     lastSyncedAccountJson = null;
   }
 
+  let ok = true;
   if (cloudJson === localJson) {
     // 已經一致，上面 seedSyncedBaseline() 就處理完了，不用再做事
   } else if (!hasLocalTrips) {
@@ -302,7 +315,7 @@ async function handleSignedIn(firestoreModule) {
     // 跳出視窗冒險；真的需要人來選「留哪一份」的情境，只保留給下面這個 else 分支：
     // 剛點連結完成登入、本機卻已經有自己的旅程資料，這才是兩邊各自有獨立歷史紀錄、
     // 真的需要問的狀況。
-    await pushNow(firestoreModule, local);
+    ok = await pushNow(firestoreModule, local);
   } else {
     const useCloud = confirm(
       '偵測到這個帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣。\n\n' +
@@ -313,11 +326,12 @@ async function handleSignedIn(firestoreModule) {
     if (useCloud) {
       applyRemoteState(cloudState);
     } else {
-      await pushNow(firestoreModule, local);
+      ok = await pushNow(firestoreModule, local);
     }
   }
 
   listenToCloud(firestoreModule);
+  return ok;
 }
 
 function applyRemoteState(state) {
@@ -427,11 +441,11 @@ const MAX_SYNC_DOC_BYTES = 900 * 1024; // 留一點餘裕給 Firestore 文件本
 let alertedTooLargeForSync = false;
 
 async function pushNow(firestoreModule, stateOverride) {
-  if (!currentUser) return;
+  if (!currentUser) return true;
   const { doc, collection, setDoc, deleteDoc, serverTimestamp } = firestoreModule;
   const localState = stateOverride || getSyncableState();
   const json = JSON.stringify(localState);
-  if (json === lastSyncedJson) return;
+  if (json === lastSyncedJson) return true;
 
   setStatus({ signedIn: true, user: currentUser, syncing: true });
 
@@ -474,12 +488,13 @@ async function pushNow(firestoreModule, stateOverride) {
         alertedTooLargeForSync = true;
         alert(message);
       }
-      return;
+      return false;
     }
     alertedTooLargeForSync = false;
 
     lastSyncedJson = json;
     setStatus({ signedIn: true, user: currentUser, syncing: false });
+    return true;
   } catch (err) {
     console.error('同步到雲端失敗', err);
     const isPermissionError = err && err.code === 'permission-denied';
@@ -491,6 +506,7 @@ async function pushNow(firestoreModule, stateOverride) {
         ? '同步失敗：雲端資料庫拒絕存取，請確認 Firebase Console 的 Firestore 安全規則已更新（見 README）'
         : '同步失敗（本機資料仍安全保留）',
     });
+    return false;
   }
 }
 

@@ -1,6 +1,13 @@
 // 本地資料持久化：所有資料存在 localStorage，不需要任何後端伺服器。
 
 const STORAGE_KEY = 'travel-expense-tracker/v1';
+// 雲端同步曾經好幾次因為判斷邏輯的 bug，把這台裝置本來就有、比較新的旅程資料整批蓋掉
+// （applySyncedState 直接整批覆蓋 activeTripId/trips/people）。這種覆蓋一旦發生就沒有回頭路，
+// 使用者往往要過一陣子才會發現東西不見了，那時候要復原已經來不及。與其每次都在同步邏輯裡
+// 抓還有沒有漏掉的 bug，這裡多一道最後防線：只要「即將要蓋掉的本機資料裡有雲端沒有的旅程」，
+// 蓋之前就先把本機現有內容整份備份起來，就算判斷邏輯又有什麼沒想到的 bug，資料還在，
+// 用 getLocalBackup()/restoreLocalBackup() 就能拿回來，不會真的憑空消失。
+const BACKUP_KEY = 'travel-expense-tracker/v1/backup-before-remote-overwrite';
 
 export const DEFAULT_CATEGORIES = [
   { id: 'food', name: '餐飲', icon: '🍲', color: '#f97316' },
@@ -62,10 +69,44 @@ export function getSyncableState() {
 
 // 用雲端資料整批覆蓋本機的 activeTripId + trips + people（不動 ratesCache）
 export function applySyncedState(remote) {
+  const remoteTrips = remote.trips || {};
+  const willLoseTrips = Object.keys(state.trips).some((id) => !(id in remoteTrips));
+  if (willLoseTrips) {
+    try {
+      localStorage.setItem(
+        BACKUP_KEY,
+        JSON.stringify({ activeTripId: state.activeTripId, trips: state.trips, people: state.people, backedUpAt: Date.now() })
+      );
+    } catch (err) {
+      console.error('備份本機資料失敗（可能是空間不足）', err);
+    }
+  }
   state.activeTripId = remote.activeTripId ?? null;
-  state.trips = remote.trips || {};
+  state.trips = remoteTrips;
   state.people = remote.people || [];
   persist();
+}
+
+// 有沒有一份「上次被雲端資料整批覆蓋掉之前」的本機備份可以拿回來
+export function getLocalBackup() {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error('讀取本機備份失敗', err);
+    return null;
+  }
+}
+
+// 把備份的內容還原成目前的本機資料（不會自動刪掉備份本身，避免還原後手滑又被蓋一次就真的找不回來）
+export function restoreLocalBackup() {
+  const backup = getLocalBackup();
+  if (!backup) return false;
+  state.activeTripId = backup.activeTripId ?? null;
+  state.trips = backup.trips || {};
+  state.people = backup.people || [];
+  persist();
+  return true;
 }
 
 // ---------------------------------------------------------------- 成員名單（跨旅程通用）

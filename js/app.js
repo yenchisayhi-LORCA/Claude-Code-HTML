@@ -72,16 +72,40 @@ async function init() {
   });
 }
 
+// 雲端同步的判斷邏輯出過好幾次 bug，把本機比較新的旅程資料整批蓋掉；storage.js 現在會在
+// 「即將蓋掉的本機資料裡有雲端沒有的旅程」時自動備份一份，這裡只要偵測到有這種備份存在，
+// 不管目前登入/同步狀態如何，都在同步狀態列旁邊露出一個明顯的還原按鈕，讓使用者不用打開
+// 瀏覽器開發者工具、自己動手在 localStorage 裡挖，就能拿回被覆蓋前的資料。
+function renderBackupRestoreLink() {
+  if (!store.getLocalBackup()) return '';
+  return `<button id="btn-restore-backup" class="btn btn-ghost" title="如果剛剛的同步把資料蓋掉了，可以用這個拿回來">⏪ 還原被覆蓋前的資料</button>`;
+}
+
+function wireBackupRestoreLink() {
+  const btn = $('#btn-restore-backup');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const backup = store.getLocalBackup();
+    const count = backup ? Object.keys(backup.trips || {}).length : 0;
+    if (!confirm(`確定要還原成被覆蓋前的本機資料嗎？（裡面有 ${count} 趟旅程）\n\n這會覆蓋掉你「現在」看到的旅程資料，改回覆蓋前的版本。`)) return;
+    store.restoreLocalBackup();
+    refreshAll();
+  });
+}
+
 function renderSyncArea(status) {
   const el = $('#sync-area');
+  const restoreLink = renderBackupRestoreLink();
   if (!status.available) {
-    el.innerHTML = '';
+    el.innerHTML = restoreLink;
+    wireBackupRestoreLink();
     return;
   }
   if (!status.signedIn) {
     const errorText = status.error ? `<span class="sync-status error">⚠️ ${escapeHtml(status.error)}</span>` : '';
-    el.innerHTML = `<button id="btn-sync-signin" class="btn btn-ghost" title="用 Email 登入，讓不同裝置同步旅程資料">☁️ 登入同步</button>${errorText}`;
+    el.innerHTML = `<button id="btn-sync-signin" class="btn btn-ghost" title="用 Email 登入，讓不同裝置同步旅程資料">☁️ 登入同步</button>${errorText}${restoreLink}`;
     $('#btn-sync-signin').addEventListener('click', openEmailSignInDialog);
+    wireBackupRestoreLink();
     return;
   }
   const name = escapeHtml(status.user.displayName || status.user.email || '已登入');
@@ -91,8 +115,10 @@ function renderSyncArea(status) {
     <div class="sync-user">${avatar}<span>${name}</span></div>
     ${statusText}
     <button id="btn-sync-signout" class="btn btn-ghost">登出</button>
+    ${restoreLink}
   `;
   $('#btn-sync-signout').addEventListener('click', signOutOfSync);
+  wireBackupRestoreLink();
 }
 
 function openEmailSignInDialog() {
