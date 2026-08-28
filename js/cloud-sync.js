@@ -31,8 +31,16 @@ let onStatusChangeCb = null;
 let shareSyncTimer = null;
 const lastPushedShareJson = new Map(); // tripId -> 上次成功推到 shared_trips 的內容，避免沒變化也重推
 
+// 除了「Firebase 根本沒設定好」那次以外，這個檔案裡幾乎每個 setStatus() 呼叫都只帶
+// { signedIn, user, syncing, error } 這幾個欄位，沒有重複帶 available——這樣沒問題的前提
+// 是 renderSyncArea() 收到 available 是 undefined 時，不能被當成「服務不可用」處理，
+// 不然一旦真的登入、開始有 setStatus() 呼叫進來，畫面上的登入狀態/登出按鈕就會直接消失
+// （使用者會看到「明明已經登入過，怎麼連登入按鈕都不見了」）。用這個模組層級的旗標統一補上
+// available 欄位，這樣呼叫端不用每次都自己記得帶，也不會漏掉。
+let isAvailable = false;
+
 function setStatus(status) {
-  if (onStatusChangeCb) onStatusChangeCb(status);
+  if (onStatusChangeCb) onStatusChangeCb({ available: isAvailable, ...status });
 }
 
 export function isSyncAvailable() {
@@ -53,6 +61,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
     setStatus({ signedIn: false, available: false });
     return;
   }
+  isAvailable = true;
 
   let initializeApp;
   let authModule;
@@ -183,26 +192,32 @@ async function handleSignedIn(firestoreModule) {
     const cloudJson = snap.data().stateJson;
     if (cloudJson === localJson) {
       lastSyncedJson = cloudJson;
-    } else if (!hasLocalTrips || !justCompletedEmailLinkSignIn) {
-      // 這裡走進來的情境，幾乎都不是真的需要人來選「用哪一份」：
-      // - 本機根本沒有旅程資料，雲端有的話直接拿來用最合理；
-      // - 這次不是剛點信件裡的連結完成登入，而是本來就已經登入、單純重新整理頁面
-      //   （Firebase 會自動保留登入狀態，每次重新整理都會直接恢復），這種情況下
-      //   雲端和本機會不一樣，幾乎都是「本機剛做的變更、還沒送出去就被手機重新整理/
-      //   背景關閉打斷」造成的落差——例如剛存好封面照片，1200ms 的 debounce 還沒送出、
-      //   頁面就被系統回收重新整理，重新整理後這裡讀到的雲端資料自然還是舊的。之前這裡
-      //   一律跳出視窗要求選「用雲端」或「用本機」，但選「用雲端」等於直接拿舊資料蓋掉
-      //   使用者剛做的變更、永久遺失（回報的「封面照片/成員縮圖/花費紀錄不管選哪個都不
-      //   見了」就是這樣來的，而且這個情境每次重新整理都可能再發生一次，不是單一事件）。
-      //   既然不是剛登入，直接信任本機現在的內容送出去就好，不用跳出視窗冒險；真的需要
-      //   人來選「留哪一份」的情境，只保留給下面這個 else 分支：剛點連結完成登入、本機卻
-      //   已經有自己的旅程資料，這才是兩邊各自有獨立歷史紀錄、真的需要問的狀況。
+    } else if (!hasLocalTrips) {
+      // 本機根本沒有旅程資料（例如換了新裝置、清過瀏覽器資料，或是 iOS「加入主畫面」建立的
+      // 獨立儲存空間——這種情況下瀏覽器版跟主畫面版即使是同一個網站，本機資料也是分開的），
+      // 雲端有資料的話直接拉下來用才合理，絕不能把這個「空的」本機狀態推上去蓋掉雲端——
+      // 那樣會直接把使用者過去所有旅程資料永久刪除，是最嚴重的一種資料遺失。
+      applyRemoteJson(cloudJson);
+    } else if (!justCompletedEmailLinkSignIn) {
+      // 這次不是剛點信件裡的連結完成登入，而是本來就已經登入、單純重新整理頁面
+      // （Firebase 會自動保留登入狀態，每次重新整理都會直接恢復），這種情況下
+      // 雲端和本機會不一樣，幾乎都是「本機剛做的變更、還沒送出去就被手機重新整理/
+      // 背景關閉打斷」造成的落差——例如剛存好封面照片，1200ms 的 debounce 還沒送出、
+      // 頁面就被系統回收重新整理，重新整理後這裡讀到的雲端資料自然還是舊的。之前這裡
+      // 一律跳出視窗要求選「用雲端」或「用本機」，但選「用雲端」等於直接拿舊資料蓋掉
+      // 使用者剛做的變更、永久遺失（回報的「封面照片/成員縮圖/花費紀錄不管選哪個都不
+      // 見了」就是這樣來的，而且這個情境每次重新整理都可能再發生一次，不是單一事件）。
+      // 既然不是剛登入、本機也確實有旅程資料，直接信任本機現在的內容送出去就好，不用
+      // 跳出視窗冒險；真的需要人來選「留哪一份」的情境，只保留給下面這個 else 分支：
+      // 剛點連結完成登入、本機卻已經有自己的旅程資料，這才是兩邊各自有獨立歷史紀錄、
+      // 真的需要問的狀況。
       await pushNow(firestoreModule, local);
     } else {
       const useCloud = confirm(
         '偵測到這個帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣。\n\n' +
-          '按「確定」= 改用雲端資料（會覆蓋這台裝置目前顯示的旅程）\n' +
-          '按「取消」= 用這台裝置目前的資料覆蓋雲端'
+          '按「確定」= 改用雲端資料（這台裝置目前顯示的旅程會被永久覆蓋、清除）\n' +
+          '按「取消」= 用這台裝置目前的資料覆蓋雲端（保留這台裝置目前看到的內容）\n\n' +
+          '不確定要選哪個，通常選「取消」比較安全。'
       );
       if (useCloud) {
         applyRemoteJson(cloudJson);
@@ -271,12 +286,34 @@ async function runPush(firestoreModule) {
   pushInFlight = false;
 }
 
+// Firestore 單一文件硬性上限是 1MiB；整個帳號的旅程資料（含封面照片、成員大頭貼、收據照片，
+// 全部用 base64 存在同一份文件裡）很容易在累積個幾趟旅程後就超過。超過時 setDoc() 一定會失敗，
+// 但失敗訊息只出現在畫面上一小行文字，很容易被忽略、以為「同步成功但資料自己消失了」——實際上
+// 是雲端那份資料整個停在超過上限之前的舊版本，本機這邊每次改東西都會嘗試推、每次都失敗。與其
+// 等失敗了才處理，這裡先用位元組大小主動擋下來，用 alert() 講清楚發生了什麼事、該怎麼辦。
+const MAX_SYNC_DOC_BYTES = 900 * 1024; // 留一點餘裕給 Firestore 文件本身欄位名稱等額外開銷
+let alertedTooLargeForSync = false;
+
 async function pushNow(firestoreModule, stateOverride) {
   if (!currentUser) return;
   const { doc, setDoc, serverTimestamp } = firestoreModule;
   const localState = stateOverride || getSyncableState();
   const json = JSON.stringify(localState);
   if (json === lastSyncedJson) return;
+
+  if (new Blob([json]).size > MAX_SYNC_DOC_BYTES) {
+    const message = '雲端同步失敗：這個帳號所有旅程的資料量（主要是封面照片／大頭貼／收據照片）已經超過雲端容量上限。本機資料仍安全保留，但不會再同步到雲端或其他裝置，直到刪除部分照片或舊旅程瘦身為止。';
+    setStatus({ signedIn: true, user: currentUser, syncing: false, error: message });
+    if (!alertedTooLargeForSync) {
+      alertedTooLargeForSync = true;
+      alert(
+        message +
+          '\n\n之後如果在其他裝置上看到「雲端資料跟本機不一樣」的提示，請選擇保留「這台裝置」的資料，不要選雲端——雲端那份是超過上限之前的舊資料，選它會蓋掉你比較新的內容。'
+      );
+    }
+    return;
+  }
+  alertedTooLargeForSync = false;
 
   setStatus({ signedIn: true, user: currentUser, syncing: true });
   try {
@@ -308,6 +345,9 @@ export async function pushSharedTrip(trip) {
   const viewers = shareViewers || [];
   const json = JSON.stringify({ viewers, tripSnapshot });
   if (lastPushedShareJson.get(trip.id) === json) return { ok: true, skipped: true };
+  if (viewers.length && new Blob([json]).size > MAX_SYNC_DOC_BYTES) {
+    return { ok: false, error: '這趟旅程的資料量（收據照片太多）超過雲端單一份文件的容量上限，無法分享，請先刪除部分收據照片' };
+  }
 
   const { doc, setDoc, deleteDoc, serverTimestamp } = firestoreModuleRef;
   const ref = doc(db, 'shared_trips', trip.id);
