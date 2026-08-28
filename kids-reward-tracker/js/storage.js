@@ -175,8 +175,14 @@ export function getExerciseFormulas() {
   return state.exerciseFormulas;
 }
 
-export function addExerciseFormula({ kind, label, unitsPerStar }) {
-  const f = { id: uid(), kind: kind.trim(), label: label.trim(), unitsPerStar: Number(unitsPerStar) };
+export function addExerciseFormula({ kind, label, unitsPerStar, defaultValue }) {
+  const f = {
+    id: uid(),
+    kind: kind.trim(),
+    label: label.trim(),
+    unitsPerStar: Number(unitsPerStar),
+    defaultValue: defaultValue || defaultValue === 0 ? Number(defaultValue) : null,
+  };
   state.exerciseFormulas.push(f);
   persist();
   return f;

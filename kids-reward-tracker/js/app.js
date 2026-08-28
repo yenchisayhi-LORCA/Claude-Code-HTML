@@ -165,6 +165,7 @@ function renderExerciseTab(kid) {
   const prevValue = select.value;
   select.innerHTML = formulas.map((f) => `<option value="${f.id}">${esc(f.label)}</option>`).join('');
   if (formulas.some((f) => f.id === prevValue)) select.value = prevValue;
+  prefillExerciseValue();
   updateExerciseSuggestHint();
 
   const pending = storage.getExerciseSubmissions(kid.id).filter((s) => s.status === 'pending');
@@ -188,6 +189,13 @@ function renderExerciseHistory(kid) {
         return `<li><div class="item-main">${esc(formulaLabelForKind(s.kind))}：${s.reportedValue}（${s.date}）</div>${badge}</li>`;
       })
       .join('') || '<li class="hint">還沒有回報歷史</li>';
+}
+
+function prefillExerciseValue() {
+  const select = document.getElementById('exercise-kind-input');
+  const formula = storage.getExerciseFormulas().find((f) => f.id === select.value);
+  const valueInput = document.getElementById('exercise-value-input');
+  valueInput.value = formula && (formula.defaultValue || formula.defaultValue === 0) ? formula.defaultValue : '';
 }
 
 function updateExerciseSuggestHint() {
@@ -394,7 +402,7 @@ function renderSettingsFormulaList() {
   document.getElementById('settings-formula-list').innerHTML =
     list
       .map(
-        (f) => `<li><div class="item-main">${iconChip(EXERCISE_ICON, `sform-${f.id}`, { size: 40, iconSize: 22 })}${esc(f.label)} <span class="hint">(${esc(f.kind)})・每${f.unitsPerStar}=1顆</span></div>
+        (f) => `<li><div class="item-main">${iconChip(EXERCISE_ICON, `sform-${f.id}`, { size: 40, iconSize: 22 })}${esc(f.label)} <span class="hint">(${esc(f.kind)})・每${f.unitsPerStar}=1顆${f.defaultValue || f.defaultValue === 0 ? `・預設帶入 ${f.defaultValue}` : ''}</span></div>
           ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', f.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有運動換算公式</li>';
@@ -524,6 +532,7 @@ function openFormulaDialog(formula = null) {
   document.getElementById('formula-kind-input').value = formula ? formula.kind : '';
   document.getElementById('formula-label-input').value = formula ? formula.label : '';
   document.getElementById('formula-units-input').value = formula ? formula.unitsPerStar : '';
+  document.getElementById('formula-default-input').value = formula && (formula.defaultValue || formula.defaultValue === 0) ? formula.defaultValue : '';
   document.getElementById('dialog-formula').showModal();
 }
 
@@ -684,7 +693,10 @@ function initEventListeners() {
   });
 
   // 運動回報
-  document.getElementById('exercise-kind-input').addEventListener('change', updateExerciseSuggestHint);
+  document.getElementById('exercise-kind-input').addEventListener('change', () => {
+    prefillExerciseValue();
+    updateExerciseSuggestHint();
+  });
   document.getElementById('exercise-value-input').addEventListener('input', updateExerciseSuggestHint);
 
   document.getElementById('form-exercise-submit').addEventListener('submit', (e) => {
@@ -694,7 +706,7 @@ function initEventListeners() {
     const kid = getActiveKid();
     if (!formula || !kid || !(value >= 0)) return;
     submitExercise(kid.id, formula, value);
-    document.getElementById('exercise-value-input').value = '';
+    prefillExerciseValue();
     updateExerciseSuggestHint();
   });
 
@@ -785,9 +797,11 @@ function initEventListeners() {
     const kind = document.getElementById('formula-kind-input').value.trim();
     const label = document.getElementById('formula-label-input').value.trim();
     const unitsPerStar = Number(document.getElementById('formula-units-input').value);
+    const defaultRaw = document.getElementById('formula-default-input').value;
+    const defaultValue = defaultRaw === '' ? null : Number(defaultRaw);
     if (!kind || !label || !unitsPerStar) return;
-    if (id) storage.updateExerciseFormula(id, { kind, label, unitsPerStar });
-    else storage.addExerciseFormula({ kind, label, unitsPerStar });
+    if (id) storage.updateExerciseFormula(id, { kind, label, unitsPerStar, defaultValue });
+    else storage.addExerciseFormula({ kind, label, unitsPerStar, defaultValue });
     document.getElementById('dialog-formula').close();
   });
   document.getElementById('settings-formula-list').addEventListener('click', (e) => {
