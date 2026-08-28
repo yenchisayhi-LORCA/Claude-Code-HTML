@@ -12,11 +12,54 @@ import { formatMonthLabel, renderCalendarGrid, renderStreakBadge } from './calen
 import { celebrate } from './confetti.js';
 import { initPin, withPinGate } from './pin.js';
 import { compressImage } from './image.js';
-import { TASK_ICONS, SHOP_ICONS, EXERCISE_ICONS } from './icons.js';
+import { TASK_ICONS, SHOP_ICONS, EXERCISE_ICON, CHIP_COLORS, MASCOT_COLORS } from './icons.js';
 import { initCloudSync, requestSignInLink, signOutOfSync } from './cloud-sync.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ---------------------------------------------------------------- 手繪風格小工具（圖示色塊、小怪獸頭像）
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+// 不規則圓角：四角各自算一個 40~64% 的值，每個 seed 都不一樣，符合設計系統「每個實例都略有不同」的要求
+function blobRadius(seed) {
+  const h = hashStr(seed);
+  const a = 40 + (h % 25);
+  const c = 40 + ((h >> 6) % 25);
+  const e = 40 + ((h >> 12) % 25);
+  const g = 40 + ((h >> 18) % 25);
+  return `${a}% ${100 - a}% ${c}% ${100 - c}% / ${e}% ${100 - g}% ${g}% ${100 - e}%`;
+}
+
+function blobRotate(seed) {
+  return (hashStr(`${seed}r`) % 9) - 4; // -4 ~ 4 度
+}
+
+// 任務/商店/獎狀共用的手繪圖示色塊
+function iconChip(iconId, seed, { size = 60, iconSize = 34 } = {}) {
+  const bg = CHIP_COLORS[hashStr(seed) % CHIP_COLORS.length];
+  return `<div class="icon-chip" style="width:${size}px;height:${size}px;background:${bg};border-radius:${blobRadius(seed)};transform:rotate(${blobRotate(seed)}deg);"><svg width="${iconSize}" height="${iconSize}"><use href="#${iconId}"></use></svg></div>`;
+}
+
+// 小孩沒有大頭貼時的預設頭像：色塊小怪獸（圓潤色塊 + 兩個圓點眼睛 + 微笑線）
+function mascotSvg(seed, size = 44) {
+  const color = MASCOT_COLORS[hashStr(seed) % MASCOT_COLORS.length];
+  return `<svg class="mascot" viewBox="0 0 60 60" width="${size}" height="${size}"><path d="M30 3c16 0 28 14 28 31 0 14-12 23-28 23S2 48 2 34C2 17 14 3 30 3Z" fill="${color}"></path><circle cx="21" cy="30" r="3" fill="#262261"></circle><circle cx="39" cy="30" r="3" fill="#262261"></circle><path d="M22 39c4 5 13 5 17-1" fill="none" stroke="#262261" stroke-width="3" stroke-linecap="round"></path></svg>`;
+}
+
+function kidAvatarHtml(kid, size, imgClass) {
+  if (kid && kid.avatar) return `<img class="${imgClass}" src="${kid.avatar}" alt="" style="width:${size}px;height:${size}px;">`;
+  return mascotSvg(kid ? kid.id : 'x', size);
+}
+
+function iconSvg(iconId, size = 18, cls = '') {
+  return `<svg class="${cls}" width="${size}" height="${size}"><use href="#${iconId}"></use></svg>`;
 }
 
 // ---------------------------------------------------------------- 畫面狀態（不進 localStorage，只是目前畫面焦點）
@@ -57,10 +100,10 @@ function renderKidSwitcher(kids) {
     kids
       .map((k) => {
         const balance = getBalance(k.id);
-        const avatar = k.avatar ? `<img class="kid-tab-avatar" src="${k.avatar}" alt="">` : `<span class="kid-tab-avatar">🧒</span>`;
-        return `<button type="button" class="kid-tab ${k.id === activeId ? 'active' : ''}" data-kid-id="${k.id}">${avatar}<span><div>${esc(k.name)}</div><div class="kid-tab-balance">⭐ ${balance}</div></span></button>`;
+        const avatar = kidAvatarHtml(k, 44, 'kid-tab-avatar');
+        return `<button type="button" class="kid-tab ${k.id === activeId ? 'active' : ''}" data-kid-id="${k.id}">${avatar}<span><div>${esc(k.name)}</div><div class="kid-tab-balance">${balance}</div></span></button>`;
       })
-      .join('') + `<button type="button" class="btn-add-kid" id="btn-switcher-add-kid">➕</button>`;
+      .join('') + `<button type="button" class="btn-add-kid" id="btn-switcher-add-kid">+</button>`;
 }
 
 function renderSyncArea() {
@@ -70,21 +113,21 @@ function renderSyncArea() {
     return;
   }
   if (!syncStatus.signedIn) {
-    el.innerHTML = `<button type="button" id="btn-sync-login" class="btn btn-ghost">☁️ 登入同步</button>`;
+    el.innerHTML = `<button type="button" id="btn-sync-login" class="btn btn-ghost">登入同步</button>`;
     if (syncStatus.error) el.innerHTML += `<span class="sync-status error">${esc(syncStatus.error)}</span>`;
     return;
   }
   const statusLabel = syncStatus.error
     ? `<span class="sync-status error">${esc(syncStatus.error)}</span>`
-    : `<span class="sync-status ${syncStatus.syncing ? '' : 'ok'}">${syncStatus.syncing ? '同步中…' : '☁️ 已同步'}</span>`;
+    : `<span class="sync-status ${syncStatus.syncing ? '' : 'ok'}">${syncStatus.syncing ? '同步中…' : '已同步'}</span>`;
   el.innerHTML = `<span class="sync-user"><span class="sync-email">${esc(syncStatus.user?.email || '')}</span>${statusLabel}<button type="button" id="btn-sync-logout" class="btn btn-ghost">登出</button></span>`;
 }
 
 function renderBalanceHero(kid) {
   const el = document.getElementById('balance-hero');
   const balance = getBalance(kid.id);
-  const avatar = kid.avatar ? `<img class="balance-hero-avatar" src="${kid.avatar}" alt="">` : `<span class="balance-hero-avatar">🧒</span>`;
-  el.innerHTML = `${avatar}<div class="balance-hero-info"><div class="balance-hero-name">${esc(kid.name)}</div><div class="balance-hero-amount">⭐ ${balance}<span class="unit">顆星星</span></div></div>`;
+  const avatar = kidAvatarHtml(kid, 76, 'balance-hero-avatar');
+  el.innerHTML = `${avatar}<div class="balance-hero-info"><div class="balance-hero-name">${esc(kid.name)}</div><div class="balance-hero-amount">${iconSvg('ic-star', 30, 'star-ic')}${balance}<span class="unit">顆星星</span></div></div>`;
 }
 
 // ================================================================== render：今日任務
@@ -96,11 +139,16 @@ function renderTasksTab(kid) {
   list.innerHTML = templates
     .map((t) => {
       const done = hasCompletedTaskToday(kid.id, t.id);
+      const chip = done
+        ? `<div class="icon-chip" style="width:60px;height:60px;background:#fff;border-radius:${blobRadius('task-' + t.id)};transform:rotate(${blobRotate('task-' + t.id)}deg);"><svg width="34" height="34"><use href="#${t.icon}"></use></svg></div>`
+        : iconChip(t.icon, `task-${t.id}`, { size: 60, iconSize: 34 });
+      const right = done
+        ? iconSvg('ic-check', 30, 'task-done-mark')
+        : `<span class="stars-badge">${iconSvg('ic-star')}${t.stars}</span>`;
       return `<button type="button" class="task-card ${done ? 'done' : ''}" data-task-id="${t.id}" ${done ? 'disabled' : ''}>
-        <span class="task-icon">${t.icon}</span>
+        ${chip}
         <span class="task-name">${esc(t.name)}</span>
-        <span class="task-stars">⭐ ${t.stars}</span>
-        ${done ? '<span class="task-done-mark">✅ 今天完成了</span>' : ''}
+        ${right}
       </button>`;
     })
     .join('');
@@ -115,7 +163,7 @@ function renderExerciseTab(kid) {
   document.getElementById('exercise-no-formula-hint').hidden = hasFormula;
   document.getElementById('form-exercise-submit').hidden = !hasFormula;
   const prevValue = select.value;
-  select.innerHTML = formulas.map((f) => `<option value="${f.id}">${EXERCISE_ICONS[f.kind] || EXERCISE_ICONS.default} ${esc(f.label)}</option>`).join('');
+  select.innerHTML = formulas.map((f) => `<option value="${f.id}">${esc(f.label)}</option>`).join('');
   if (formulas.some((f) => f.id === prevValue)) select.value = prevValue;
   updateExerciseSuggestHint();
 
@@ -124,7 +172,7 @@ function renderExerciseTab(kid) {
     pending
       .map(
         (s) => `<li class="pending-item" data-sub-id="${s.id}">
-          <div class="item-main">${EXERCISE_ICONS[s.kind] || EXERCISE_ICONS.default} ${esc(formulaLabelForKind(s.kind))}：${s.reportedValue}（建議 ⭐${s.suggestedStars}）</div>
+          <div class="item-main">${iconChip(EXERCISE_ICON, `ex-${s.id}`, { size: 40, iconSize: 22 })}${esc(formulaLabelForKind(s.kind))}：${s.reportedValue}（建議 ${s.suggestedStars} 顆）</div>
           <div class="item-actions"><button type="button" class="btn-review" data-sub-id="${s.id}">審核</button></div>
         </li>`
       )
@@ -136,7 +184,7 @@ function renderExerciseHistory(kid) {
   document.getElementById('exercise-history-list').innerHTML =
     history
       .map((s) => {
-        const badge = s.status === 'approved' ? `<span class="badge badge-approved">✅ 核准 ⭐${s.approvedStars}</span>` : `<span class="badge badge-rejected">退回</span>`;
+        const badge = s.status === 'approved' ? `<span class="badge badge-approved">核准 ${s.approvedStars}</span>` : `<span class="badge badge-rejected">退回</span>`;
         return `<li><div class="item-main">${esc(formulaLabelForKind(s.kind))}：${s.reportedValue}（${s.date}）</div>${badge}</li>`;
       })
       .join('') || '<li class="hint">還沒有回報歷史</li>';
@@ -147,7 +195,7 @@ function updateExerciseSuggestHint() {
   const formula = storage.getExerciseFormulas().find((f) => f.id === select.value);
   const value = Number(document.getElementById('exercise-value-input').value) || 0;
   const hint = document.getElementById('exercise-suggest-hint');
-  hint.textContent = formula ? `預估可得 ⭐ ${computeSuggestedStars(formula, value)} 顆（家長審核後才會入帳）` : '';
+  hint.textContent = formula ? `預估可得 ${computeSuggestedStars(formula, value)} 顆星（家長審核後才會入帳）` : '';
 }
 
 function openExerciseReview(submissionId) {
@@ -170,11 +218,11 @@ function renderShopTab(kid) {
     .map((item) => {
       const affordable = balance >= item.cost;
       return `<div class="shop-card">
-        <span class="shop-icon">${item.icon}</span>
-        <div>${esc(item.name)}</div>
+        ${iconChip(item.icon, `shop-${item.id}`, { size: 72, iconSize: 40 })}
+        <div class="shop-name">${esc(item.name)}</div>
         <span class="shop-kind-badge">${esc(item.kind)}</span>
-        <span class="shop-cost">⭐ ${item.cost}</span>
-        <button type="button" class="btn btn-primary btn-redeem" data-item-id="${item.id}" ${affordable ? '' : 'disabled'}>兌換</button>
+        <span class="stars-badge">${iconSvg('ic-star')}${item.cost}</span>
+        <button type="button" class="btn btn-accent btn-redeem" data-item-id="${item.id}" ${affordable ? '' : 'disabled'}>兌換</button>
       </div>`;
     })
     .join('');
@@ -182,26 +230,65 @@ function renderShopTab(kid) {
 
 // ================================================================== render：獎狀牆 + 獎狀 canvas 預覽
 
+const AWARD_COLORS = [
+  { bg: 'var(--sun-yellow)', text: 'var(--ink-navy)' },
+  { bg: 'var(--block-blue)', text: '#fff' },
+  { bg: 'var(--lake-teal)', text: 'var(--ink-navy)' },
+  { bg: 'var(--bubble-pink)', text: 'var(--ink-navy)' },
+];
+
 function renderCertificatesTab(kid) {
+  const balance = getBalance(kid.id);
+  const tiers = storage.getCertificateTiers();
+  const nextTier = tiers.find((t) => t.threshold > balance);
+  const progressWrap = document.getElementById('cert-progress-wrap');
+  if (nextTier) {
+    const prevThreshold = tiers.filter((t) => t.threshold <= balance).slice(-1)[0]?.threshold || 0;
+    const span = Math.max(1, nextTier.threshold - prevThreshold);
+    const pct = Math.min(100, Math.round(((balance - prevThreshold) / span) * 100));
+    progressWrap.hidden = false;
+    progressWrap.innerHTML = `
+      <div class="progress-head"><strong>下一張：${esc(nextTier.title)}</strong><span class="progress-frac">${balance} / ${nextTier.threshold}</span></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div>${iconSvg('ic-star', 48, 'progress-star')}</div>`;
+  } else {
+    progressWrap.hidden = true;
+    progressWrap.innerHTML = '';
+  }
+
   const certs = storage.getAwardedCertificates(kid.id);
+  const achievedThresholds = new Set(certs.map((c) => c.thresholdSnapshot));
+  const lockedTiers = tiers.filter((t) => !achievedThresholds.has(t.threshold) && t.threshold > balance);
+
   const gallery = document.getElementById('cert-gallery');
-  document.getElementById('cert-empty-hint').hidden = certs.length > 0;
-  gallery.innerHTML = certs
-    .map((c) => {
-      const photo = c.photoDataUrl || kid.avatar;
-      const thumb = photo ? `<img src="${photo}" alt="">` : `<div class="task-icon" style="font-size:3rem;padding:20px 0;">🏆</div>`;
-      return `<div class="cert-card" data-cert-id="${c.id}">
-        ${thumb}
-        <div class="cert-title">${esc(c.tierTitleSnapshot)}</div>
-        <div class="cert-date">${c.date} · ⭐${c.thresholdSnapshot}</div>
-      </div>`;
-    })
-    .join('');
+  document.getElementById('cert-empty-hint').hidden = certs.length > 0 || lockedTiers.length > 0;
+
+  const unlockedCards = certs.map((c, i) => {
+    const color = AWARD_COLORS[i % AWARD_COLORS.length];
+    const photo = c.photoDataUrl || kid.avatar;
+    const thumb = photo
+      ? `<img class="cert-photo" src="${photo}" alt="">`
+      : iconSvg('ic-trophy', 44);
+    return `<div class="cert-card" data-cert-id="${c.id}" style="background:${color.bg};color:${color.text};transform:rotate(${blobRotate('cert-' + c.id)}deg);">
+      ${thumb}
+      <div class="cert-title">${esc(c.tierTitleSnapshot)}</div>
+      <div class="cert-stars">${c.thresholdSnapshot} STARS</div>
+    </div>`;
+  });
+
+  const lockedCards = lockedTiers.map((t) => `<div class="cert-card locked" style="transform:rotate(${blobRotate('tier-' + t.id)}deg);">
+      ${iconSvg('ic-lock', 44)}
+      <div class="cert-title">${esc(t.title)}</div>
+      <div class="cert-stars">還差 ${t.threshold - balance} 顆</div>
+    </div>`);
+
+  gallery.innerHTML = unlockedCards.join('') + lockedCards.join('');
 }
 
 async function openCertPreview(cert, { isNewUnlock = false } = {}) {
   const dialog = document.getElementById('dialog-cert-preview');
-  document.getElementById('cert-preview-title').textContent = isNewUnlock ? '🎉 解鎖新獎狀！' : '🏆 獎狀';
+  document.getElementById('cert-preview-title').innerHTML = isNewUnlock
+    ? `${iconSvg('ic-sparkle', 26, 'heading-icon')}解鎖新獎狀！`
+    : `${iconSvg('ic-trophy', 26, 'heading-icon')}獎狀`;
   const kid = storage.getKid(cert.kidId);
   const wrap = document.getElementById('cert-canvas-wrap');
   wrap.innerHTML = '<p class="hint">產生中…</p>';
@@ -272,15 +359,20 @@ function renderCalendarTab(kid) {
 
 // ================================================================== render：家長設定
 
+const EDIT_DELETE_BTNS = (editCls, delCls, id) => `<div class="item-actions">
+  <button type="button" class="${editCls} btn-icon-only" data-id="${id}">${iconSvg('ic-pencil', 18)}</button>
+  <button type="button" class="${delCls} btn-icon-only" data-id="${id}" style="font-size:20px;font-weight:900;">×</button>
+</div>`;
+
 function renderSettingsKidList() {
   const kids = storage.getKids();
   document.getElementById('settings-kid-list').innerHTML =
     kids
       .map(
-        (k) => `<li><div class="item-main">${k.avatar ? `<img class="kid-tab-avatar" src="${k.avatar}" alt="">` : '🧒'} ${esc(k.name)}</div>
+        (k) => `<li><div class="item-main">${kidAvatarHtml(k, 32, 'kid-tab-avatar')} ${esc(k.name)}</div>
           <div class="item-actions">
-            <button type="button" class="btn-edit-kid" data-kid-id="${k.id}">✏️</button>
-            <button type="button" class="btn-delete-kid" data-kid-id="${k.id}">🗑️</button>
+            <button type="button" class="btn-edit-kid btn-icon-only" data-kid-id="${k.id}">${iconSvg('ic-pencil', 18)}</button>
+            <button type="button" class="btn-delete-kid btn-icon-only" data-kid-id="${k.id}" style="font-size:20px;font-weight:900;">×</button>
           </div></li>`
       )
       .join('') || '<li class="hint">還沒有小孩</li>';
@@ -291,11 +383,8 @@ function renderSettingsTaskList() {
   document.getElementById('settings-task-list').innerHTML =
     list
       .map(
-        (t) => `<li><div class="item-main">${t.icon} ${esc(t.name)} <span class="badge">⭐${t.stars}</span></div>
-          <div class="item-actions">
-            <button type="button" class="btn-edit" data-id="${t.id}">✏️</button>
-            <button type="button" class="btn-delete" data-id="${t.id}">🗑️</button>
-          </div></li>`
+        (t) => `<li><div class="item-main">${iconChip(t.icon, `stask-${t.id}`, { size: 40, iconSize: 22 })}${esc(t.name)} <span class="badge">${t.stars}</span></div>
+          ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', t.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有作業項目</li>';
 }
@@ -305,11 +394,8 @@ function renderSettingsFormulaList() {
   document.getElementById('settings-formula-list').innerHTML =
     list
       .map(
-        (f) => `<li><div class="item-main">${EXERCISE_ICONS[f.kind] || EXERCISE_ICONS.default} ${esc(f.label)} <span class="hint">(${esc(f.kind)})・每${f.unitsPerStar}=⭐1</span></div>
-          <div class="item-actions">
-            <button type="button" class="btn-edit" data-id="${f.id}">✏️</button>
-            <button type="button" class="btn-delete" data-id="${f.id}">🗑️</button>
-          </div></li>`
+        (f) => `<li><div class="item-main">${iconChip(EXERCISE_ICON, `sform-${f.id}`, { size: 40, iconSize: 22 })}${esc(f.label)} <span class="hint">(${esc(f.kind)})・每${f.unitsPerStar}=1顆</span></div>
+          ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', f.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有運動換算公式</li>';
 }
@@ -319,11 +405,8 @@ function renderSettingsTierList() {
   document.getElementById('settings-tier-list').innerHTML =
     list
       .map(
-        (t) => `<li><div class="item-main">🏆 ⭐${t.threshold}：${esc(t.title)}</div>
-          <div class="item-actions">
-            <button type="button" class="btn-edit" data-id="${t.id}">✏️</button>
-            <button type="button" class="btn-delete" data-id="${t.id}">🗑️</button>
-          </div></li>`
+        (t) => `<li><div class="item-main">${iconSvg('ic-trophy', 22)}${t.threshold} 顆：${esc(t.title)}</div>
+          ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', t.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有設定獎狀門檻</li>';
 }
@@ -333,11 +416,8 @@ function renderSettingsChallengeList() {
   document.getElementById('settings-challenge-list').innerHTML =
     list
       .map(
-        (c) => `<li><div class="item-main">🐷 ${esc(c.name)}<br><span class="hint">${esc(scopeLabel(c.scope))}・維持⭐${c.minBalance}・連續${c.targetDays}天・獎勵⭐${c.bonusStars}</span></div>
-          <div class="item-actions">
-            <button type="button" class="btn-edit" data-id="${c.id}">✏️</button>
-            <button type="button" class="btn-delete" data-id="${c.id}">🗑️</button>
-          </div></li>`
+        (c) => `<li><div class="item-main">${esc(c.name)}<br><span class="hint">${esc(scopeLabel(c.scope))}・維持${c.minBalance}顆・連續${c.targetDays}天・獎勵${c.bonusStars}顆</span></div>
+          ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', c.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有儲蓄挑戰</li>';
 }
@@ -347,18 +427,15 @@ function renderSettingsShopList() {
   document.getElementById('settings-shop-list').innerHTML =
     list
       .map(
-        (i) => `<li><div class="item-main">${i.icon} ${esc(i.name)} <span class="badge">⭐${i.cost}</span></div>
-          <div class="item-actions">
-            <button type="button" class="btn-edit" data-id="${i.id}">✏️</button>
-            <button type="button" class="btn-delete" data-id="${i.id}">🗑️</button>
-          </div></li>`
+        (i) => `<li><div class="item-main">${iconChip(i.icon, `sshop-${i.id}`, { size: 40, iconSize: 22 })}${esc(i.name)} <span class="badge">${i.cost}</span></div>
+          ${EDIT_DELETE_BTNS('btn-edit', 'btn-delete', i.id)}</li>`
       )
       .join('') || '<li class="hint">還沒有商店品項</li>';
 }
 
 function renderPinStatus() {
   const pin = storage.getPin();
-  document.getElementById('pin-status').textContent = pin ? '🔒 目前已設定 PIN 保護。' : '目前尚未設定 PIN，家長功能任何人都能操作。';
+  document.getElementById('pin-status').textContent = pin ? '目前已設定 PIN 保護。' : '目前尚未設定 PIN，家長功能任何人都能操作。';
   document.getElementById('btn-clear-pin').disabled = !pin;
 }
 
@@ -403,7 +480,9 @@ function render() {
 
 function renderIconPicker(containerEl, hiddenInputEl, icons, selected) {
   const initial = selected || icons[0];
-  containerEl.innerHTML = icons.map((ic) => `<button type="button" class="icon-option ${ic === initial ? 'selected' : ''}" data-icon="${ic}">${ic}</button>`).join('');
+  containerEl.innerHTML = icons
+    .map((ic) => `<button type="button" class="icon-option ${ic === initial ? 'selected' : ''}" data-icon="${ic}">${iconSvg(ic, 26)}</button>`)
+    .join('');
   hiddenInputEl.value = initial;
   containerEl.querySelectorAll('.icon-option').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -465,7 +544,7 @@ function openChallengeDialog(challenge = null) {
   document.getElementById('challenge-id-input').value = challenge ? challenge.id : '';
   document.getElementById('challenge-name-input').value = challenge ? challenge.name : '';
   const scopeSelect = document.getElementById('challenge-scope-input');
-  scopeSelect.innerHTML = `<option value="all">👨‍👩‍👧‍👦 全部小孩</option>` + storage.getKids().map((k) => `<option value="${k.id}">${esc(k.name)}</option>`).join('');
+  scopeSelect.innerHTML = `<option value="all">全部小孩</option>` + storage.getKids().map((k) => `<option value="${k.id}">${esc(k.name)}</option>`).join('');
   scopeSelect.value = challenge ? challenge.scope : 'all';
   document.getElementById('challenge-min-balance-input').value = challenge ? challenge.minBalance : '';
   document.getElementById('challenge-days-input').value = challenge ? challenge.targetDays : '';
