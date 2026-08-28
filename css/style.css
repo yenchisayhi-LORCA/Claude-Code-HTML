@@ -377,6 +377,14 @@ legend { font-size: 0.82rem; color: var(--text-muted-2); padding: 0 4px; font-we
 
 #receipt-preview img { max-width: 100%; border-radius: 14px; margin-top: 6px; }
 
+/* .trip-sidebar 的 max-width: 340px 是為了在雙欄並排（桌機/平板橫向）時，讓側欄不要跟主要
+   內容搶版面；但螢幕不夠寬、雙欄擠不下、.trip-layout 自動換行成單欄時（例如手機橫向），
+   側欄還是被這個上限卡住，變成孤零零一張比上下卡片都窄的窄卡片。這個斷點抓在雙欄版面
+   實際會擠不下、開始換行的寬度左右，換行後就把上限拿掉，讓側欄跟主要內容一樣撐滿整列寬度。 */
+@media (max-width: 900px) {
+  .trip-sidebar { max-width: none; }
+}
+
 @media (max-width: 720px) {
   .app-header { margin: 12px 12px 0; }
   #app-main { padding: 16px 12px 60px; }
