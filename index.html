@@ -43,11 +43,6 @@
     <section id="trip-view" hidden>
       <div class="trip-layout">
         <aside class="trip-sidebar">
-          <div class="trip-cover-card">
-            <div id="trip-cover-wrap" class="trip-cover-wrap"></div>
-            <input type="file" id="trip-cover-input" accept="image/*" hidden />
-          </div>
-
           <div class="trip-info-card">
             <h1 id="trip-name"></h1>
             <div id="trip-meta" class="trip-meta"></div>
@@ -198,10 +193,6 @@
         <label class="inline-radio"><input type="radio" name="split-type" value="custom" /> 自訂金額</label>
         <div id="split-members-list" class="split-members-list"></div>
       </fieldset>
-      <label>收據照片（選填）
-        <input type="file" id="expense-receipt-input" accept="image/*" />
-      </label>
-      <div id="receipt-preview"></div>
       <div class="dialog-actions">
         <button type="button" class="btn btn-ghost" data-close>取消</button>
         <button type="submit" class="btn btn-primary">儲存</button>
