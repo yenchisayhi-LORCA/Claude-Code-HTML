@@ -366,7 +366,7 @@ export function buildReportCanvas(data) {
 
       cx = drawSettleChip(ctx, cx, rowCenterY, s.to, '#DCEFE6', '#3F8B76');
 
-      const amt = `${Number(s.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} ${s.currency || cur}`;
+      const amt = `${Number(s.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${s.currency || cur}`;
       ctx.font = `900 17px ${FONT}`;
       const pillW = ctx.measureText(amt).width + 36;
       const pillH = 40;
@@ -378,7 +378,7 @@ export function buildReportCanvas(data) {
       ctx.fillText(amt, pillX + pillW / 2, pillY + pillH / 2 + 6);
       if (s.twdAmount != null) {
         ctx.fillStyle = '#B0A093'; ctx.font = `700 11.5px ${FONT}`;
-        ctx.fillText(`≈ ${Number(s.twdAmount).toLocaleString('en-US', { maximumFractionDigits: 2 })} TWD`, pillX + pillW / 2, pillY + pillH + 14);
+        ctx.fillText(`≈ ${Number(s.twdAmount).toLocaleString('en-US', { maximumFractionDigits: 0 })} TWD`, pillX + pillW / 2, pillY + pillH + 14);
       }
       ctx.textAlign = 'left';
 
