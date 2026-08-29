@@ -1,7 +1,6 @@
 // 套用樣板匯出：把使用者上傳的照片放進樣板的每個照片框，可拖曳調整位置、滑桿縮放，
 // 最後用滿版解析度（300 DPI）重畫一次並輸出 PNG。
 
-import * as storage from './storage.js';
 import { loadImageSource, loadImageElement } from './image.js';
 import { drawTemplate, drawPhotoInRect, computeDrawParams, clamp, canvasToDownload } from './compositor.js';
 
@@ -11,6 +10,7 @@ const SLOT_CARD_W = 380;
 let els = null;
 let template = null;
 let bgImg = null;
+let fgImg = null;
 let slotPhotos = []; // 跟 template.slots 對應，每格是 null 或 { img, imgW, imgH, zoom, offX, offY, cleanup }
 let previewCtx = null;
 
@@ -25,13 +25,14 @@ export function initExporter() {
   els.downloadBtn.addEventListener('click', doExport);
 }
 
-export async function openExport(templateId) {
+export async function openExport(tpl) {
   disposeExport();
-  template = storage.getTemplate(templateId);
+  template = tpl;
   if (!template) return;
 
   els.title.textContent = `套用樣板：${template.name}`;
   bgImg = await loadImageElement(template.background);
+  fgImg = template.foreground ? await loadImageElement(template.foreground) : null;
 
   const previewW = Math.min(PREVIEW_MAX_W, template.canvasW);
   const previewH = Math.round((previewW * template.canvasH) / template.canvasW);
@@ -49,7 +50,7 @@ export function disposeExport() {
 }
 
 function renderPreview() {
-  drawTemplate(previewCtx, els.previewCanvas.width, els.previewCanvas.height, bgImg, template.slots, slotPhotos, { showPlaceholders: true });
+  drawTemplate(previewCtx, els.previewCanvas.width, els.previewCanvas.height, bgImg, template.slots, slotPhotos, { showPlaceholders: true, foreground: fgImg });
 }
 
 function renderSlotCards() {
@@ -185,7 +186,7 @@ function doExport() {
   canvas.width = template.canvasW;
   canvas.height = template.canvasH;
   const ctx = canvas.getContext('2d');
-  drawTemplate(ctx, canvas.width, canvas.height, bgImg, template.slots, slotPhotos, { showPlaceholders: false });
+  drawTemplate(ctx, canvas.width, canvas.height, bgImg, template.slots, slotPhotos, { showPlaceholders: false, foreground: fgImg });
   const safeName = template.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'photo';
   canvasToDownload(canvas, `${safeName}-${template.printSize}-${Date.now()}.png`);
 }

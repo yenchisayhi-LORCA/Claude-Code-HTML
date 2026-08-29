@@ -16,16 +16,36 @@ export function computeDrawParams(rw, rh, imgW, imgH, zoom) {
   return { dw, dh, excessW, excessH };
 }
 
-export function drawPhotoInRect(ctx, rx, ry, rw, rh, photoState) {
-  const { img, imgW, imgH, zoom, offX, offY } = photoState;
-  const { dw, dh, excessW, excessH } = computeDrawParams(rw, rh, imgW, imgH, zoom);
-  const dx = rx - excessW / 2 - offX * (excessW / 2);
-  const dy = ry - excessH / 2 - offY * (excessH / 2);
-  ctx.save();
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
-  ctx.rect(rx, ry, rw, rh);
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+// shape: { radius (0~0.5，以 min(rw,rh) 為基準的圓角比例；0.5 = 正方形變圓形), rotationDeg }。
+// 兩者都跟解析度無關，可以直接沿用同一份樣板定義畫在任何尺寸的 canvas 上。
+// 有旋轉角度時，整個框（含框內的照片）繞框中心旋轉，對應設計稿理「整張拍立得卡片歪一個角度」
+// 這種效果——旋轉中心固定在框中心，跟框裡的照片一起轉，不會走位。
+export function drawPhotoInRect(ctx, rx, ry, rw, rh, photoState, shape = {}) {
+  const { img, imgW, imgH, zoom, offX, offY } = photoState;
+  const { radius = 0, rotationDeg = 0 } = shape;
+  const { dw, dh, excessW, excessH } = computeDrawParams(rw, rh, imgW, imgH, zoom);
+  const cx = rx + rw / 2;
+  const cy = ry + rh / 2;
+  const localDx = -rw / 2 - excessW / 2 - offX * (excessW / 2);
+  const localDy = -rh / 2 - excessH / 2 - offY * (excessH / 2);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  if (rotationDeg) ctx.rotate((rotationDeg * Math.PI) / 180);
+  roundRectPath(ctx, -rw / 2, -rh / 2, rw, rh, radius * Math.min(rw, rh));
   ctx.clip();
-  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.drawImage(img, localDx, localDy, dw, dh);
   ctx.restore();
 }
 
@@ -35,7 +55,9 @@ export function clamp(v, min, max) {
 
 // 畫整份樣板：background 是 <img>／ImageBitmap，slots 是樣板的框定義陣列，
 // slotPhotos 是跟 slots 一一對應、可能含 null 的照片狀態陣列。
-export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPlaceholders = false } = {}) {
+// foreground（可省略）是疊在「所有照片畫完之後」最上層的裝飾圖層（例如對話泡泡、標題文字
+// 設計上就是要蓋在滿版照片上面），四周留白處必須是透明的 PNG，沒有照片重疊到的樣板不需要它。
+export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPlaceholders = false, foreground = null } = {}) {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, w, h);
@@ -46,20 +68,26 @@ export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPla
     const ry = slot.y * h;
     const rw = slot.w * w;
     const rh = slot.h * h;
+    const shape = { radius: slot.radius || 0, rotationDeg: slot.rotationDeg || 0 };
     const photo = slotPhotos[i];
     if (photo) {
-      drawPhotoInRect(ctx, rx, ry, rw, rh, photo);
+      drawPhotoInRect(ctx, rx, ry, rw, rh, photo, shape);
     } else if (showPlaceholders) {
       ctx.save();
+      ctx.translate(rx + rw / 2, ry + rh / 2);
+      if (shape.rotationDeg) ctx.rotate((shape.rotationDeg * Math.PI) / 180);
+      roundRectPath(ctx, -rw / 2, -rh / 2, rw, rh, shape.radius * Math.min(rw, rh));
       ctx.fillStyle = 'rgba(120,120,120,0.18)';
-      ctx.fillRect(rx, ry, rw, rh);
+      ctx.fill();
       ctx.strokeStyle = 'rgba(90,90,90,0.6)';
       ctx.lineWidth = Math.max(1, w * 0.003);
       ctx.setLineDash([w * 0.01, w * 0.008]);
-      ctx.strokeRect(rx, ry, rw, rh);
+      ctx.stroke();
       ctx.restore();
     }
   });
+
+  if (foreground) ctx.drawImage(foreground, 0, 0, w, h);
 }
 
 export function canvasToDownload(canvas, filename) {
