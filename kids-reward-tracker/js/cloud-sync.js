@@ -107,14 +107,18 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   let authModule;
   let firestoreModule;
   try {
-    [{ initializeApp }, authModule, firestoreModule] = await Promise.all([
-      import(gstatic('app')),
-      import(gstatic('auth')),
-      import(gstatic('firestore')),
+    // import() 掛住不動（例如瀏覽器擴充功能、廣告攔截器把 gstatic.com 的請求吃掉、
+    // 既不成功也不報錯）的話，這裡會永遠卡住，畫面上什麼都不會顯示、也不會有錯誤訊息，
+    // 使用者會看到一片空白、怎麼重新整理都一樣。用 Promise.race 加一個逾時，
+    // 逾時就當作載入失敗處理，至少會顯示看得到的錯誤文字，不會無聲無息卡住。
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 12000));
+    [{ initializeApp }, authModule, firestoreModule] = await Promise.race([
+      Promise.all([import(gstatic('app')), import(gstatic('auth')), import(gstatic('firestore'))]),
+      timeout,
     ]);
   } catch (err) {
     console.error('載入雲端同步套件失敗', err);
-    setStatus({ signedIn: false, available: true, error: '無法載入雲端同步功能，請檢查網路連線' });
+    setStatus({ signedIn: false, available: true, error: '無法載入雲端同步功能，請檢查網路連線（可能是瀏覽器擴充功能或廣告攔截器擋住了）' });
     return;
   }
 
