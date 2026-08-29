@@ -22,6 +22,7 @@ const SYNC_COLLECTION = 'kids_reward_users';
 let currentUser = null;
 let db = null;
 let auth = null;
+let firestoreModuleRef = null; // 存起來給偵錯功能用，不用重新動態載入一次
 let unsubscribeSnapshot = null;
 let pushTimer = null;
 let pushScheduled = false;
@@ -50,6 +51,45 @@ export function isSyncAvailable() {
 
 export function getCurrentUser() {
   return currentUser;
+}
+
+// 排查「明明兩台裝置都顯示已同步、資料卻對不起來」用的暫時性偵錯工具：直接把本機跟
+// 雲端目前實際的內容（有幾個小孩、資料大小、雲端最後更新時間）攤開來看，比隔著螢幕截圖
+// 用眼睛猜快很多。
+export async function debugSyncInfo() {
+  if (!currentUser || !db || !firestoreModuleRef) return { error: '還沒登入或雲端同步還沒就緒' };
+  const { doc, getDoc } = firestoreModuleRef;
+  const local = getSyncableState();
+  const localJson = JSON.stringify(local);
+  const info = {
+    uid: currentUser.uid,
+    email: currentUser.email,
+    localKidsCount: Object.keys(local.kids || {}).length,
+    localKidsNames: Object.values(local.kids || {}).map((k) => k.name),
+    localSizeKB: (localJson.length / 1024).toFixed(1),
+  };
+  try {
+    const snap = await getDoc(doc(db, SYNC_COLLECTION, currentUser.uid));
+    if (!snap.exists()) {
+      info.cloudExists = false;
+    } else {
+      info.cloudExists = true;
+      const cloudJson = snap.data().stateJson || '';
+      info.cloudSizeKB = (cloudJson.length / 1024).toFixed(1);
+      try {
+        const cloudData = JSON.parse(cloudJson);
+        info.cloudKidsCount = Object.keys(cloudData.kids || {}).length;
+        info.cloudKidsNames = Object.values(cloudData.kids || {}).map((k) => k.name);
+      } catch (err) {
+        info.cloudParseError = String(err);
+      }
+      const updatedAt = snap.data().updatedAt;
+      info.cloudUpdatedAt = updatedAt && updatedAt.toDate ? updatedAt.toDate().toISOString() : String(updatedAt);
+    }
+  } catch (err) {
+    info.cloudReadError = `${err.code || ''} ${err.message || err}`.trim();
+  }
+  return info;
 }
 
 // callbacks: { onRemoteChange(), onStatusChange(status) }
@@ -81,6 +121,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
   const app = initializeApp(firebaseConfig);
   auth = authModule.getAuth(app);
   db = firestoreModule.getFirestore(app);
+  firestoreModuleRef = firestoreModule;
 
   const { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } = authModule;
   window.__kidsCloudSyncAuth = { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut };
