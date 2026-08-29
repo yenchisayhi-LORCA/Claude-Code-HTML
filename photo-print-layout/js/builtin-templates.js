@@ -244,8 +244,6 @@ export const BUILTIN_TEMPLATES = [
     background: `${BASE}t14.png`,
     slots: [
       { id: 'p1', x: 0.075, y: 0.3, w: 0.85, h: 0.5666666666666667, radius: 0.5, rotationDeg: 0 },
-      // p2：橢圓（580×112），水平/垂直半徑各佔框寬高一半但絕對值不同，要用 blob。
-      { id: 'p2', x: 0.1375, y: 0.8833333333333333, w: 0.725, h: 0.09333333333333334, rotationDeg: 0, blob: { tl: [0.5, 0.5], tr: [0.5, 0.5], br: [0.5, 0.5], bl: [0.5, 0.5] } },
     ],
     texts: [
       { id: 'title', x: 0.5, y: 0.30416666666666664, w: 1, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.03667, lineHeightRatio: 1.2, color: 'rgb(255, 246, 236)', align: 'center', rotationDeg: 0, default: "今天也是好天氣" },
