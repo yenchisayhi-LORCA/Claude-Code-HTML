@@ -105,7 +105,7 @@ function renderTextFields() {
 function fieldLabel(id) {
   const labels = {
     title: '標題', date: '日期', caption: '文字說明', name: '名字',
-    subtitle: '副標題', bubble: '對話框文字', meta: '資訊文字',
+    subtitle: '副標題', bubble: '對話框文字', meta: '資訊文字', metaSub: '資訊文字（第二行）',
     noteTitle: '備註標題', noteSubtitle: '備註說明',
     caption1: '照片 1 說明', caption2: '照片 2 說明', caption3: '照片 3 說明',
   };

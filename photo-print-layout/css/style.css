@@ -13,6 +13,12 @@
   font-weight: 400 800;
   src: url('../fonts/nunito.woff2') format('woff2');
 }
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 800;
+  src: url('../fonts/baloo2.woff2') format('woff2');
+}
 
 :root {
   --ink: #2b2622;
