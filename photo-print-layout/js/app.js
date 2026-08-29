@@ -50,6 +50,17 @@ function buildThumb(tpl) {
     if (slot.rotationDeg) box.style.transform = `rotate(${slot.rotationDeg}deg)`;
     thumb.appendChild(box);
   });
+  if (tpl.foreground) {
+    const fg = document.createElement('img');
+    fg.src = tpl.foreground;
+    fg.alt = '';
+    fg.style.position = 'absolute';
+    fg.style.inset = '0';
+    fg.style.width = '100%';
+    fg.style.height = '100%';
+    fg.style.objectFit = 'cover';
+    thumb.appendChild(fg);
+  }
   return thumb;
 }
 
