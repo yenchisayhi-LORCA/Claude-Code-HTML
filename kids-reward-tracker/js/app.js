@@ -4,7 +4,7 @@
 
 import * as storage from './storage.js';
 import { getBalance, getStreak, getMonthCalendar, todayStr } from './ledger.js';
-import { completeTask, hasCompletedTaskToday, manualAdjust } from './tasks.js';
+import { completeTask, uncompleteTask, hasCompletedTaskToday, manualAdjust } from './tasks.js';
 import { computeSuggestedStars, submitExercise, approveExercise, rejectExercise, deleteExerciseSubmission } from './exercise.js';
 import { canRedeem, redeemShopItem } from './shop.js';
 import { renderCertificateCanvas, downloadCertificatePng, printCertificateImage } from './certificate.js';
@@ -146,7 +146,7 @@ function renderTasksTab(kid) {
       const right = done
         ? iconSvg('ic-check', 30, 'task-done-mark')
         : `<span class="stars-badge">${iconSvg('ic-star')}${t.stars}</span>`;
-      return `<button type="button" class="task-card ${done ? 'done' : ''}" data-task-id="${t.id}" ${done ? 'disabled' : ''}>
+      return `<button type="button" class="task-card ${done ? 'done' : ''}" data-task-id="${t.id}" title="${done ? '再點一下可以取消' : ''}">
         ${chip}
         <span class="task-name">${esc(t.name)}</span>
         ${right}
@@ -688,10 +688,14 @@ function initEventListeners() {
   // 今日任務
   document.getElementById('task-list').addEventListener('click', (e) => {
     const btn = e.target.closest('.task-card');
-    if (!btn || btn.disabled) return;
+    if (!btn) return;
     const task = storage.getTaskTemplates().find((t) => t.id === btn.dataset.taskId);
     const kid = getActiveKid();
     if (!task || !kid) return;
+    if (btn.classList.contains('done')) {
+      uncompleteTask(kid.id, task.id);
+      return;
+    }
     const result = completeTask(kid.id, task);
     celebrate();
     handleNewCertificates(result.newlyUnlockedTiers);
