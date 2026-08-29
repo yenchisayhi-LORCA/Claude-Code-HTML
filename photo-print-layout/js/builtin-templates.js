@@ -361,6 +361,24 @@ export const BUILTIN_TEMPLATES = [
       { id: 'caption4', x: 0.5544609832763672, y: 0.8735453287760416, w: 0.15, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(59, 111, 212)', align: 'left', rotationDeg: 4, default: "2013.1 高雄" },
     ],
   },
+  {
+    id: 'builtin-t21',
+    name: '生日拼貼手帳',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t21.png`,
+    slots: [
+      { id: 'p1', x: 0.33325380325317383, y: 0.06287663777669271, w: 0.535, h: 0.22333333333333333, radius: 0, rotationDeg: 2 },
+      { id: 'p2', x: 0.06623469352722168, y: 0.4958443196614583, w: 0.3775, h: 0.18916666666666668, radius: 0, rotationDeg: -4 },
+      { id: 'p3', x: 0.4961361312866211, y: 0.4027422078450521, w: 0.4025, h: 0.3333333333333333, radius: 0, rotationDeg: 3 },
+    ],
+    texts: [
+      { id: 'title', x: 0.16375, y: 0.07490885416666666, w: 0.2375, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.03167, lineHeightRatio: 1.05, color: 'rgb(107, 66, 38)', align: 'left', rotationDeg: 0, default: "HAPPY\nBIRTHDAY" },
+      { id: 'caption1', x: 0.6, y: 0.3570833333333333, w: 0.575, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.035, lineHeightRatio: 1.2, color: 'rgb(162, 79, 201)', align: 'center', rotationDeg: 0, default: "TO ANNE" },
+      { id: 'caption2', x: 0.5258076858520507, y: 0.7457474772135416, w: 0.0825, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02167, lineHeightRatio: 1.2, color: 'rgb(224, 138, 46)', align: 'left', rotationDeg: 3, default: "TO ME" },
+    ],
+  },
 ];
 
 export function getBuiltinTemplate(id) {
