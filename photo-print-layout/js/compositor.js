@@ -90,16 +90,31 @@ export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPla
   if (foreground) ctx.drawImage(foreground, 0, 0, w, h);
 }
 
-export function canvasToDownload(canvas, filename) {
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }, 'image/png');
+// 一般網頁環境用 <a download> 存檔即可；如果是跑在 Claude Artifact 預覽環境裡
+// （沒有真正的下載權限，<a download> 點了沒反應），改用 Artifact 提供的
+// downloads 能力跳出存檔確認。window.claude 不存在時就是一般網頁，直接走 <a download>。
+export async function canvasToDownload(canvas, filename) {
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) return;
+
+  if (window.claude && typeof window.claude.use === 'function') {
+    const downloads = await window.claude.use('downloads').catch(() => null);
+    if (downloads) {
+      try {
+        await downloads.save({ filename, data: blob });
+      } catch (err) {
+        console.error('儲存失敗', err);
+      }
+      return;
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
