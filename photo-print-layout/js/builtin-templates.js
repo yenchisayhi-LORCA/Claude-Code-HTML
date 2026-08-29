@@ -375,7 +375,7 @@ export const BUILTIN_TEMPLATES = [
     ],
     texts: [
       { id: 'title', x: 0.16375, y: 0.07490885416666666, w: 0.2375, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.03167, lineHeightRatio: 1.05, color: 'rgb(107, 66, 38)', align: 'left', rotationDeg: 0, default: "HAPPY\nBIRTHDAY" },
-      { id: 'caption1', x: 0.6, y: 0.3570833333333333, w: 0.575, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.035, lineHeightRatio: 1.2, color: 'rgb(162, 79, 201)', align: 'center', rotationDeg: 0, default: "TO ANNE" },
+      { id: 'caption1', x: 0.4117122459411621, y: 0.29730305989583333, w: 0.17, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.03, lineHeightRatio: 1.2, color: 'rgb(162, 79, 201)', align: 'left', rotationDeg: 2, default: "TO ANNE" },
       { id: 'caption2', x: 0.5258076858520507, y: 0.7457474772135416, w: 0.0825, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02167, lineHeightRatio: 1.2, color: 'rgb(224, 138, 46)', align: 'left', rotationDeg: 3, default: "TO ME" },
     ],
   },
