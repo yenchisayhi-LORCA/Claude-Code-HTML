@@ -203,11 +203,17 @@ async function completeEmailLinkSignInIfPresent(authModule) {
   try {
     await signInWithEmailLink(auth, email, window.location.href);
     window.localStorage.removeItem(EMAIL_STORAGE_KEY);
-    window.history.replaceState({}, document.title, window.location.pathname);
     justCompletedEmailLinkSignIn = true;
   } catch (err) {
     console.error('Email 連結登入失敗', err);
     setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
+  } finally {
+    // 不管成功還是失敗，都要把網址上的登入參數清掉：連結本身是一次性的，失敗多半是因為
+    // 過期或已經用過。如果只在成功時才清網址，失敗後這個分頁只要一重新整理，就會用同一個
+    // 已經失效的連結再跳一次「請輸入 Email」，卡在無限迴圈——使用者不管輸入幾次都不會成功，
+    // 只會看到同一個輸入框一直跳出來。清掉網址後就會正常回到「登入同步」按鈕，可以請他直接
+    // 重新按一次寄一個新的連結。
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 
