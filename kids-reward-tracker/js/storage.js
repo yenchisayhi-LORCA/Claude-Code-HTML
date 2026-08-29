@@ -183,6 +183,13 @@ export function removeLedgerEntryRaw(id) {
   state.ledger = state.ledger.filter((e) => e.id !== id);
 }
 
+// 從「歷程」畫面上隱藏一筆帳本紀錄，但不動星星：getBalance()／getStreak()／
+// getMonthCalendar() 都不會理會這個旗標，一樣照常把這筆算進餘額/連續天數/日曆標記。
+export function hideLedgerEntryFromHistory(id) {
+  const e = state.ledger.find((x) => x.id === id);
+  if (e) e.hiddenFromHistory = true;
+}
+
 // ---------------------------------------------------------------- 睡眠回報（掛在小孩身上，同一天可覆蓋修正）
 
 export function getSleepRecord(kidId, dateStr) {
