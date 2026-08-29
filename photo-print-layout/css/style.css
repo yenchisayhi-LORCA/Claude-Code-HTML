@@ -139,7 +139,6 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .template-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .template-thumb-slot {
   position: absolute;
-  border: 2px dashed rgba(181,101,47,0.85);
   background: rgba(181,101,47,0.12);
 }
 .template-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }

@@ -142,10 +142,6 @@ export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPla
       shapePath(ctx, -rw / 2, -rh / 2, rw, rh, shape);
       ctx.fillStyle = 'rgba(120,120,120,0.18)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(90,90,90,0.6)';
-      ctx.lineWidth = Math.max(1, w * 0.003);
-      ctx.setLineDash([w * 0.01, w * 0.008]);
-      ctx.stroke();
       ctx.restore();
     }
   });
