@@ -331,6 +331,7 @@ export const BUILTIN_TEMPLATES = [
     canvasW: 1200,
     canvasH: 1800,
     background: `${BASE}t19.png`,
+    foreground: `${BASE}t19-fg.png`,
     slots: [
       { id: 'p1', x: 0.0906496810913086, y: 0.051462198893229165, w: 0.4975, h: 0.26666666666666666, radius: 0, rotationDeg: -6 },
       { id: 'p2', x: 0.38885663986206054, y: 0.2624336751302083, w: 0.4975, h: 0.26666666666666666, radius: 0, rotationDeg: 4 },
