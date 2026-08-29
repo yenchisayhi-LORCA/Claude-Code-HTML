@@ -218,6 +218,111 @@ export const BUILTIN_TEMPLATES = [
       { id: 'title', x: 0.5, y: 0.04583333333333333, w: 0.55765625, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.035, lineHeightRatio: 1.2, color: 'rgb(253, 235, 227)', align: 'left', rotationDeg: 0, default: "LITTLE ADVENTURES" },
     ],
   },
+  {
+    id: 'builtin-t13',
+    name: '生日派對',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t13.png`,
+    slots: [
+      { id: 'p1', x: 0.125, y: 0.25, w: 0.75, h: 0.5333333333333333, rotationDeg: 0, blob: { tl: [0.5, 0.4688], tr: [0.5, 0.4688], br: [0.0667, 0.0625], bl: [0.0667, 0.0625] } },
+      { id: 'p2', x: 0.08, y: 0.8, w: 0.2625, h: 0.175, radius: 0.5, rotationDeg: 0 },
+    ],
+    texts: [
+      { id: 'labelTop', x: 0.5, y: 0.13458333333333333, w: 1, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.04333, lineHeightRatio: 1.2, color: 'rgb(255, 246, 236)', align: 'center', rotationDeg: 0, default: "HAPPY" },
+      { id: 'title', x: 0.5, y: 0.185, w: 1, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.08667, lineHeightRatio: 1, color: 'rgb(255, 201, 60)', align: 'center', rotationDeg: 0, default: "Birthday" },
+      { id: 'caption', x: 0.445, y: 0.9604166666666667, w: 0.14, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01667, lineHeightRatio: 1.2, color: 'rgb(255, 246, 236)', align: 'left', rotationDeg: 0, default: "小壽星 · 3 歲" },
+    ],
+  },
+  {
+    id: 'builtin-t14',
+    name: '彩虹雲朵',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t14.png`,
+    slots: [
+      { id: 'p1', x: 0.075, y: 0.3, w: 0.85, h: 0.5666666666666667, radius: 0.5, rotationDeg: 0 },
+      // p2：橢圓（580×112），水平/垂直半徑各佔框寬高一半但絕對值不同，要用 blob。
+      { id: 'p2', x: 0.1375, y: 0.8833333333333333, w: 0.725, h: 0.09333333333333334, rotationDeg: 0, blob: { tl: [0.5, 0.5], tr: [0.5, 0.5], br: [0.5, 0.5], bl: [0.5, 0.5] } },
+    ],
+    texts: [
+      { id: 'title', x: 0.5, y: 0.30416666666666664, w: 1, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.03667, lineHeightRatio: 1.2, color: 'rgb(255, 246, 236)', align: 'center', rotationDeg: 0, default: "今天也是好天氣" },
+    ],
+  },
+  {
+    id: 'builtin-t15',
+    name: '小公主皇冠',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t15.png`,
+    slots: [
+      { id: 'p1', x: 0.055, y: 0.20833333333333334, w: 0.5875, h: 0.39166666666666666, rotationDeg: 0, blob: { tl: [0.58, 0.52], tr: [0.42, 0.56], br: [0.48, 0.44], bl: [0.52, 0.48] } },
+      { id: 'p2', x: 0.62, y: 0.2916666666666667, w: 0.33, h: 0.33, rotationDeg: 0, blob: { tl: [0.5, 0.5], tr: [0.5, 0.5], br: [0.5, 0.5], bl: [0.5, 0.5] } },
+      { id: 'p3', x: 0.075, y: 0.65, w: 0.85, h: 0.275, radius: 0.5, rotationDeg: 0 },
+    ],
+    texts: [
+      { id: 'title', x: 0.5875, y: 0.12, w: 0.65, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.055, lineHeightRatio: 1, color: 'rgb(240, 86, 140)', align: 'left', rotationDeg: 0, default: "MY LITTLE\nPRINCESS" },
+      { id: 'subtitle', x: 0.5875, y: 0.1925, w: 0.65, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01833, lineHeightRatio: 1.2, color: 'rgb(55, 55, 122)', align: 'left', rotationDeg: 0, default: "2026 · 三歲生日快樂" },
+      { id: 'caption', x: 0.22, y: 0.9508333333333333, w: 0.275, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01833, lineHeightRatio: 1.2, color: 'rgb(55, 55, 122)', align: 'left', rotationDeg: 0, default: "最喜歡的小裙子與皇冠" },
+    ],
+  },
+  {
+    id: 'builtin-t16',
+    name: '派對拍立得',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t16.png`,
+    slots: [
+      { id: 'p1', x: 0.06641525268554688, y: 0.17738390604654947, w: 0.505, h: 0.25333333333333335, radius: 0, rotationDeg: -3 },
+      { id: 'p2', x: 0.40344589233398437, y: 0.49609855651855467, w: 0.505, h: 0.25333333333333335, radius: 0, rotationDeg: 2.5 },
+      { id: 'p3', x: 0.0425, y: 0.6833333333333333, w: 0.4, h: 0.26666666666666666, radius: 0.5, rotationDeg: 0 },
+    ],
+    texts: [
+      { id: 'title', x: 0.5, y: 0.07541666666666667, w: 1, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.04833, lineHeightRatio: 1.2, color: 'rgb(255, 246, 236)', align: 'center', rotationDeg: 0, default: "PARTY TIME!" },
+      { id: 'caption1', x: 0.13172260284423828, y: 0.45453776041666666, w: 0.0975, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02167, lineHeightRatio: 1.2, color: 'rgb(240, 86, 140)', align: 'left', rotationDeg: -3, default: "吹蠟燭" },
+      { id: 'caption2', x: 0.44797966003417966, y: 0.7605989583333334, w: 0.0975, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02167, lineHeightRatio: 1.2, color: 'rgb(89, 169, 239)', align: 'left', rotationDeg: 2.5, default: "拆禮物" },
+      { id: 'caption3', x: 0.5575, y: 0.8, w: 0.125, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01667, lineHeightRatio: 1.5, color: 'rgb(55, 55, 122)', align: 'right', rotationDeg: 0, default: "三張最愛的\n派對瞬間" },
+    ],
+  },
+  {
+    id: 'builtin-t17',
+    name: '氣球動物園',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t17.png`,
+    slots: [
+      { id: 'p1', x: 0.055, y: 0.175, w: 0.45, h: 0.3416666666666667, rotationDeg: 0, blob: { tl: [0.5, 0.5], tr: [0.5, 0.5], br: [0.46, 0.46], bl: [0.46, 0.46] } },
+      { id: 'p2', x: 0.545, y: 0.35833333333333334, w: 0.4125, h: 0.31333333333333335, rotationDeg: 0, blob: { tl: [0.5, 0.5], tr: [0.5, 0.5], br: [0.46, 0.46], bl: [0.46, 0.46] } },
+      { id: 'p3', x: 0.075, y: 0.6366666666666667, w: 0.45, h: 0.3, radius: 0.5, rotationDeg: 0 },
+    ],
+    texts: [
+      { id: 'title', x: 0.5, y: 0.065, w: 1, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.04167, lineHeightRatio: 1.2, color: 'rgb(255, 246, 236)', align: 'center', rotationDeg: 0, default: "動物園的一天" },
+      { id: 'caption', x: 0.2475, y: 0.9541666666666667, w: 0.33, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01833, lineHeightRatio: 1.2, color: 'rgb(55, 55, 122)', align: 'left', rotationDeg: 0, default: "看到獅子、長頸鹿和好多鳥" },
+    ],
+  },
+  {
+    id: 'builtin-t18',
+    name: '蛋糕慶生',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t18.png`,
+    slots: [
+      // p1：橢圓（700×440），水平/垂直半徑各佔框寬高一半但絕對值不同，要用 blob。
+      { id: 'p1', x: 0.0625, y: 0.058333333333333334, w: 0.875, h: 0.36666666666666664, rotationDeg: 0, blob: { tl: [0.5, 0.5], tr: [0.5, 0.5], br: [0.5, 0.5], bl: [0.5, 0.5] } },
+      { id: 'p2', x: 0.06, y: 0.6166666666666667, w: 0.4375, h: 0.2916666666666667, rotationDeg: 0, blob: { tl: [0.56, 0.48], tr: [0.44, 0.54], br: [0.52, 0.46], bl: [0.48, 0.52] } },
+      { id: 'p3', x: 0.565, y: 0.6333333333333333, w: 0.375, h: 0.25, rotationDeg: 0, blob: { tl: [0.44, 0.54], tr: [0.56, 0.46], br: [0.48, 0.54], bl: [0.52, 0.46] } },
+    ],
+    texts: [
+      { id: 'title', x: 0.5, y: 0.5066666666666667, w: 1, fontFamily: `"Baloo 2", cursive`, fontWeight: '800', fontSizeFrac: 0.06167, lineHeightRatio: 1, color: 'rgb(255, 122, 92)', align: 'center', rotationDeg: 0, default: "SWEET\nTHREE" },
+      { id: 'subtitle', x: 0.5, y: 0.5841666666666666, w: 1, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01833, lineHeightRatio: 1.2, color: 'rgb(55, 55, 122)', align: 'center', rotationDeg: 0, default: "生日蛋糕與許願時間" },
+    ],
+  },
 ];
 
 export function getBuiltinTemplate(id) {
