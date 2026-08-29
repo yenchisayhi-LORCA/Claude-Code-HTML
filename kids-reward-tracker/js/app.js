@@ -300,7 +300,7 @@ async function openCertPreview(cert, { isNewUnlock = false } = {}) {
     threshold: cert.thresholdSnapshot,
     stars: cert.starsAtAward,
     date: cert.date,
-    photoDataUrl: cert.photoDataUrl,
+    photoDataUrl: cert.photoDataUrl || (kid ? kid.avatar : null),
   });
   currentCertCanvas = canvas;
   wrap.innerHTML = '';

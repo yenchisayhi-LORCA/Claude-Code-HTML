@@ -46,6 +46,15 @@ function sanitize(s) {
   if (!Array.isArray(s.exerciseSubmissions)) s.exerciseSubmissions = [];
   if (!Array.isArray(s.certificateTiers)) s.certificateTiers = [];
   if (!Array.isArray(s.awardedCertificates)) s.awardedCertificates = [];
+  // 一次性清理：獎狀曾經在每次頒發時都複製一份小孩大頭貼存進 photoDataUrl，同一個門檻
+  // 反覆跨越就會複製一堆重複的照片，很容易把整包資料撐爆 Firestore 單一文件 1MB 的上限
+  // 導致同步失敗（見 ledger.js 的說明）。這裡把「跟小孩目前大頭貼完全一樣」的複製本清掉
+  // （畫面上會自動改用小孩目前的大頭貼顯示，效果不變），只保留家長曾經手動補傳、
+  // 跟目前大頭貼不同的照片。
+  for (const cert of s.awardedCertificates) {
+    const kid = s.kids[cert.kidId];
+    if (kid && cert.photoDataUrl && cert.photoDataUrl === kid.avatar) cert.photoDataUrl = null;
+  }
   if (!Array.isArray(s.savingsChallenges)) s.savingsChallenges = [];
   if (!Array.isArray(s.shopCatalog)) s.shopCatalog = [];
   if (!s.pin || typeof s.pin !== 'object') s.pin = { plain: null };
