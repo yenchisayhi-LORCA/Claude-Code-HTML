@@ -41,7 +41,12 @@ function buildThumb(tpl) {
     box.style.top = `${slot.y * 100}%`;
     box.style.width = `${slot.w * 100}%`;
     box.style.height = `${slot.h * 100}%`;
-    if (slot.radius) box.style.borderRadius = `${slot.radius * 100}%`;
+    if (slot.blob) {
+      const b = slot.blob;
+      box.style.borderRadius = `${b.tl[0] * 100}% ${b.tr[0] * 100}% ${b.br[0] * 100}% ${b.bl[0] * 100}% / ${b.tl[1] * 100}% ${b.tr[1] * 100}% ${b.br[1] * 100}% ${b.bl[1] * 100}%`;
+    } else if (slot.radius) {
+      box.style.borderRadius = `${slot.radius * 100}%`;
+    }
     if (slot.rotationDeg) box.style.transform = `rotate(${slot.rotationDeg}deg)`;
     thumb.appendChild(box);
   });
