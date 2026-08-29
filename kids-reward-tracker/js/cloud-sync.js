@@ -32,8 +32,16 @@ let onRemoteChangeCb = null;
 let onStatusChangeCb = null;
 let justCompletedEmailLinkSignIn = false;
 
+// 除了「Firebase 根本沒設定好」那次以外，這個檔案裡幾乎每個 setStatus() 呼叫都只帶
+// { signedIn, user, syncing, error } 這幾個欄位，沒有重複帶 available——這樣沒問題的前提
+// 是 renderSyncArea() 收到 available 是 undefined 時，不能被當成「服務不可用」處理，
+// 不然一旦真的登入、開始有 setStatus() 呼叫進來，畫面上的登入狀態/登出按鈕就會直接消失
+// （使用者會看到「明明已經登入過，怎麼連登入按鈕都不見了」）。用這個模組層級的旗標統一補上
+// available 欄位，這樣呼叫端不用每次都自己記得帶，也不會漏掉。理由同根目錄同一份檔案的說明。
+let isAvailable = false;
+
 function setStatus(status) {
-  if (onStatusChangeCb) onStatusChangeCb(status);
+  if (onStatusChangeCb) onStatusChangeCb({ available: isAvailable, ...status });
 }
 
 export function isSyncAvailable() {
@@ -53,6 +61,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
     setStatus({ signedIn: false, available: false });
     return;
   }
+  isAvailable = true;
 
   let initializeApp;
   let authModule;
