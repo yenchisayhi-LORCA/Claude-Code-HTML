@@ -717,7 +717,7 @@ function initEventListeners() {
     const btn = e.target.closest('.btn-delete-task-history');
     if (!btn) return;
     withPinGate(() => {
-      if (confirm('確定要刪除這筆作業歷程嗎？當初入帳的星星也會一併扣掉。')) {
+      if (confirm('確定要刪除這筆作業歷程嗎？只會刪除紀錄本身，已經入帳的星星不會變動。')) {
         deleteTaskHistoryEntry(btn.dataset.entryId);
       }
     })();
