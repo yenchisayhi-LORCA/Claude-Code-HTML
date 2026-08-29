@@ -51,9 +51,13 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         if (req.mode === 'navigate') {
           const fallback = await cache.match(new URL('./index.html', self.location.href));
-          if (fallback) return fallback;
+          return fallback || offlineResponse();
         }
-        return offlineResponse();
+        // 非導覽請求（圖片、字型、JS 等）如果連快取都沒有，就讓這次 fetch 失敗自然往上拋，
+        // 讓瀏覽器照平常的方式處理載入失敗（例如 <img> 顯示壞圖示），而不是硬塞一個
+        // 純文字的「離線」假回應——那樣圖片會直接整張消失、看起來像資料不見了，
+        // 但其實只是行動網路一時不穩，之後重新整理通常就會恢復正常。
+        throw err;
       }
     })
   );
