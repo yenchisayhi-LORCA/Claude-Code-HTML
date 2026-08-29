@@ -228,7 +228,15 @@ async function handleSignedIn(firestoreModule) {
     snap = await getDoc(ref);
   } catch (err) {
     console.error('讀取雲端資料失敗', err);
-    setStatus({ signedIn: true, user: currentUser, syncing: false, error: '讀取雲端資料失敗，暫時只使用本機資料' });
+    const isPermissionError = err && err.code === 'permission-denied';
+    setStatus({
+      signedIn: true,
+      user: currentUser,
+      syncing: false,
+      error: isPermissionError
+        ? '讀取雲端資料失敗：雲端資料庫拒絕存取，請確認 Firebase Console 的 Firestore 安全規則已更新（見 README），暫時只使用本機資料'
+        : '讀取雲端資料失敗，暫時只使用本機資料',
+    });
     return;
   }
 
@@ -328,11 +336,14 @@ async function pushNow(firestoreModule, stateOverride) {
     setStatus({ signedIn: true, user: currentUser, syncing: false });
   } catch (err) {
     console.error('同步到雲端失敗', err);
+    const isPermissionError = err && err.code === 'permission-denied';
     setStatus({
       signedIn: true,
       user: currentUser,
       syncing: false,
-      error: '同步失敗（資料量可能太大，常見原因是照片太多；本機資料仍安全保留）',
+      error: isPermissionError
+        ? '同步失敗：雲端資料庫拒絕存取，請確認 Firebase Console 的 Firestore 安全規則已更新（見 README）'
+        : '同步失敗（資料量可能太大或網路問題；本機資料仍安全保留）',
     });
   }
 }
