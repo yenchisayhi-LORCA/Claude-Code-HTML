@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>照片沖印排版</title>
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="照片排版" />
+<meta name="theme-color" content="#b5652f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title">🖼️ 照片沖印排版</div>
+    <nav class="header-nav">
+      <button id="nav-gallery" class="nav-btn active" data-view="gallery">我的樣板</button>
+    </nav>
+  </header>
+
+  <main id="app-main">
+    <!-- 樣板總覽 -->
+    <section id="view-gallery" class="view">
+      <div class="view-toolbar">
+        <p class="view-hint">先建立一份「底稿樣板」（背景圖 + 1～3 個照片框位置），之後就能重複拿來套照片、匯出沖印用的圖檔。</p>
+        <button id="btn-new-template" class="btn btn-primary">＋ 新增樣板</button>
+      </div>
+      <div id="template-empty" class="empty-state" hidden>
+        <p>還沒有任何樣板，建立第一份底稿樣板開始吧！</p>
+        <button id="btn-new-template-empty" class="btn btn-primary">建立第一份樣板</button>
+      </div>
+      <div id="template-grid" class="template-grid"></div>
+    </section>
+
+    <!-- 樣板編輯器：上傳底稿、框出照片位置 -->
+    <section id="view-editor" class="view" hidden>
+      <div class="view-toolbar">
+        <button class="btn btn-ghost" data-back-to="gallery">← 返回樣板列表</button>
+        <h2 id="editor-title">新增樣板</h2>
+      </div>
+
+      <div class="editor-layout">
+        <div class="editor-canvas-col">
+          <div id="editor-canvas-wrap" class="editor-canvas-wrap">
+            <div id="editor-empty-bg" class="editor-empty-bg">
+              <p>尚未上傳底稿圖</p>
+              <button id="btn-upload-bg" class="btn btn-secondary">上傳底稿圖片</button>
+            </div>
+            <img id="editor-bg-img" alt="底稿預覽" hidden />
+            <div id="editor-slots-layer" class="editor-slots-layer" hidden></div>
+          </div>
+          <input type="file" id="editor-bg-input" accept="image/*" hidden />
+          <p class="hint">框可以直接拖曳移動，拖右下角的把手調整大小。</p>
+        </div>
+
+        <aside class="editor-side-col">
+          <label class="field-label">樣板名稱
+            <input type="text" id="editor-name-input" placeholder="例如：生日拍貼、聖誕卡片" />
+          </label>
+
+          <label class="field-label">沖印尺寸
+            <select id="editor-size-select">
+              <option value="4x6">4×6 吋</option>
+              <option value="5x7">5×7 吋</option>
+            </select>
+          </label>
+          <p class="hint" id="editor-size-hint"></p>
+
+          <div class="field-label">
+            照片框（最多 3 個）
+            <div id="editor-slot-list" class="editor-slot-list"></div>
+            <button id="btn-add-slot" class="btn btn-outline-primary btn-block">＋ 新增照片框</button>
+          </div>
+
+          <div class="editor-actions">
+            <button id="btn-save-template" class="btn btn-primary btn-block">儲存樣板</button>
+            <button id="btn-change-bg" class="btn btn-ghost btn-block" hidden>更換底稿圖片</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- 套用樣板：上傳照片、調整位置、匯出 -->
+    <section id="view-export" class="view" hidden>
+      <div class="view-toolbar">
+        <button class="btn btn-ghost" data-back-to="gallery">← 返回樣板列表</button>
+        <h2 id="export-title">套用樣板</h2>
+      </div>
+
+      <div class="export-layout">
+        <div class="export-preview-col">
+          <canvas id="export-preview-canvas"></canvas>
+          <p class="hint">預覽僅供參考，實際匯出解析度較高（300 DPI，適合送洗沖印）。</p>
+          <button id="btn-export-download" class="btn btn-primary btn-block">📥 匯出圖檔（PNG）</button>
+        </div>
+
+        <div class="export-slots-col">
+          <div id="export-slot-cards"></div>
+          <div id="export-text-fields" class="export-text-fields" hidden></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
