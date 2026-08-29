@@ -12,6 +12,7 @@ let template = null;
 let bgImg = null;
 let fgImg = null;
 let slotPhotos = []; // 跟 template.slots 對應，每格是 null 或 { img, imgW, imgH, zoom, offX, offY, cleanup }
+let textValues = {}; // 跟 template.texts 對應，key 是 text.id，value 是使用者目前編輯的文字
 let previewCtx = null;
 
 export function initExporter() {
@@ -19,6 +20,7 @@ export function initExporter() {
     title: document.getElementById('export-title'),
     previewCanvas: document.getElementById('export-preview-canvas'),
     slotCards: document.getElementById('export-slot-cards'),
+    textFields: document.getElementById('export-text-fields'),
     downloadBtn: document.getElementById('btn-export-download'),
   };
   previewCtx = els.previewCanvas.getContext('2d');
@@ -40,7 +42,10 @@ export async function openExport(tpl) {
   els.previewCanvas.height = previewH;
 
   slotPhotos = template.slots.map(() => null);
+  textValues = {};
+  (template.texts || []).forEach((t) => { textValues[t.id] = t.default; });
   renderSlotCards();
+  renderTextFields();
   renderPreview();
 }
 
@@ -50,7 +55,61 @@ export function disposeExport() {
 }
 
 function renderPreview() {
-  drawTemplate(previewCtx, els.previewCanvas.width, els.previewCanvas.height, bgImg, template.slots, slotPhotos, { showPlaceholders: true, foreground: fgImg });
+  drawTemplate(previewCtx, els.previewCanvas.width, els.previewCanvas.height, bgImg, template.slots, slotPhotos, {
+    showPlaceholders: true,
+    foreground: fgImg,
+    texts: template.texts || [],
+    textValues,
+  });
+}
+
+function renderTextFields() {
+  els.textFields.innerHTML = '';
+  const texts = template.texts || [];
+  if (texts.length === 0) {
+    els.textFields.hidden = true;
+    return;
+  }
+  els.textFields.hidden = false;
+
+  const heading = document.createElement('div');
+  heading.className = 'export-text-fields-heading';
+  heading.textContent = '文字內容（可自行編輯）';
+  els.textFields.appendChild(heading);
+
+  texts.forEach((t) => {
+    const field = document.createElement('label');
+    field.className = 'text-field';
+    const labelText = document.createElement('span');
+    labelText.className = 'text-field-label';
+    labelText.textContent = fieldLabel(t.id);
+    field.appendChild(labelText);
+
+    const isMultiline = t.default.includes('\n');
+    const input = document.createElement(isMultiline ? 'textarea' : 'input');
+    if (!isMultiline) input.type = 'text';
+    else input.rows = t.default.split('\n').length;
+    input.className = 'text-field-input';
+    input.value = textValues[t.id];
+    input.maxLength = 60;
+    input.addEventListener('input', () => {
+      textValues[t.id] = input.value;
+      renderPreview();
+    });
+    field.appendChild(input);
+    els.textFields.appendChild(field);
+  });
+}
+
+// 把英文欄位代號轉成看得懂的中文標籤；沒對到的就直接顯示代號本身。
+function fieldLabel(id) {
+  const labels = {
+    title: '標題', date: '日期', caption: '文字說明', name: '名字',
+    subtitle: '副標題', bubble: '對話框文字', meta: '資訊文字',
+    noteTitle: '備註標題', noteSubtitle: '備註說明',
+    caption1: '照片 1 說明', caption2: '照片 2 說明', caption3: '照片 3 說明',
+  };
+  return labels[id] || id;
 }
 
 function renderSlotCards() {
@@ -186,7 +245,12 @@ function doExport() {
   canvas.width = template.canvasW;
   canvas.height = template.canvasH;
   const ctx = canvas.getContext('2d');
-  drawTemplate(ctx, canvas.width, canvas.height, bgImg, template.slots, slotPhotos, { showPlaceholders: false, foreground: fgImg });
+  drawTemplate(ctx, canvas.width, canvas.height, bgImg, template.slots, slotPhotos, {
+    showPlaceholders: false,
+    foreground: fgImg,
+    texts: template.texts || [],
+    textValues,
+  });
   const safeName = template.name.replace(/[\\/:*?"<>|]+/g, '').trim() || 'photo';
   canvasToDownload(canvas, `${safeName}-${template.printSize}-${Date.now()}.png`);
 }

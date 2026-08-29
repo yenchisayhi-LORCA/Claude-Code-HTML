@@ -1,3 +1,19 @@
+/* 內建樣板包的裝飾文字用字（拿掉了對 Google Fonts 的依賴，直接把兩款字內嵌進站內，
+   離線或封鎖外部字型 CDN 的環境也能正常顯示手寫風標題）。中文字沿用系統內建字型即可，
+   不需要另外嵌 Noto Sans TC（檔案太大),所以下面沒有它的 @font-face。*/
+@font-face {
+  font-family: 'Gochi Hand';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../fonts/gochi-hand.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 400 800;
+  src: url('../fonts/nunito.woff2') format('woff2');
+}
+
 :root {
   --ink: #2b2622;
   --paper: #faf6f0;
@@ -249,7 +265,20 @@ button, input, select { font-family: inherit; font-size: inherit; }
   margin-bottom: 10px;
 }
 
-.export-slots-col { display: flex; flex-direction: column; gap: 16px; }
+.export-slots-col { display: flex; flex-direction: column; gap: 24px; }
+#export-slot-cards { display: flex; flex-direction: column; gap: 16px; }
+
+.export-text-fields { display: flex; flex-direction: column; gap: 14px; }
+.export-text-fields-heading { font-weight: 800; font-size: 0.95rem; color: var(--accent-dark); }
+.text-field { display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 0.88rem; }
+.text-field-input {
+  font-weight: 400;
+  font-family: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
 .slot-card {
   background: var(--card);
   border: 1px solid var(--line);

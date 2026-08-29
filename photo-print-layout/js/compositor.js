@@ -53,11 +53,40 @@ export function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
 }
 
+// textDef: { x, y（文字整塊的中心點，0~1）, w（框寬，0~1，依 align 決定要用哪一邊當錨點）,
+//   fontFamily, fontWeight, fontSizeFrac（以畫布高度為基準的比例）, lineHeightRatio（相對字級
+//   的倍數）, color, align, rotationDeg }。跟照片框一樣是解析度無關、可以直接套用在任何尺寸。
+export function drawText(ctx, w, h, textDef, value) {
+  const { x, y, fontFamily, fontWeight, fontSizeFrac, lineHeightRatio, color, align, rotationDeg = 0 } = textDef;
+  const fontSize = fontSizeFrac * h;
+  const lineHeight = fontSize * lineHeightRatio;
+  const boxW = textDef.w * w;
+  const lines = String(value ?? '').split('\n');
+  const totalHeight = lineHeight * lines.length;
+
+  let anchorX = 0;
+  if (align === 'left') anchorX = -boxW / 2;
+  else if (align === 'right') anchorX = boxW / 2;
+
+  ctx.save();
+  ctx.translate(x * w, y * h);
+  if (rotationDeg) ctx.rotate((rotationDeg * Math.PI) / 180);
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  ctx.fillStyle = color;
+  ctx.textAlign = align === 'right' ? 'right' : align === 'center' ? 'center' : 'left';
+  ctx.textBaseline = 'middle';
+  lines.forEach((line, i) => {
+    const ly = -totalHeight / 2 + lineHeight * (i + 0.5);
+    ctx.fillText(line, anchorX, ly);
+  });
+  ctx.restore();
+}
+
 // 畫整份樣板：background 是 <img>／ImageBitmap，slots 是樣板的框定義陣列，
 // slotPhotos 是跟 slots 一一對應、可能含 null 的照片狀態陣列。
 // foreground（可省略）是疊在「所有照片畫完之後」最上層的裝飾圖層（例如對話泡泡、標題文字
 // 設計上就是要蓋在滿版照片上面），四周留白處必須是透明的 PNG，沒有照片重疊到的樣板不需要它。
-export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPlaceholders = false, foreground = null } = {}) {
+export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPlaceholders = false, foreground = null, texts = [], textValues = {} } = {}) {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, w, h);
@@ -88,6 +117,11 @@ export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPla
   });
 
   if (foreground) ctx.drawImage(foreground, 0, 0, w, h);
+
+  texts.forEach((t) => {
+    const value = textValues[t.id] ?? t.default;
+    drawText(ctx, w, h, t, value);
+  });
 }
 
 // 一般網頁環境用 <a download> 存檔即可；如果是跑在 Claude Artifact 預覽環境裡
