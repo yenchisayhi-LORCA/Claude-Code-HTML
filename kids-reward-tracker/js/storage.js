@@ -258,6 +258,10 @@ export function updateExerciseSubmission(id, patch) {
   return s;
 }
 
+export function deleteExerciseSubmissionRaw(id) {
+  state.exerciseSubmissions = state.exerciseSubmissions.filter((s) => s.id !== id);
+}
+
 // ---------------------------------------------------------------- 獎狀門檻 + 獎狀牆
 
 export function getCertificateTiers() {
