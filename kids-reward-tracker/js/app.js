@@ -376,7 +376,7 @@ function renderCalendarTab(kid) {
 }
 
 function renderSleepHistory(kid) {
-  const history = getSleepHistory(kid.id);
+  const history = getSleepHistory(kid.id, calYear, calMonth);
   document.getElementById('sleep-history-list').innerHTML =
     history
       .map((e) => `<li><div class="item-main">${iconChip('ic-bed', `sleep-${e.id}`, { size: 40, iconSize: 22 })}${e.date}：${e.label.replace('睡眠回報：', '')}</div><span class="badge badge-approved">+${e.amount}</span></li>`)
