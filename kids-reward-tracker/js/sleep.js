@@ -53,9 +53,11 @@ export function getSleepMonthCalendar(kidId, year, month) {
   return cells;
 }
 
-export function getSleepHistory(kidId) {
+// 只列出目前日曆檢視的那個月份（year/month，month 從 0 開始），跟切換上/下個月連動，
+// 不是不分月份、只看最近幾筆。
+export function getSleepHistory(kidId, year, month) {
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   return getState()
-    .ledger.filter((e) => e.kidId === kidId && e.type === 'sleep')
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 30);
+    .ledger.filter((e) => e.kidId === kidId && e.type === 'sleep' && e.date.startsWith(monthPrefix))
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
