@@ -14,7 +14,7 @@ export const BUILTIN_TEMPLATES = [
     canvasH: 1800,
     background: `${BASE}t1.png`,
     slots: [
-      { id: 'p1', x: 0.08, y: 0.35, w: 0.84, h: 0.5, radius: 0.06, rotationDeg: 0 },
+      { id: 'p1', x: 0.08, y: 0.35, w: 0.84, h: 0.5, rotationDeg: 0, blob: { tl: [0.1786, 0.16], tr: [0.125, 0.2133], br: [0.1964, 0.1333], bl: [0.1429, 0.2067] } },
     ],
     texts: [
       { id: 'title', x: 0.79625, y: 0.12682291666666667, w: 0.2675, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.06333, lineHeightRatio: 0.95, color: 'rgb(38, 34, 97)', align: 'right', rotationDeg: 0, default: "HELLO\nSUNNY" },
@@ -30,8 +30,8 @@ export const BUILTIN_TEMPLATES = [
     canvasH: 1800,
     background: `${BASE}t2.png`,
     slots: [
-      { id: 'p1', x: 0.08, y: 0.18, w: 0.84, h: 0.35, radius: 0.0667, rotationDeg: 0 },
-      { id: 'p2', x: 0.08, y: 0.5566666666666666, w: 0.84, h: 0.35, radius: 0.0667, rotationDeg: 0 },
+      { id: 'p1', x: 0.08, y: 0.18, w: 0.84, h: 0.35, rotationDeg: 0, blob: { tl: [0.1667, 0.1905], tr: [0.1042, 0.2714], br: [0.1815, 0.1571], bl: [0.119, 0.2571] } },
+      { id: 'p2', x: 0.08, y: 0.5566666666666666, w: 0.84, h: 0.35, rotationDeg: 0, blob: { tl: [0.1042, 0.2524], tr: [0.1756, 0.1714], br: [0.1131, 0.2762], bl: [0.1667, 0.1667] } },
     ],
     texts: [
       { id: 'title', x: 0.499990234375, y: 0.0625, w: 0.47611375, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.05167, lineHeightRatio: 1.2, color: 'rgb(253, 253, 239)', align: 'left', rotationDeg: 0, default: "BEST FRIENDS" },
@@ -47,9 +47,9 @@ export const BUILTIN_TEMPLATES = [
     canvasH: 1800,
     background: `${BASE}t3.png`,
     slots: [
-      { id: 'p1', x: 0.08, y: 0.21666666666666667, w: 0.84, h: 0.37333333333333335, radius: 0.0714, rotationDeg: 0 },
-      { id: 'p2', x: 0.08, y: 0.6133333333333333, w: 0.4075, h: 0.27166666666666667, radius: 0.0798, rotationDeg: 0 },
-      { id: 'p3', x: 0.5125, y: 0.6133333333333333, w: 0.4075, h: 0.27166666666666667, radius: 0.0798, rotationDeg: 0 },
+      { id: 'p1', x: 0.08, y: 0.21666666666666667, w: 0.84, h: 0.37333333333333335, rotationDeg: 0, blob: { tl: [0.1756, 0.1875], tr: [0.1131, 0.2679], br: [0.1875, 0.1607], bl: [0.125, 0.2545] } },
+      { id: 'p2', x: 0.08, y: 0.6133333333333333, w: 0.4075, h: 0.27166666666666667, rotationDeg: 0, blob: { tl: [0.2577, 0.184], tr: [0.1718, 0.2699], br: [0.2822, 0.1595], bl: [0.184, 0.2577] } },
+      { id: 'p3', x: 0.5125, y: 0.6133333333333333, w: 0.4075, h: 0.27166666666666667, rotationDeg: 0, blob: { tl: [0.1718, 0.2577], tr: [0.2699, 0.1779], br: [0.184, 0.2761], bl: [0.2761, 0.1718] } },
     ],
     texts: [
       { id: 'title', x: 0.3425, y: 0.08849609375, w: 0.525, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.06, lineHeightRatio: 0.95, color: 'rgb(38, 34, 97)', align: 'left', rotationDeg: 0, default: "NOVEMBER" },
@@ -88,7 +88,7 @@ export const BUILTIN_TEMPLATES = [
     foreground: `${BASE}t5-fg.png`,
     slots: [
       { id: 'p1', x: 0, y: 0, w: 1, h: 0.6833333333333333, radius: 0, rotationDeg: 0 },
-      { id: 'p2', x: 0.5375, y: 0.6133333333333333, w: 0.375, h: 0.25, radius: 0.08, rotationDeg: 0 },
+      { id: 'p2', x: 0.5375, y: 0.6133333333333333, w: 0.375, h: 0.25, rotationDeg: 0, blob: { tl: [0.2067, 0.1467], tr: [0.1333, 0.2133], br: [0.2267, 0.1267], bl: [0.1467, 0.2] } },
     ],
     texts: [
       { id: 'bubble', x: 0.2225, y: 0.12166666666666667, w: 0.165, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.03667, lineHeightRatio: 1, color: 'rgb(38, 34, 97)', align: 'center', rotationDeg: 0, default: "我三歲\n啦！" },
@@ -105,8 +105,8 @@ export const BUILTIN_TEMPLATES = [
     background: `${BASE}t6.png`,
     slots: [
       { id: 'p1', x: 0.08, y: 0.075, w: 0.4075, h: 0.27166666666666667, radius: 0.5, rotationDeg: 0 },
-      { id: 'p2', x: 0.08, y: 0.39166666666666666, w: 0.4075, h: 0.36666666666666664, radius: 0.0736, rotationDeg: 0 },
-      { id: 'p3', x: 0.5125, y: 0.39166666666666666, w: 0.4075, h: 0.36666666666666664, radius: 0.0736, rotationDeg: 0 },
+      { id: 'p2', x: 0.08, y: 0.39166666666666666, w: 0.4075, h: 0.36666666666666664, rotationDeg: 0, blob: { tl: [0.2699, 0.15], tr: [0.1779, 0.2091], br: [0.2945, 0.1273], bl: [0.1902, 0.2] } },
+      { id: 'p3', x: 0.5125, y: 0.39166666666666666, w: 0.4075, h: 0.36666666666666664, rotationDeg: 0, blob: { tl: [0.1779, 0.2045], tr: [0.2822, 0.1409], br: [0.184, 0.2136], bl: [0.2883, 0.1318] } },
     ],
     texts: [
       { id: 'title', x: 0.76, y: 0.1756640625, w: 0.33, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.05333, lineHeightRatio: 0.95, color: 'rgb(38, 34, 97)', align: 'right', rotationDeg: 0, default: "GROWING\nUP" },
