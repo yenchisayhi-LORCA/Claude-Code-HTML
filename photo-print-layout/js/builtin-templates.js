@@ -88,7 +88,7 @@ export const BUILTIN_TEMPLATES = [
     foreground: `${BASE}t5-fg.png`,
     slots: [
       { id: 'p1', x: 0, y: 0, w: 1, h: 0.6833333333333333, radius: 0, rotationDeg: 0 },
-      { id: 'p2', x: 0.5375, y: 0.6133333333333333, w: 0.375, h: 0.25, rotationDeg: 0, blob: { tl: [0.2067, 0.1467], tr: [0.1333, 0.2133], br: [0.2267, 0.1267], bl: [0.1467, 0.2] } },
+      { id: 'p2', x: 0.555, y: 0.625, w: 0.375, h: 0.25, rotationDeg: 0, blob: { tl: [0.2067, 0.1467], tr: [0.1333, 0.2133], br: [0.2267, 0.1267], bl: [0.1467, 0.2] } },
     ],
     texts: [
       { id: 'bubble', x: 0.2225, y: 0.12166666666666667, w: 0.165, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.03667, lineHeightRatio: 1, color: 'rgb(38, 34, 97)', align: 'center', rotationDeg: 0, default: "我三歲\n啦！" },
