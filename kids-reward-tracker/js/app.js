@@ -14,7 +14,7 @@ import { initPin, withPinGate } from './pin.js';
 import { compressImage } from './image.js';
 import { computeSleepStars, submitSleep, clearSleep, getSleepMonthCalendar, getSleepHistory } from './sleep.js';
 import { TASK_ICONS, SHOP_ICONS, EXERCISE_ICON, CHIP_COLORS, MASCOT_COLORS } from './icons.js';
-import { initCloudSync, requestSignInLink, signOutOfSync } from './cloud-sync.js';
+import { initCloudSync, requestSignInLink, signOutOfSync, debugSyncInfo } from './cloud-sync.js';
 
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -121,7 +121,7 @@ function renderSyncArea() {
   const statusLabel = syncStatus.error
     ? `<span class="sync-status error">${esc(syncStatus.error)}</span>`
     : `<span class="sync-status ${syncStatus.syncing ? '' : 'ok'}">${syncStatus.syncing ? '同步中…' : '已同步'}</span>`;
-  el.innerHTML = `<span class="sync-user"><span class="sync-email">${esc(syncStatus.user?.email || '')}</span>${statusLabel}<button type="button" id="btn-sync-logout" class="btn btn-ghost">登出</button></span>`;
+  el.innerHTML = `<span class="sync-user"><span class="sync-email">${esc(syncStatus.user?.email || '')}</span>${statusLabel}<button type="button" id="btn-sync-debug" class="btn btn-ghost">偵錯</button><button type="button" id="btn-sync-logout" class="btn btn-ghost">登出</button></span>`;
 }
 
 function renderBalanceHero(kid) {
@@ -300,7 +300,7 @@ async function openCertPreview(cert, { isNewUnlock = false } = {}) {
     threshold: cert.thresholdSnapshot,
     stars: cert.starsAtAward,
     date: cert.date,
-    photoDataUrl: cert.photoDataUrl,
+    photoDataUrl: cert.photoDataUrl || (kid ? kid.avatar : null),
   });
   currentCertCanvas = canvas;
   wrap.innerHTML = '';
@@ -626,6 +626,9 @@ function initEventListeners() {
     }
     if (e.target.closest('#btn-sync-logout')) {
       signOutOfSync();
+    }
+    if (e.target.closest('#btn-sync-debug')) {
+      debugSyncInfo().then((info) => alert(JSON.stringify(info, null, 2)));
     }
   });
   document.getElementById('form-email-signin').addEventListener('submit', async (e) => {

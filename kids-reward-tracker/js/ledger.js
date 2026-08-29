@@ -46,6 +46,11 @@ function checkTierCrossings(kidId, prevBalance, newBalance) {
   const newlyUnlocked = [];
   for (const tier of getCertificateTiers()) {
     if (prevBalance < tier.threshold && tier.threshold <= newBalance) {
+      // 不在這裡把 kid.avatar 複製一份存進 photoDataUrl：同一個門檻可能因為餘額起伏被
+      // 重複跨越好幾次，每次都複製一份大頭貼會讓帳本資料無限膨脹，很快就超過 Firestore
+      // 單一文件 1MB 的上限導致同步失敗。畫面顯示/產生獎狀圖片時，photoDataUrl 是 null
+      // 就會自動改用小孩「目前」的大頭貼（見 app.js），效果一樣、還不用另外存一份。
+      // 想幫某張獎狀凍結一張特定照片的話，家長還是可以透過「補傳照片」手動指定。
       const cert = addAwardedCertificate({
         kidId,
         tierId: tier.id,
@@ -53,7 +58,6 @@ function checkTierCrossings(kidId, prevBalance, newBalance) {
         thresholdSnapshot: tier.threshold,
         starsAtAward: newBalance,
         date: todayStr(),
-        photoDataUrl: kid.avatar || null,
       });
       newlyUnlocked.push(cert);
     }
