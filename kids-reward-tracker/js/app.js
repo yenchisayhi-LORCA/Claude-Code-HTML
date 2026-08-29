@@ -742,7 +742,7 @@ function initEventListeners() {
     const btn = e.target.closest('.btn-delete-exercise');
     if (!btn) return;
     withPinGate(() => {
-      if (confirm('確定要刪除這筆回報紀錄嗎？如果已經核准過，對應的星星也會一併扣掉。')) {
+      if (confirm('確定要刪除這筆回報紀錄嗎？只會刪除紀錄本身，已經核准入帳的星星不會變動。')) {
         deleteExerciseSubmission(btn.dataset.subId);
       }
     })();
