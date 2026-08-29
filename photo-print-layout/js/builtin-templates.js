@@ -324,6 +324,42 @@ export const BUILTIN_TEMPLATES = [
       { id: 'subtitle', x: 0.5, y: 0.5841666666666666, w: 1, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.01833, lineHeightRatio: 1.2, color: 'rgb(55, 55, 122)', align: 'center', rotationDeg: 0, default: "生日蛋糕與許願時間" },
     ],
   },
+  {
+    id: 'builtin-t19',
+    name: '手寫日期三連拍',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t19.png`,
+    slots: [
+      { id: 'p1', x: 0.0906496810913086, y: 0.051462198893229165, w: 0.4975, h: 0.26666666666666666, radius: 0, rotationDeg: -6 },
+      { id: 'p2', x: 0.38885663986206054, y: 0.2624336751302083, w: 0.4975, h: 0.26666666666666666, radius: 0, rotationDeg: 4 },
+      { id: 'p3', x: 0.15137947082519532, y: 0.5322032674153646, w: 0.695, h: 0.3333333333333333, radius: 0, rotationDeg: -2 },
+    ],
+    texts: [
+      { id: 'date', x: 0.2703303337097168, y: 0.8963916015625, w: 0.2025, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.03333, lineHeightRatio: 1.2, color: 'rgb(139, 95, 191)', align: 'left', rotationDeg: -2, default: "2013.4.13" },
+    ],
+  },
+  {
+    id: 'builtin-t20',
+    name: '四格回憶明信片',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t20.png`,
+    slots: [
+      { id: 'p1', x: 0.06623470306396484, y: 0.04584426879882812, w: 0.3775, h: 0.2833333333333333, radius: 0, rotationDeg: -4 },
+      { id: 'p2', x: 0.5260052490234375, y: 0.11607322692871094, w: 0.3775, h: 0.2833333333333333, radius: 0, rotationDeg: 3 },
+      { id: 'p3', x: 0.04647724151611328, y: 0.44562889099121095, w: 0.39, h: 0.3333333333333333, radius: 0, rotationDeg: -3 },
+      { id: 'p4', x: 0.49643783569335936, y: 0.5158853149414062, w: 0.415, h: 0.35, radius: 0, rotationDeg: 4 },
+    ],
+    texts: [
+      { id: 'caption1', x: 0.16200729370117187, y: 0.34638875325520835, w: 0.15375, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(59, 111, 212)', align: 'left', rotationDeg: -4, default: "2012.8 台北" },
+      { id: 'caption2', x: 0.5928033447265625, y: 0.4078572591145833, w: 0.1525, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(162, 79, 201)', align: 'left', rotationDeg: 3, default: "2012.6 香港" },
+      { id: 'caption3', x: 0.15456218719482423, y: 0.7964139811197917, w: 0.1825, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(224, 138, 46)', align: 'left', rotationDeg: -3, default: "2012.6 北海道" },
+      { id: 'caption4', x: 0.5544609832763672, y: 0.8735453287760416, w: 0.15, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(59, 111, 212)', align: 'left', rotationDeg: 4, default: "2013.1 高雄" },
+    ],
+  },
 ];
 
 export function getBuiltinTemplate(id) {
