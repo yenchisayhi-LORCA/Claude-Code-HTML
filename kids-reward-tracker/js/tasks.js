@@ -25,3 +25,18 @@ export function uncompleteTask(kidId, taskId) {
 export function manualAdjust(kidId, { amount, reason }) {
   return addLedgerEntry(kidId, { amount, type: 'manual', refId: null, label: reason, date: todayStr() });
 }
+
+// 作業完成紀錄本身就是帳本紀錄（不像運動回報另外存一份待審核清單），所以歷程就是直接讀
+// type: 'task' 的帳本紀錄；刪除歷程等於刪掉那筆帳本紀錄，星星會跟著一起扣掉（不是像運動
+// 回報歷史那樣可以只刪紀錄、留著星星——作業沒有另外一份紀錄可以留）。
+export function getTaskHistory(kidId) {
+  return getState()
+    .ledger.filter((e) => e.kidId === kidId && e.type === 'task')
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 30);
+}
+
+export function deleteTaskHistoryEntry(entryId) {
+  removeLedgerEntry(entryId);
+  persist();
+}

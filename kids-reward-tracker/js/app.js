@@ -4,7 +4,7 @@
 
 import * as storage from './storage.js';
 import { getBalance, getStreak, getMonthCalendar, todayStr } from './ledger.js';
-import { completeTask, uncompleteTask, hasCompletedTaskToday, manualAdjust } from './tasks.js';
+import { completeTask, uncompleteTask, hasCompletedTaskToday, manualAdjust, getTaskHistory, deleteTaskHistoryEntry } from './tasks.js';
 import { computeSuggestedStars, submitExercise, approveExercise, rejectExercise, deleteExerciseSubmission } from './exercise.js';
 import { canRedeem, redeemShopItem } from './shop.js';
 import { renderCertificateCanvas, downloadCertificatePng, printCertificateImage } from './certificate.js';
@@ -153,6 +153,18 @@ function renderTasksTab(kid) {
       </button>`;
     })
     .join('');
+  renderTaskHistory(kid);
+}
+
+function renderTaskHistory(kid) {
+  const history = getTaskHistory(kid.id);
+  document.getElementById('task-history-list').innerHTML =
+    history
+      .map(
+        (e) => `<li><div class="item-main">${esc(e.label)}（${e.date}）</div>
+          <div class="item-actions"><span class="stars-badge">${iconSvg('ic-star')}${e.amount}</span><button type="button" class="btn-delete-task-history btn-icon-only" data-entry-id="${e.id}" style="font-size:20px;font-weight:900;">×</button></div></li>`
+      )
+      .join('') || '<li class="hint">還沒有作業歷程</li>';
 }
 
 // ================================================================== render：運動回報
@@ -699,6 +711,16 @@ function initEventListeners() {
     const result = completeTask(kid.id, task);
     celebrate();
     handleNewCertificates(result.newlyUnlockedTiers);
+  });
+
+  document.getElementById('task-history-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-delete-task-history');
+    if (!btn) return;
+    withPinGate(() => {
+      if (confirm('確定要刪除這筆作業歷程嗎？當初入帳的星星也會一併扣掉。')) {
+        deleteTaskHistoryEntry(btn.dataset.entryId);
+      }
+    })();
   });
 
   document.getElementById('btn-manual-adjust').addEventListener('click', withPinGate(() => {
