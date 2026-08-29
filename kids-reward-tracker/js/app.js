@@ -5,7 +5,7 @@
 import * as storage from './storage.js';
 import { getBalance, getStreak, getMonthCalendar, todayStr } from './ledger.js';
 import { completeTask, hasCompletedTaskToday, manualAdjust } from './tasks.js';
-import { computeSuggestedStars, submitExercise, approveExercise, rejectExercise } from './exercise.js';
+import { computeSuggestedStars, submitExercise, approveExercise, rejectExercise, deleteExerciseSubmission } from './exercise.js';
 import { canRedeem, redeemShopItem } from './shop.js';
 import { renderCertificateCanvas, downloadCertificatePng, printCertificateImage } from './certificate.js';
 import { formatMonthLabel, renderCalendarGrid, renderSleepCalendarGrid, renderStreakBadge } from './calendar.js';
@@ -186,7 +186,8 @@ function renderExerciseHistory(kid) {
     history
       .map((s) => {
         const badge = s.status === 'approved' ? `<span class="badge badge-approved">核准 ${s.approvedStars}</span>` : `<span class="badge badge-rejected">退回</span>`;
-        return `<li><div class="item-main">${esc(formulaLabelForKind(s.kind))}：${s.reportedValue}（${s.date}）</div>${badge}</li>`;
+        return `<li><div class="item-main">${esc(formulaLabelForKind(s.kind))}：${s.reportedValue}（${s.date}）</div>
+          <div class="item-actions">${badge}<button type="button" class="btn-delete-exercise btn-icon-only" data-sub-id="${s.id}" style="font-size:20px;font-weight:900;">×</button></div></li>`;
       })
       .join('') || '<li class="hint">還沒有回報歷史</li>';
 }
@@ -735,6 +736,16 @@ function initEventListeners() {
   document.getElementById('exercise-pending-list').addEventListener('click', (e) => {
     const btn = e.target.closest('.btn-review');
     if (btn) openExerciseReview(btn.dataset.subId);
+  });
+
+  document.getElementById('exercise-history-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-delete-exercise');
+    if (!btn) return;
+    withPinGate(() => {
+      if (confirm('確定要刪除這筆回報紀錄嗎？如果已經核准過，對應的星星也會一併扣掉。')) {
+        deleteExerciseSubmission(btn.dataset.subId);
+      }
+    })();
   });
 
   document.getElementById('btn-exercise-approve').addEventListener('click', withPinGate(() => {
