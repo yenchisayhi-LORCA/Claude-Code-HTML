@@ -115,6 +115,24 @@ export const BUILTIN_TEMPLATES = [
       { id: 'noteSubtitle', x: 0.535, y: 0.8594921875, w: 0.84, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '400', fontSizeFrac: 0.015, lineHeightRatio: 1.2, color: 'rgb(253, 253, 239)', align: 'left', rotationDeg: 0, default: "記錄一件小小的第一次。" },
     ],
   },
+  {
+    id: 'builtin-t7',
+    name: '花園寫真',
+    printSize: '4x6',
+    canvasW: 1200,
+    canvasH: 1800,
+    background: `${BASE}t7.png`,
+    slots: [
+      // blob：四個角各自的橢圓圓角比例（水平/垂直），做出不規則有機造型的照片框，
+      // 花草裝飾就位在框的四角缺口，照片畫上去之後才會有「探出邊框」的效果。
+      { id: 'p1', x: 0.1125, y: 0.23333333333333334, w: 0.775, h: 0.5833333333333334, rotationDeg: 0, blob: { tl: [0.32, 0.68], tr: [0.68, 0.42], br: [0.62, 0.7], bl: [0.38, 0.3] } },
+    ],
+    texts: [
+      { id: 'title', x: 0.5, y: 0.07833333333333334, w: 0.51625, fontFamily: `"Gochi Hand", cursive`, fontWeight: '400', fontSizeFrac: 0.05667, lineHeightRatio: 1, color: 'rgb(38, 34, 97)', align: 'center', rotationDeg: 0, default: "GARDEN DAYS" },
+      { id: 'subtitle', x: 0.5, y: 0.125, w: 0.15, fontFamily: `Nunito, sans-serif`, fontWeight: '700', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(63, 111, 181)', align: 'center', rotationDeg: 0, default: "小小探索家" },
+      { id: 'caption', x: 0.5, y: 0.9383333333333334, w: 1, fontFamily: `Nunito, "Noto Sans TC", sans-serif`, fontWeight: '700', fontSizeFrac: 0.02, lineHeightRatio: 1.2, color: 'rgb(38, 34, 97)', align: 'center', rotationDeg: 0, default: "陽台上的午後時光。" },
+    ],
+  },
 ];
 
 export function getBuiltinTemplate(id) {

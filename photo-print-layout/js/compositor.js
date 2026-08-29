@@ -27,13 +27,47 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// blob: { tl, tr, br, bl } 四個角各自的 [水平半徑比例, 垂直半徑比例]（0~0.5，以框的 w/h 為基準），
+// 對應 CSS 多值 border-radius 做出的「不規則有機造型」（例如花園寫真款的照片框）。
+// 四個角各用一段橢圓弧，弧之間用直線相接，畫法跟 CSS 的橢圓圓角完全對應。
+function blobRectPath(ctx, x, y, w, h, blob) {
+  let tlx = blob.tl[0] * w, tly = blob.tl[1] * h;
+  let trx = blob.tr[0] * w, trY = blob.tr[1] * h;
+  let brx = blob.br[0] * w, brY = blob.br[1] * h;
+  let blx = blob.bl[0] * w, blY = blob.bl[1] * h;
+  // CSS 圓角重疊修正：某條邊相鄰兩角的半徑加起來超過那條邊本身的長度時（花園寫真這種
+  // 刻意誇張的不規則造型很容易踩到），瀏覽器算 border-radius 時全部圓角會等比例縮小到
+  // 剛好貼合，這裡照搬同一套規則，畫出來的比例才會跟設計稿量出來的百分比數字一致。
+  const f = Math.min(1, w / (tlx + trx), w / (blx + brx), h / (tly + blY), h / (trY + brY));
+  if (f < 1) {
+    tlx *= f; tly *= f; trx *= f; trY *= f; brx *= f; brY *= f; blx *= f; blY *= f;
+  }
+  const HALF_PI = Math.PI / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + tlx, y);
+  ctx.lineTo(x + w - trx, y);
+  ctx.ellipse(x + w - trx, y + trY, trx, trY, 0, -HALF_PI, 0);
+  ctx.lineTo(x + w, y + h - brY);
+  ctx.ellipse(x + w - brx, y + h - brY, brx, brY, 0, 0, HALF_PI);
+  ctx.lineTo(x + blx, y + h);
+  ctx.ellipse(x + blx, y + h - blY, blx, blY, 0, HALF_PI, Math.PI);
+  ctx.lineTo(x, y + tly);
+  ctx.ellipse(x + tlx, y + tly, tlx, tly, 0, Math.PI, Math.PI * 1.5);
+  ctx.closePath();
+}
+
+function shapePath(ctx, x, y, w, h, shape) {
+  if (shape.blob) blobRectPath(ctx, x, y, w, h, shape.blob);
+  else roundRectPath(ctx, x, y, w, h, (shape.radius || 0) * Math.min(w, h));
+}
+
 // shape: { radius (0~0.5，以 min(rw,rh) 為基準的圓角比例；0.5 = 正方形變圓形), rotationDeg }。
 // 兩者都跟解析度無關，可以直接沿用同一份樣板定義畫在任何尺寸的 canvas 上。
 // 有旋轉角度時，整個框（含框內的照片）繞框中心旋轉，對應設計稿理「整張拍立得卡片歪一個角度」
 // 這種效果——旋轉中心固定在框中心，跟框裡的照片一起轉，不會走位。
 export function drawPhotoInRect(ctx, rx, ry, rw, rh, photoState, shape = {}) {
   const { img, imgW, imgH, zoom, offX, offY } = photoState;
-  const { radius = 0, rotationDeg = 0 } = shape;
+  const { rotationDeg = 0 } = shape;
   const { dw, dh, excessW, excessH } = computeDrawParams(rw, rh, imgW, imgH, zoom);
   const cx = rx + rw / 2;
   const cy = ry + rh / 2;
@@ -43,7 +77,7 @@ export function drawPhotoInRect(ctx, rx, ry, rw, rh, photoState, shape = {}) {
   ctx.save();
   ctx.translate(cx, cy);
   if (rotationDeg) ctx.rotate((rotationDeg * Math.PI) / 180);
-  roundRectPath(ctx, -rw / 2, -rh / 2, rw, rh, radius * Math.min(rw, rh));
+  shapePath(ctx, -rw / 2, -rh / 2, rw, rh, shape);
   ctx.clip();
   ctx.drawImage(img, localDx, localDy, dw, dh);
   ctx.restore();
@@ -97,7 +131,7 @@ export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPla
     const ry = slot.y * h;
     const rw = slot.w * w;
     const rh = slot.h * h;
-    const shape = { radius: slot.radius || 0, rotationDeg: slot.rotationDeg || 0 };
+    const shape = { radius: slot.radius || 0, blob: slot.blob || null, rotationDeg: slot.rotationDeg || 0 };
     const photo = slotPhotos[i];
     if (photo) {
       drawPhotoInRect(ctx, rx, ry, rw, rh, photo, shape);
@@ -105,7 +139,7 @@ export function drawTemplate(ctx, w, h, background, slots, slotPhotos, { showPla
       ctx.save();
       ctx.translate(rx + rw / 2, ry + rh / 2);
       if (shape.rotationDeg) ctx.rotate((shape.rotationDeg * Math.PI) / 180);
-      roundRectPath(ctx, -rw / 2, -rh / 2, rw, rh, shape.radius * Math.min(rw, rh));
+      shapePath(ctx, -rw / 2, -rh / 2, rw, rh, shape);
       ctx.fillStyle = 'rgba(120,120,120,0.18)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(90,90,90,0.6)';
