@@ -9,7 +9,13 @@
 // 不會受這個限制影響。詳見 https://firebase.google.com/docs/auth/web/redirect-best-practices
 
 import { firebaseConfig, isFirebaseConfigured } from './firebase-config.js';
-import { getSyncableState, applySyncedState, subscribe as onLocalChange } from './storage.js';
+import {
+  getSyncableState,
+  applySyncedState,
+  mergeRemoteTrips,
+  applyRemoteAccountFields,
+  subscribe as onLocalChange,
+} from './storage.js';
 
 const FIREBASE_VERSION = '10.14.1';
 const gstatic = (pkg) => `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-${pkg}.js`;
@@ -111,7 +117,7 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       lastSyncedTripJson = new Map();
       lastSyncedAccountJson = null;
       cachedCloudTrips = {};
-      cachedCloudAccount = { activeTripId: null, people: [] };
+      cachedCloudAccount = { activeTripId: null, people: [], accountUpdatedAt: 0 };
       alertedTooLargeForSync = false;
       listeningForUid = null;
       clearTimeout(shareSyncTimer);
@@ -215,7 +221,11 @@ let lastSyncedAccountJson = null; // 上次成功推上雲端帳號文件（acti
 function seedSyncedBaseline(state) {
   lastSyncedJson = JSON.stringify(state);
   lastSyncedTripJson = new Map(Object.entries(state.trips || {}).map(([id, trip]) => [id, JSON.stringify(trip)]));
-  lastSyncedAccountJson = JSON.stringify({ activeTripId: state.activeTripId ?? null, people: state.people || [] });
+  lastSyncedAccountJson = JSON.stringify({
+    activeTripId: state.activeTripId ?? null,
+    people: state.people || [],
+    accountUpdatedAt: state.accountUpdatedAt || 0,
+  });
 }
 
 async function readCloudState(firestoreModule) {
@@ -235,6 +245,7 @@ async function readCloudState(firestoreModule) {
 
   let activeTripId = null;
   let people = [];
+  let accountUpdatedAt = 0;
   let legacyAccountFormat = false;
   if (accountSnap.exists()) {
     const data = accountSnap.data();
@@ -243,12 +254,14 @@ async function readCloudState(firestoreModule) {
         const acc = JSON.parse(data.accountJson);
         activeTripId = acc.activeTripId ?? null;
         people = acc.people || [];
+        accountUpdatedAt = acc.accountUpdatedAt || 0;
       } catch (err) {
         console.error('解析雲端帳號資料失敗', err);
       }
     } else if (data.stateJson && Object.keys(trips).length === 0) {
       // 舊版整包資料格式、且新結構的 trips 子集合還是空的：代表這個帳號還沒搬過來，
       // 直接把整包舊資料當作目前的雲端狀態，之後第一次成功 push 就會自動改寫成新結構。
+      // 這種舊格式沒有 accountUpdatedAt 欄位，維持預設值 0。
       try {
         const legacy = JSON.parse(data.stateJson);
         activeTripId = legacy.activeTripId ?? null;
@@ -260,7 +273,53 @@ async function readCloudState(firestoreModule) {
       }
     }
   }
-  return { state: { activeTripId, trips, people }, legacyAccountFormat };
+  return { state: { activeTripId, trips, people, accountUpdatedAt }, legacyAccountFormat };
+}
+
+// 依每趟旅程各自的 updatedAt 時間戳記，決定「這趟旅程」該用本機還是雲端的版本——
+// 不再靠「是不是剛點登入連結」這種跟資料新舊完全無關的訊號去猜。切到另一台裝置時，
+// 那台裝置的本機快取通常比較舊（修改是在別的裝置做的），過去的邏輯只要不是剛登入就
+// 無條件信任本機、推上去蓋掉雲端，等於把剛在別的裝置做的修改整個抹掉——這正是「換裝置
+// 後修改的東西又被還原」的根因。
+function mergeTripsByTimestamp(localTrips, cloudTrips) {
+  const toApplyLocally = {}; // 雲端版本比較新（或本機沒有），要蓋進本機
+  const toPush = {}; // 本機版本比較新（或雲端沒有），要推上雲端
+  const ambiguousIds = []; // 兩邊都有、內容不同，卻都沒有時間戳記可比（遷移前的舊資料）
+  const allIds = new Set([...Object.keys(localTrips), ...Object.keys(cloudTrips)]);
+  for (const id of allIds) {
+    const localTrip = localTrips[id];
+    const cloudTrip = cloudTrips[id];
+    if (localTrip && !cloudTrip) {
+      toPush[id] = localTrip;
+    } else if (!localTrip && cloudTrip) {
+      toApplyLocally[id] = cloudTrip;
+    } else if (JSON.stringify(localTrip) !== JSON.stringify(cloudTrip)) {
+      const localTime = localTrip.updatedAt || 0;
+      const cloudTime = cloudTrip.updatedAt || 0;
+      if (localTime > cloudTime) {
+        toPush[id] = localTrip;
+      } else if (cloudTime > localTime) {
+        toApplyLocally[id] = cloudTrip;
+      } else {
+        toPush[id] = localTrip; // 預設本機贏，維持過去的行為當作最後手段
+        ambiguousIds.push(id);
+      }
+    }
+  }
+  return { toApplyLocally, toPush, ambiguousIds };
+}
+
+// 「本機、雲端都有旅程資料，但完全沒有時間戳記可以判斷誰新誰舊」只會發生在遷移到這個機制
+// 之前就存在、之後都沒有任何一邊改過的舊資料——這種情況下沒有「新舊」可言，維持原本的做法：
+// 剛點登入連結時才跳出視窗問使用者要整批留哪一份（見 handleSignedIn 對應分支）。
+function cloudHasNoUsableTimestamps(local, cloudState) {
+  const accountAmbiguous =
+    (local.accountUpdatedAt || 0) === 0 &&
+    (cloudState.accountUpdatedAt || 0) === 0 &&
+    JSON.stringify({ activeTripId: local.activeTripId, people: local.people }) !==
+      JSON.stringify({ activeTripId: cloudState.activeTripId, people: cloudState.people });
+  if (accountAmbiguous) return true;
+  return mergeTripsByTimestamp(local.trips, cloudState.trips).ambiguousIds.length > 0;
 }
 
 async function handleSignedIn(firestoreModule) {
@@ -311,23 +370,14 @@ async function handleSignedIn(firestoreModule) {
     // 雲端有資料的話直接拉下來用才合理，絕不能把這個「空的」本機狀態推上去蓋掉雲端——
     // 那樣會直接把使用者過去所有旅程資料永久刪除，是最嚴重的一種資料遺失。
     if (Object.keys(cloudState.trips).length > 0) applyRemoteState(cloudState);
-  } else if (!justCompletedEmailLinkSignIn) {
-    // 這次不是剛點信件裡的連結完成登入，而是本來就已經登入、單純重新整理頁面
-    // （Firebase 會自動保留登入狀態，每次重新整理都會直接恢復），這種情況下
-    // 雲端和本機會不一樣，幾乎都是「本機剛做的變更、還沒送出去就被手機重新整理/
-    // 背景關閉打斷」造成的落差——例如剛存好封面照片，1200ms 的 debounce 還沒送出、
-    // 頁面就被系統回收重新整理，重新整理後這裡讀到的雲端資料自然還是舊的。之前這裡
-    // 一律跳出視窗要求選「用雲端」或「用本機」，但選「用雲端」等於直接拿舊資料蓋掉
-    // 使用者剛做的變更、永久遺失（回報的「封面照片/成員縮圖/花費紀錄不管選哪個都不
-    // 見了」就是這樣來的，而且這個情境每次重新整理都可能再發生一次，不是單一事件）。
-    // 既然不是剛登入、本機也確實有旅程資料，直接信任本機現在的內容送出去就好，不用
-    // 跳出視窗冒險；真的需要人來選「留哪一份」的情境，只保留給下面這個 else 分支：
-    // 剛點連結完成登入、本機卻已經有自己的旅程資料，這才是兩邊各自有獨立歷史紀錄、
-    // 真的需要問的狀況。
-    ok = await pushNow(firestoreModule, local);
-  } else {
+  } else if (justCompletedEmailLinkSignIn && cloudHasNoUsableTimestamps(local, cloudState)) {
+    // 剛點信件連結完成登入、而且本機和雲端兩邊都完全沒有時間戳記可比——這種情況只會發生在
+    // 遷移到「依 updatedAt 判斷新舊」這個機制之前就存在、之後都沒再被任何一邊改過的舊資料，
+    // 通常代表這是兩份各自獨立的歷史紀錄（例如借別人手機用同一個 Email 登入過），真的沒有
+    // 「新舊」可言，這才需要整批二選一、問使用者要留哪一份，而不是逐趟旅程試著合併。
+    // 只要任一邊已經有時間戳記可比，就會走下面的合併邏輯，不會再看到這個確認視窗。
     const useCloud = confirm(
-      '偵測到這個帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣。\n\n' +
+      '偵測到這個帳號的雲端已經有旅程資料，且跟這台裝置目前顯示的不一樣（沒有足夠的時間資訊可以自動判斷新舊）。\n\n' +
         '按「確定」= 改用雲端資料（這台裝置目前顯示的旅程會被永久覆蓋、清除）\n' +
         '按「取消」= 用這台裝置目前的資料覆蓋雲端（保留這台裝置目前看到的內容）\n\n' +
         '不確定要選哪個，通常選「取消」比較安全。'
@@ -337,6 +387,32 @@ async function handleSignedIn(firestoreModule) {
     } else {
       ok = await pushNow(firestoreModule, local);
     }
+  } else {
+    // 本機、雲端都有旅程資料，但內容不一樣：依每趟旅程各自的 updatedAt 時間戳記決定該用
+    // 哪一份（本機獨有/雲端獨有的旅程一律保留，等於是把兩邊合併起來），而不是像過去那樣
+    // 看「是不是剛點登入連結」就整批二選一——那個訊號跟資料本身新舊完全無關，同一帳號
+    // 同時在多台裝置登入時會出錯：切到另一台裝置、單純重新整理（不是剛點連結），過去的
+    // 邏輯會無條件信任這台裝置的本機快取、整批推上去蓋掉雲端，把剛剛在別的裝置做的修改
+    // 整個抹掉，這正是「換裝置後，剛剛的修改又被還原」的根因。
+    const { toApplyLocally } = mergeTripsByTimestamp(local.trips, cloudState.trips);
+    const useCloudAccount = (cloudState.accountUpdatedAt || 0) > (local.accountUpdatedAt || 0);
+
+    let localChanged = false;
+    if (Object.keys(toApplyLocally).length > 0) {
+      mergeRemoteTrips(toApplyLocally);
+      localChanged = true;
+    }
+    if (useCloudAccount) {
+      applyRemoteAccountFields(cloudState);
+      localChanged = true;
+    }
+    if (localChanged && onRemoteChangeCb) onRemoteChangeCb();
+
+    // 不管上面本機端有沒有變化，都呼叫一次 pushNow()：它自己會依照目前（可能剛被上面
+    // 局部更新過的）本機內容，逐趟旅程比對 lastSyncedTripJson（已經在上面 seedSyncedBaseline()
+    // 設成雲端目前的內容），只送出真的有差異的部分，沒有真的要推的東西時會自己判斷
+    // 「沒變化」直接跳過，不需要另外判斷要不要呼叫。
+    ok = await pushNow(firestoreModule);
   }
 
   listenToCloud(firestoreModule);
@@ -356,10 +432,15 @@ function applyRemoteState(state) {
 // 帳號文件（activeTripId + people）跟 trips 子集合是兩個獨立的 onSnapshot 訂閱，
 // 各自更新自己快取的那一半，兩邊都收到過至少一次之後，才開始比對、決定要不要套用。
 let cachedCloudTrips = {};
-let cachedCloudAccount = { activeTripId: null, people: [] };
+let cachedCloudAccount = { activeTripId: null, people: [], accountUpdatedAt: 0 };
 
 function currentCachedCloudState() {
-  return { activeTripId: cachedCloudAccount.activeTripId, trips: { ...cachedCloudTrips }, people: cachedCloudAccount.people };
+  return {
+    activeTripId: cachedCloudAccount.activeTripId,
+    trips: { ...cachedCloudTrips },
+    people: cachedCloudAccount.people,
+    accountUpdatedAt: cachedCloudAccount.accountUpdatedAt,
+  };
 }
 
 function handleIncomingCloudSnapshot() {
@@ -418,7 +499,7 @@ function listenToCloud(firestoreModule) {
     if (snap.exists() && snap.data().accountJson) {
       try {
         const acc = JSON.parse(snap.data().accountJson);
-        cachedCloudAccount = { activeTripId: acc.activeTripId ?? null, people: acc.people || [] };
+        cachedCloudAccount = { activeTripId: acc.activeTripId ?? null, people: acc.people || [], accountUpdatedAt: acc.accountUpdatedAt || 0 };
       } catch (err) {
         console.error('解析雲端帳號資料失敗', err);
       }
@@ -509,7 +590,11 @@ async function pushNow(firestoreModule, stateOverride) {
       lastSyncedTripJson.delete(tripId);
     }
 
-    const accountJson = JSON.stringify({ activeTripId: localState.activeTripId ?? null, people: localState.people || [] });
+    const accountJson = JSON.stringify({
+      activeTripId: localState.activeTripId ?? null,
+      people: localState.people || [],
+      accountUpdatedAt: localState.accountUpdatedAt || 0,
+    });
     if (accountJson !== lastSyncedAccountJson) {
       if (new Blob([accountJson]).size > MAX_SYNC_DOC_BYTES) {
         oversizedNames.push('成員名單');
