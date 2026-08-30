@@ -32,11 +32,25 @@ function loadRaw() {
 }
 
 function emptyState() {
-  return { activeTripId: null, trips: {}, ratesCache: {}, people: [] };
+  return { activeTripId: null, trips: {}, ratesCache: {}, people: [], accountUpdatedAt: 0 };
 }
 
 let state = loadRaw() || emptyState();
 if (!Array.isArray(state.people)) state.people = []; // 相容舊版本存的資料（還沒有成員名單功能）
+if (typeof state.accountUpdatedAt !== 'number') state.accountUpdatedAt = 0; // 相容舊版本存的資料
+
+// 雲端同步曾經靠「這次是不是剛點信件連結登入」這種跟資料新舊完全無關的訊號，去猜「本機
+// 跟雲端不一樣時該用哪一份」——這在同一帳號同時登入多台裝置時是錯的：切到另一台裝置時，
+// 那台裝置的本機快取通常比較舊（因為修改是在別的裝置做的），一開機就把自己這份舊資料
+// 蓋回雲端，把剛剛在別的裝置做的修改整個抹掉。改成每次真正修改旅程/成員名單的內容時，
+// 都記錄一個 updatedAt 時間戳記，隨資料一起同步出去；cloud-sync.js 收到雲端資料時直接比較
+// 本機與雲端誰的時間比較新，新的那份才生效，不再用「有沒有剛點登入連結」去猜。
+function touchTrip(trip) {
+  trip.updatedAt = Date.now();
+}
+function touchAccount() {
+  state.accountUpdatedAt = Date.now();
+}
 
 export function getState() {
   return state;
@@ -64,10 +78,13 @@ export function persist() {
 
 // 只有 activeTripId + trips + people 需要跨裝置同步，ratesCache 只是本機快取，各裝置自己抓即可
 export function getSyncableState() {
-  return { activeTripId: state.activeTripId, trips: state.trips, people: state.people };
+  return { activeTripId: state.activeTripId, trips: state.trips, people: state.people, accountUpdatedAt: state.accountUpdatedAt };
 }
 
-// 用雲端資料整批覆蓋本機的 activeTripId + trips + people（不動 ratesCache）
+// 用雲端資料整批覆蓋本機的 activeTripId + trips + people（不動 ratesCache）。只有在本機根本
+// 沒有旅程資料、或使用者在「兩邊都有各自歷史紀錄」的情境下明確選擇用雲端時才會呼叫這個——
+// 一般情況下的多裝置同步改用下面的 mergeRemoteTrips()，依每趟旅程各自的時間戳記決定，
+// 不會整批覆蓋。
 export function applySyncedState(remote) {
   const remoteTrips = remote.trips || {};
   const willLoseTrips = Object.keys(state.trips).some((id) => !(id in remoteTrips));
@@ -84,6 +101,23 @@ export function applySyncedState(remote) {
   state.activeTripId = remote.activeTripId ?? null;
   state.trips = remoteTrips;
   state.people = remote.people || [];
+  state.accountUpdatedAt = remote.accountUpdatedAt || 0;
+  persist();
+}
+
+// 只局部套用「雲端版本比較新」的那幾趟旅程（依 id），不動本機其他旅程；用在多裝置同步時
+// 依時間戳記決定各自要用哪一份，而不是整批覆蓋 applySyncedState()。
+export function mergeRemoteTrips(tripsById) {
+  if (!tripsById || !Object.keys(tripsById).length) return;
+  Object.assign(state.trips, tripsById);
+  persist();
+}
+
+// 只在雲端的帳號資料（activeTripId + people）比本機新的時候呼叫，整份採用雲端版本
+export function applyRemoteAccountFields(remote) {
+  state.activeTripId = remote.activeTripId ?? state.activeTripId;
+  state.people = remote.people || state.people;
+  state.accountUpdatedAt = remote.accountUpdatedAt || 0;
   persist();
 }
 
@@ -109,6 +143,11 @@ export function restoreLocalBackup() {
   state.activeTripId = backup.activeTripId ?? null;
   state.trips = backup.trips || {};
   state.people = backup.people || [];
+  // 使用者明確點了「還原」，代表這份內容才是他要的最新版本：把所有旅程跟帳號層級的時間戳記
+  // 都刷新成現在，確保下一次同步時這份還原回來的資料會贏過雲端現有的版本，真的推得上去，
+  // 不會因為備份裡舊的時間戳記反而被雲端「看起來比較新」的資料蓋回去。
+  Object.values(state.trips).forEach((trip) => touchTrip(trip));
+  touchAccount();
   persist();
   try {
     localStorage.removeItem(BACKUP_KEY);
@@ -131,6 +170,7 @@ export function addPerson(name) {
   if (existing) return existing;
   const person = { id: uid('person'), name: trimmed, avatar: null };
   state.people.push(person);
+  touchAccount();
   persist();
   return person;
 }
@@ -139,6 +179,7 @@ export function renamePerson(personId, name) {
   const person = state.people.find((p) => p.id === personId);
   if (!person) return;
   person.name = name;
+  touchAccount();
   persist();
 }
 
@@ -151,15 +192,22 @@ export function setPersonAvatar(personId, avatarDataUrl) {
   // 成員身上，這樣改一次名單裡的大頭貼，之前已經加入各旅程的縮圖也會一起更新，不用逐一
   // 進到每趟旅程手動改。跟 app.js 裡「旅程成員改照片時用姓名比對回寫名單」是同一個方向反過來。
   Object.values(state.trips).forEach((trip) => {
+    let touched = false;
     trip.members.forEach((m) => {
-      if (m.name === person.name) m.avatar = avatarDataUrl;
+      if (m.name === person.name) {
+        m.avatar = avatarDataUrl;
+        touched = true;
+      }
     });
+    if (touched) touchTrip(trip);
   });
+  touchAccount();
   persist();
 }
 
 export function removePerson(personId) {
   state.people = state.people.filter((p) => p.id !== personId);
+  touchAccount();
   persist();
 }
 
@@ -170,6 +218,7 @@ export function addTripMember(tripId, personId) {
   if (!trip || !person) return;
   const member = { id: uid('member'), name: person.name, avatar: person.avatar };
   trip.members.push(member);
+  touchTrip(trip);
   persist();
   return member;
 }
@@ -188,6 +237,7 @@ export function getActiveTrip() {
 
 export function setActiveTrip(tripId) {
   state.activeTripId = tripId;
+  touchAccount();
   persist();
 }
 
@@ -212,8 +262,10 @@ export function createTrip({ name, baseCurrency, startDate, endDate, budgetTotal
     expenses: [],
     createdAt: Date.now(),
   };
+  touchTrip(trip);
   state.trips[id] = trip;
   state.activeTripId = id;
+  touchAccount();
   persist();
   return trip;
 }
@@ -222,6 +274,7 @@ export function updateTrip(tripId, patch) {
   const trip = state.trips[tripId];
   if (!trip) return;
   Object.assign(trip, patch);
+  touchTrip(trip);
   persist();
 }
 
@@ -230,6 +283,7 @@ export function setTripShareViewers(tripId, emails) {
   const trip = state.trips[tripId];
   if (!trip) return;
   trip.shareViewers = emails;
+  touchTrip(trip);
   persist();
 }
 
@@ -239,6 +293,7 @@ export function deleteTrip(tripId) {
     const remaining = getTrips();
     state.activeTripId = remaining.length ? remaining[0].id : null;
   }
+  touchAccount();
   persist();
 }
 
@@ -247,6 +302,7 @@ export function renameMember(tripId, memberId, name) {
   const member = trip && trip.members.find((m) => m.id === memberId);
   if (!member) return;
   member.name = name;
+  touchTrip(trip);
   persist();
 }
 
@@ -255,6 +311,7 @@ export function setMemberAvatar(tripId, memberId, avatarDataUrl) {
   const member = trip && trip.members.find((m) => m.id === memberId);
   if (!member) return;
   member.avatar = avatarDataUrl;
+  touchTrip(trip);
   persist();
 }
 
@@ -267,6 +324,7 @@ export function removeMember(tripId, memberId) {
     exp.splitMembers = (exp.splitMembers || []).filter((id) => id !== memberId);
     if (exp.splitCustom) delete exp.splitCustom[memberId];
   });
+  touchTrip(trip);
   persist();
 }
 
@@ -275,6 +333,7 @@ export function addCategory(tripId, { name, icon, color }) {
   if (!trip) return;
   const category = { id: uid('cat'), name, icon: icon || '🏷️', color: color || '#64748b' };
   trip.categories.push(category);
+  touchTrip(trip);
   persist();
   return category;
 }
@@ -283,6 +342,7 @@ export function removeCategory(tripId, categoryId) {
   const trip = state.trips[tripId];
   if (!trip) return;
   trip.categories = trip.categories.filter((c) => c.id !== categoryId);
+  touchTrip(trip);
   persist();
 }
 
@@ -291,6 +351,7 @@ export function addExpense(tripId, expense) {
   if (!trip) return;
   const record = { id: uid('exp'), createdAt: Date.now(), ...expense };
   trip.expenses.push(record);
+  touchTrip(trip);
   persist();
   return record;
 }
@@ -300,6 +361,7 @@ export function updateExpense(tripId, expenseId, patch) {
   const exp = trip && trip.expenses.find((e) => e.id === expenseId);
   if (!exp) return;
   Object.assign(exp, patch);
+  touchTrip(trip);
   persist();
 }
 
@@ -307,6 +369,7 @@ export function removeExpense(tripId, expenseId) {
   const trip = state.trips[tripId];
   if (!trip) return;
   trip.expenses = trip.expenses.filter((e) => e.id !== expenseId);
+  touchTrip(trip);
   persist();
 }
 
