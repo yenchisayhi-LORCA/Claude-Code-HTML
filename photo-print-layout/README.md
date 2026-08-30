@@ -51,7 +51,7 @@ npx serve .
 index.html               三個畫面的結構：樣板列表、樣板編輯器、套用樣板匯出
 css/style.css             樣式
 fonts/                    內建樣板包標題用的兩款字型（Gochi Hand、Nunito），自行嵌入不依賴 Google Fonts
-builtin-templates/        內建樣板包的底稿圖檔（t1~t21.png，t2/t5/t19 額外各有一張 -fg.png 前景圖層，都已經拿掉文字）
+builtin-templates/        內建樣板包的底稿圖檔（t1~t21.png，t5/t19 額外各有一張 -fg.png 前景圖層，都已經拿掉文字）
 js/
   app.js                 畫面切換（gallery/editor/export）與樣板列表渲染（內建＋自訂）
   builtin-templates.js   內建樣板包的資料（框位置／圓角／旋轉角度／前景圖層／可編輯文字欄位）
