@@ -198,6 +198,15 @@ async function completeEmailLinkSignInIfPresent(authModule) {
   const { isSignInWithEmailLink, signInWithEmailLink } = authModule;
   if (!isSignInWithEmailLink(auth, window.location.href)) return;
 
+  const signInHref = window.location.href;
+  // Firebase 的登入連結是一次性的，成功用過一次、或連結本身已經過期/失效之後，網址上帶的
+  // 那組參數就沒有用了。原本只有登入「成功」才會清掉網址上的參數，一旦連結過期、或使用者
+  // 在等一下的 Email 輸入框按了取消，網址上的參數會一直留著——這個分頁只要重新整理、或是
+  // 被系統從背景還原，就會又被誤判成「剛點了登入連結」，重新跳出輸入 Email 的提示、再拿
+  // 同一組已經失效的連結試一次，註定失敗，不斷重複。不管接下來成功、失敗、還是使用者取消，
+  // 都先把網址清乾淨，這組連結不會再被用第二次。
+  window.history.replaceState({}, document.title, window.location.pathname);
+
   let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
   if (!email) {
     email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
@@ -205,19 +214,12 @@ async function completeEmailLinkSignInIfPresent(authModule) {
   if (!email) return;
 
   try {
-    await signInWithEmailLink(auth, email, window.location.href);
+    await signInWithEmailLink(auth, email, signInHref);
     window.localStorage.removeItem(EMAIL_STORAGE_KEY);
     justCompletedEmailLinkSignIn = true;
   } catch (err) {
     console.error('Email 連結登入失敗', err);
     setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
-  } finally {
-    // 不管成功還是失敗，都要把網址上的登入參數清掉：連結本身是一次性的，失敗多半是因為
-    // 過期或已經用過。如果只在成功時才清網址，失敗後這個分頁只要一重新整理，就會用同一個
-    // 已經失效的連結再跳一次「請輸入 Email」，卡在無限迴圈——使用者不管輸入幾次都不會成功，
-    // 只會看到同一個輸入框一直跳出來。清掉網址後就會正常回到「登入同步」按鈕，可以請他直接
-    // 重新按一次寄一個新的連結。
-    window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 
