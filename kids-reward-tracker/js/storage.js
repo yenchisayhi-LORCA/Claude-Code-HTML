@@ -31,6 +31,7 @@ function emptyState() {
     savingsChallenges: [],
     shopCatalog: [],
     pin: { plain: null },
+    updatedAt: 0,
   };
 }
 
@@ -59,6 +60,8 @@ function sanitize(s) {
   if (!Array.isArray(s.shopCatalog)) s.shopCatalog = [];
   if (!s.pin || typeof s.pin !== 'object') s.pin = { plain: null };
   if (typeof s.activeKidId !== 'string') s.activeKidId = s.activeKidId || null;
+  // 舊資料（這個欄位加進來之前存的）沒有 updatedAt，補 0 當「不知道多新，當最舊處理」。
+  if (typeof s.updatedAt !== 'number' || !Number.isFinite(s.updatedAt)) s.updatedAt = 0;
   return s;
 }
 
@@ -77,13 +80,22 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
-export function persist() {
+function writeLocalStorage() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
     console.error('儲存本地資料失敗（可能是空間不足）', err);
     alert('儲存失敗：瀏覽器儲存空間可能已滿（常見原因是照片太多），請刪除部分照片或舊獎狀。');
   }
+}
+
+export function persist() {
+  // 每次「真正的本機修改」都蓋成現在時間：cloud-sync.js 靠這個欄位判斷多裝置之間誰的
+  // 資料比較新，所以只有實際呼叫 persist() 的異動（addKid/updateKid/manualAdjust…）
+  // 才能動它——見下面 applySyncedState()，套用雲端資料不能也蓋成「現在」，不然會失去
+  // 判斷新舊的意義。
+  state.updatedAt = Date.now();
+  writeLocalStorage();
   notify();
 }
 
@@ -95,10 +107,13 @@ export function getSyncableState() {
   return state;
 }
 
-// 用雲端資料整批覆蓋本機狀態（cloud-sync.js 收到遠端快照時呼叫）。
+// 用雲端資料整批覆蓋本機狀態（cloud-sync.js 收到遠端快照、或判斷雲端比較新時呼叫）。
+// 刻意不呼叫 persist()：套用進來的 updatedAt 是「原本寫這筆資料那台裝置」的本機時間，
+// 要原封不動保留，不能蓋成這台裝置的現在時間，否則下次比較新舊就會失真。
 export function applySyncedState(remote) {
   state = sanitize(remote);
-  persist();
+  writeLocalStorage();
+  notify();
 }
 
 // ---------------------------------------------------------------- 小孩

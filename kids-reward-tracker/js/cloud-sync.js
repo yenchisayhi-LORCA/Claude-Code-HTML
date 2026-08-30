@@ -31,7 +31,6 @@ let pushAgainAfter = false;
 let lastSyncedJson = null;
 let onRemoteChangeCb = null;
 let onStatusChangeCb = null;
-let justCompletedEmailLinkSignIn = false;
 
 // 除了「Firebase 根本沒設定好」那次以外，這個檔案裡幾乎每個 setStatus() 呼叫都只帶
 // { signedIn, user, syncing, error } 這幾個欄位，沒有重複帶 available——這樣沒問題的前提
@@ -67,6 +66,9 @@ export async function debugSyncInfo() {
     localKidsCount: Object.keys(local.kids || {}).length,
     localKidsNames: Object.values(local.kids || {}).map((k) => k.name),
     localSizeKB: (localJson.length / 1024).toFixed(1),
+    // 這台裝置最後一次真正修改資料的時間（storage.js persist() 蓋的），跟下面
+    // cloudContentUpdatedAt 是同一把尺，兩者誰比較新，開啟時就是用誰的資料。
+    localContentUpdatedAt: local.updatedAt ? new Date(local.updatedAt).toISOString() : null,
   };
   try {
     const snap = await getDoc(doc(db, SYNC_COLLECTION, currentUser.uid));
@@ -80,11 +82,16 @@ export async function debugSyncInfo() {
         const cloudData = JSON.parse(cloudJson);
         info.cloudKidsCount = Object.keys(cloudData.kids || {}).length;
         info.cloudKidsNames = Object.values(cloudData.kids || {}).map((k) => k.name);
+        // 雲端這份資料本身記的「最後修改那台裝置」的本機時間，跟上面 localContentUpdatedAt
+        // 互相比較用（見 handleSignedIn() 的說明）。
+        info.cloudContentUpdatedAt = cloudData.updatedAt ? new Date(cloudData.updatedAt).toISOString() : null;
       } catch (err) {
         info.cloudParseError = String(err);
       }
+      // 這是 Firestore 伺服器記的「這份文件最後一次被寫入」的時間，反映的是同步的時機，
+      // 不是資料本身的新舊（跟 cloudContentUpdatedAt 意義不同，兩個都留著方便對照）。
       const updatedAt = snap.data().updatedAt;
-      info.cloudUpdatedAt = updatedAt && updatedAt.toDate ? updatedAt.toDate().toISOString() : String(updatedAt);
+      info.cloudDocPushedAt = updatedAt && updatedAt.toDate ? updatedAt.toDate().toISOString() : String(updatedAt);
     }
   } catch (err) {
     info.cloudReadError = `${err.code || ''} ${err.message || err}`.trim();
@@ -137,7 +144,6 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       currentUser = user;
       setStatus({ signedIn: true, user, syncing: true });
       await handleSignedIn(firestoreModule);
-      justCompletedEmailLinkSignIn = false;
       setStatus({ signedIn: true, user, syncing: false });
     } else {
       currentUser = null;
@@ -148,7 +154,6 @@ export async function initCloudSync({ onRemoteChange, onStatusChange } = {}) {
       pushInFlight = false;
       pushAgainAfter = false;
       lastSyncedJson = null;
-      justCompletedEmailLinkSignIn = false;
       setStatus({ signedIn: false, available: true });
     }
   });
@@ -216,7 +221,6 @@ async function completeEmailLinkSignInIfPresent(authModule) {
   try {
     await signInWithEmailLink(auth, email, signInHref);
     window.localStorage.removeItem(EMAIL_STORAGE_KEY);
-    justCompletedEmailLinkSignIn = true;
   } catch (err) {
     console.error('Email 連結登入失敗', err);
     setStatus({ signedIn: false, available: true, error: `登入失敗：${err.code || err.message}` });
@@ -266,20 +270,37 @@ async function handleSignedIn(firestoreModule) {
       } else {
         await pushNow(firestoreModule, local);
       }
-    } else if (!justCompletedEmailLinkSignIn) {
-      // 本機確實有小孩資料、這次只是重新整理（不是剛點信件連結登入）：直接信任本機、送出去，
-      // 不跳視窗冒險蓋掉使用者剛做的變更。理由同根目錄旅遊記帳系統同一份檔案的說明。
-      await pushNow(firestoreModule, local);
     } else {
-      const useCloud = confirm(
-        '偵測到這個帳號的雲端已經有小孩獎勵資料，且跟這台裝置目前顯示的不一樣。\n\n' +
-          '按「確定」= 改用雲端資料（會覆蓋這台裝置目前顯示的內容）\n' +
-          '按「取消」= 用這台裝置目前的資料覆蓋雲端'
-      );
-      if (useCloud) {
+      // 本機、雲端都有資料但兜不起來。以前這裡是看「這次是不是剛點信件連結登入」來猜
+      // 哪一份比較新——只要不是剛登入（單純重新整理／背景喚醒），一律相信本機、直接
+      // 送出去蓋過雲端。這個假設在同一個帳號同時登入多台裝置時是錯的：切去另一台裝置
+      // 時，那台裝置的本機快取通常比較舊（剛剛的修改是在別台裝置做的），一開啟就會把
+      // 自己這份過時的資料蓋回雲端，把剛剛在別台裝置做的修改整個抹掉——使用者會看到在
+      // A 裝置修好的數字，切到 B 裝置又變回修改前，來回好幾台裝置都這樣。
+      //
+      // 改成直接比較兩邊的 updatedAt：每次真正的本機修改，storage.js 的 persist() 都會
+      // 蓋成 Date.now()，並隨整包資料一起同步過去，所以雲端 JSON 裡的 updatedAt 就是
+      // 「最後修改那台裝置」當時記下的本機時間。誰的時間比較新就用誰的，不再靠「有沒有
+      // 剛點登入連結」這種跟資料新舊完全無關的訊號去猜。只有兩邊都沒有可比的時間戳記
+      // （例如更新這個版本以前存的舊資料）時，才退回原本跳出視窗問使用者的做法。
+      const cloudData = JSON.parse(cloudJson);
+      const cloudUpdatedAt = Number(cloudData.updatedAt) || 0;
+      const localUpdatedAt = Number(local.updatedAt) || 0;
+      if (cloudUpdatedAt > localUpdatedAt) {
         applyRemoteJson(cloudJson);
-      } else {
+      } else if (localUpdatedAt > cloudUpdatedAt) {
         await pushNow(firestoreModule, local);
+      } else {
+        const useCloud = confirm(
+          '偵測到這個帳號的雲端已經有小孩獎勵資料，且跟這台裝置目前顯示的不一樣。\n\n' +
+            '按「確定」= 改用雲端資料（會覆蓋這台裝置目前顯示的內容）\n' +
+            '按「取消」= 用這台裝置目前的資料覆蓋雲端'
+        );
+        if (useCloud) {
+          applyRemoteJson(cloudJson);
+        } else {
+          await pushNow(firestoreModule, local);
+        }
       }
     }
   } else {
