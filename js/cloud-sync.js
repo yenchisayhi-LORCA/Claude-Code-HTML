@@ -160,6 +160,15 @@ async function completeEmailLinkSignInIfPresent(authModule) {
   const { isSignInWithEmailLink, signInWithEmailLink } = authModule;
   if (!isSignInWithEmailLink(auth, window.location.href)) return;
 
+  const signInHref = window.location.href;
+  // Firebase 的登入連結是一次性的，成功用過一次、或連結本身已經過期/失效之後，網址上帶的
+  // 那組參數就沒有用了。原本只有登入「成功」才會清掉網址上的參數，一旦連結過期、或使用者
+  // 在等一下的 Email 輸入框按了取消，網址上的參數會一直留著——這個分頁只要重新整理、或是
+  // 被系統從背景還原，就會又被誤判成「剛點了登入連結」，重新跳出輸入 Email 的提示、再拿
+  // 同一組已經失效的連結試一次，註定失敗，不斷重複。不管接下來成功、失敗、還是使用者取消，
+  // 都先把網址清乾淨，這組連結不會再被用第二次。
+  window.history.replaceState({}, document.title, window.location.pathname);
+
   let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
   if (!email) {
     email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
@@ -167,9 +176,8 @@ async function completeEmailLinkSignInIfPresent(authModule) {
   if (!email) return;
 
   try {
-    await signInWithEmailLink(auth, email, window.location.href);
+    await signInWithEmailLink(auth, email, signInHref);
     window.localStorage.removeItem(EMAIL_STORAGE_KEY);
-    window.history.replaceState({}, document.title, window.location.pathname); // 清掉網址上的登入參數
     justCompletedEmailLinkSignIn = true;
   } catch (err) {
     console.error('Email 連結登入失敗', err);
@@ -630,16 +638,21 @@ export async function initShareViewerAuth({ onUser, onError } = {}) {
   const { isSignInWithEmailLink, signInWithEmailLink, sendSignInLinkToEmail, onAuthStateChanged } = authModule;
 
   if (isSignInWithEmailLink(viewerAuth, window.location.href)) {
+    const signInHref = window.location.href;
+    // 登入連結是一次性的，成功用過、或過期失效之後就沒用了：不管接下來成功、失敗、還是
+    // 使用者在輸入 Email 時按取消，都先清掉網址上的登入參數（但保留 ?share=tripId，不然
+    // 重新整理就找不到要看哪趟旅程了），避免這組壞掉的連結卡在網址上，每次重新整理都
+    // 又跳出一次輸入 Email 的提示、拿同一組已經失效的連結再試一次。
+    const shareId = new URLSearchParams(window.location.search).get('share');
+    const cleanUrl = window.location.pathname + (shareId ? `?share=${encodeURIComponent(shareId)}` : '');
+    window.history.replaceState({}, document.title, cleanUrl);
+
     let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
     if (!email) email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
     if (email) {
       try {
-        await signInWithEmailLink(viewerAuth, email, window.location.href);
+        await signInWithEmailLink(viewerAuth, email, signInHref);
         window.localStorage.removeItem(EMAIL_STORAGE_KEY);
-        // 清掉網址上 Firebase 附加的登入參數，但保留 ?share=tripId，不然重新整理就找不到要看哪趟旅程了
-        const shareId = new URLSearchParams(window.location.search).get('share');
-        const cleanUrl = window.location.pathname + (shareId ? `?share=${encodeURIComponent(shareId)}` : '');
-        window.history.replaceState({}, document.title, cleanUrl);
       } catch (err) {
         console.error('分享檢視登入失敗', err);
         onError && onError(err);
