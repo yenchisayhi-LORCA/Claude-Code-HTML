@@ -31,6 +31,7 @@ function emptyState() {
     savingsChallenges: [],
     shopCatalog: [],
     pin: { plain: null },
+    updatedAt: 0,
   };
 }
 
@@ -59,6 +60,7 @@ function sanitize(s) {
   if (!Array.isArray(s.shopCatalog)) s.shopCatalog = [];
   if (!s.pin || typeof s.pin !== 'object') s.pin = { plain: null };
   if (typeof s.activeKidId !== 'string') s.activeKidId = s.activeKidId || null;
+  if (typeof s.updatedAt !== 'number') s.updatedAt = 0; // 相容舊版本存的資料
   return s;
 }
 
@@ -77,7 +79,22 @@ function notify() {
   listeners.forEach((fn) => fn());
 }
 
+// 雲端同步曾經靠「這次是不是剛點信件連結登入」這種跟資料新舊完全無關的訊號，去猜「本機
+// 跟雲端不一樣時該用哪一份」——這在同一帳號同時在多台裝置使用時是錯的：切到另一台裝置、
+// 單純重新整理（不是剛點連結）時，那台裝置的本機快取通常比較舊，一開機就把自己這份舊資料
+// 蓋回雲端，把剛剛在別的裝置做的修改整個抹掉。改成每次真正修改資料時，都用這個共用的
+// persist() 記錄一個 updatedAt 時間戳記（這個 app 全部資料存成一份 JSON，不像旅遊記帳系統
+// 拆成每趟旅程各自一份，所以只需要一個整體的時間戳記，不用逐項分開記）；cloud-sync.js
+// 收到雲端資料時直接比較本機與雲端誰的時間比較新，新的那份才生效，不再用「有沒有剛點
+// 登入連結」去猜。注意：這裡刻意只在「真的是本機自己做了修改」時才更新時間戳記，套用從
+// 雲端拉下來的資料（applySyncedState）不能經過這裡，不然每次同步都會把本機的時間戳記
+// 洗成「現在」，之後永遠都會誤判成本機比較新。
 export function persist() {
+  state.updatedAt = Date.now();
+  writeAndNotify();
+}
+
+function writeAndNotify() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (err) {
@@ -95,10 +112,12 @@ export function getSyncableState() {
   return state;
 }
 
-// 用雲端資料整批覆蓋本機狀態（cloud-sync.js 收到遠端快照時呼叫）。
+// 用雲端資料整批覆蓋本機狀態（cloud-sync.js 收到遠端快照時呼叫）。刻意呼叫 writeAndNotify()
+// 而不是 persist()：這裡套用的是雲端已經決定好、帶著自己 updatedAt 的資料，不能被這裡
+// 洗成「現在」，理由見 persist() 上面的說明。
 export function applySyncedState(remote) {
   state = sanitize(remote);
-  persist();
+  writeAndNotify();
 }
 
 // ---------------------------------------------------------------- 小孩
