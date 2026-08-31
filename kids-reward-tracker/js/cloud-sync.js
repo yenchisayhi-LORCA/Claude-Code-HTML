@@ -264,17 +264,31 @@ async function handleSignedIn(firestoreModule) {
       } else {
         await pushNow(firestoreModule, local);
       }
-    } else if (!justCompletedEmailLinkSignIn) {
-      // 本機確實有小孩資料、這次只是重新整理（不是剛點信件連結登入）：直接信任本機、送出去，
-      // 不跳視窗冒險蓋掉使用者剛做的變更。理由同根目錄旅遊記帳系統同一份檔案的說明。
-      await pushNow(firestoreModule, local);
     } else {
-      const useCloud = confirm(
-        '偵測到這個帳號的雲端已經有小孩獎勵資料，且跟這台裝置目前顯示的不一樣。\n\n' +
-          '按「確定」= 改用雲端資料（會覆蓋這台裝置目前顯示的內容）\n' +
-          '按「取消」= 用這台裝置目前的資料覆蓋雲端'
-      );
-      if (useCloud) {
+      // 本機、雲端都有小孩資料，但內容不一樣：原本是用「是不是剛點信件連結登入」去猜該用
+      // 哪一份，這個訊號跟資料本身新舊完全無關——同一帳號同時在多台裝置使用時會出錯：切到
+      // 另一台裝置、單純重新整理（不是剛點連結），過去的邏輯會無條件信任這台裝置的本機
+      // 快取、整份推上去蓋掉雲端，把剛剛在別的裝置做的修改整個抹掉（這個 app 全部資料是
+      // 一份 JSON，一旦發生，受影響的不會只有一個小孩，是所有小孩的資料一起被蓋掉）。
+      // 改成直接比較本機／雲端各自的 updatedAt 時間戳記，真的比較新的那份才生效。
+      const cloudData = JSON.parse(cloudJson);
+      const cloudUpdatedAt = cloudData.updatedAt || 0;
+      const localUpdatedAt = local.updatedAt || 0;
+      if (cloudUpdatedAt === 0 && localUpdatedAt === 0 && justCompletedEmailLinkSignIn) {
+        // 雙方都沒有時間戳記可比——只會發生在遷移到這個機制之前就存在、之後都沒有任何一邊
+        // 改過的舊資料，真的沒有新舊可言，這種情況才需要問使用者要留哪一份。只要任一邊已經
+        // 有時間戳記可比，就不會再看到這個確認視窗。
+        const useCloud = confirm(
+          '偵測到這個帳號的雲端已經有小孩獎勵資料，且跟這台裝置目前顯示的不一樣（沒有足夠的\n時間資訊可以自動判斷新舊）。\n\n' +
+            '按「確定」= 改用雲端資料（會覆蓋這台裝置目前顯示的內容）\n' +
+            '按「取消」= 用這台裝置目前的資料覆蓋雲端'
+        );
+        if (useCloud) {
+          applyRemoteJson(cloudJson);
+        } else {
+          await pushNow(firestoreModule, local);
+        }
+      } else if (cloudUpdatedAt > localUpdatedAt) {
         applyRemoteJson(cloudJson);
       } else {
         await pushNow(firestoreModule, local);
@@ -307,6 +321,19 @@ function listenToCloud(firestoreModule) {
     if (!snap.exists()) return;
     const json = snap.data().stateJson;
     if (json === lastSyncedJson) return;
+    // 這筆即時更新（不用重新整理頁面就會生效）也要跟 handleSignedIn() 一樣比較 updatedAt，
+    // 不能「只要跟上次同步的內容不一樣就套用」——另一台裝置有可能推了一份還沒跟上進度的
+    // 舊內容上來，這種情況下小孩資料看起來像正常的更新，卻會把這台裝置剛做的修改整批
+    // 蓋掉，而且不用重新整理就會發生，畫面上也不會有任何錯誤訊息。
+    let cloudData;
+    try {
+      cloudData = JSON.parse(json);
+    } catch (err) {
+      console.error('解析雲端資料失敗', err);
+      return;
+    }
+    const local = getSyncableState();
+    if ((cloudData.updatedAt || 0) <= (local.updatedAt || 0)) return;
     applyRemoteJson(json);
   });
 }
