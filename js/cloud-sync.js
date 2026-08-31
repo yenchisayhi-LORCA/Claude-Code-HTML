@@ -453,25 +453,40 @@ function handleIncomingCloudSnapshot() {
   // 同時間別的裝置寫入的資料），等本機這輪全部 push 完再處理；到時候 onSnapshot 本來就會
   // 再送一次最新的文件內容過來，不會漏掉。
   if (pushScheduled || pushInFlight) return;
-  const state = currentCachedCloudState();
-  const json = JSON.stringify(state);
+  const remoteState = currentCachedCloudState();
+  const json = JSON.stringify(remoteState);
   if (json === lastSyncedJson) return; // 自己剛寫入或讀過的資料，略過避免無限循環
 
-  // 多一道保險：即時更新的訂閱理論上一個 session 只會建立一次（見 listenToCloud 的
-  // listeningForUid 防呆），但這裡還是不相信「這筆遠端快照，比本機少了幾趟本機現有的
-  // 旅程」這種訊號——這種落差幾乎都是訂閱剛建立瞬間、真正的內容還沒完全載入完成前的
-  // 暫時性不完整結果（不管是完全沒有旅程，還是只是缺了其中幾趟），而不是真的有人在
-  // 別的裝置上把這些旅程都刪掉了（那種操作本來就少見，而且如果是這台裝置自己刪的，
-  // 根本不會走到這個監聽分支，走的是本機刪除→pushNow 那條路）。發現任何本機有、
-  // 這筆遠端快照卻沒有的旅程，就整筆跳過不套用，寧可這次不同步，也不要冒險把本機
-  // 還有的旅程清掉——真的是別的裝置刪除的話，下次重新登入時的完整讀取仍然抓得到。
-  const localTripIds = Object.keys(getSyncableState().trips);
-  const remoteTripIds = new Set(Object.keys(state.trips));
-  if (localTripIds.some((id) => !remoteTripIds.has(id))) {
-    console.warn('忽略一筆遠端快照：本機有的旅程，這筆快照卻沒有，避免誤判成雲端把旅程刪掉了');
-    return;
+  // 這裡跟 handleSignedIn() 一樣，逐趟旅程依 updatedAt 決定要不要套用這筆即時更新，
+  // 而不是像過去那樣「這筆快照裡只要缺了本機現有的任何一趟旅程，就整筆跳過；只要都有就
+  // 整批套用」。那種全有全無的判斷擋得住「快照完全沒有旅程」這種明顯異常的情況，卻擋不住
+  // 「旅程 id 都還在、但其中一趟的內容其實是比較舊的版本」——例如另一台裝置在這台裝置
+  // 剛做完修改之後，推了一份還沒跟上最新進度的舊內容上去，這種即時更新來的時候旅程 id
+  // 明明都在，卻會整批把這台裝置剛做的修改蓋掉、而且不需要重新整理頁面就會發生，使用者
+  // 完全看不出來發生了什麼事。逐趟比較 updatedAt 之後，只有真的比較新的旅程才會被套用，
+  // 本機比較新的旅程、或本機才有的旅程都不會被這種快照動到。
+  const local = getSyncableState();
+  const { toApplyLocally } = mergeTripsByTimestamp(local.trips, remoteState.trips);
+  const useCloudAccount = (remoteState.accountUpdatedAt || 0) > (local.accountUpdatedAt || 0);
+
+  let localChanged = false;
+  if (Object.keys(toApplyLocally).length > 0) {
+    for (const [id, trip] of Object.entries(toApplyLocally)) {
+      lastSyncedTripJson.set(id, JSON.stringify(trip));
+    }
+    mergeRemoteTrips(toApplyLocally);
+    localChanged = true;
   }
-  applyRemoteState(state);
+  if (useCloudAccount) {
+    lastSyncedAccountJson = JSON.stringify({
+      activeTripId: remoteState.activeTripId ?? null,
+      people: remoteState.people || [],
+      accountUpdatedAt: remoteState.accountUpdatedAt || 0,
+    });
+    applyRemoteAccountFields(remoteState);
+    localChanged = true;
+  }
+  if (localChanged && onRemoteChangeCb) onRemoteChangeCb();
 }
 
 // 正常情況下，一整個登入 session 只需要訂閱一次即時更新；但 Firebase Auth 在某些瀏覽器
