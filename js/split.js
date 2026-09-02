@@ -2,11 +2,19 @@
 
 import { convertToBase } from './currency.js';
 
-// 回傳 { memberId: 淨餘額（以旅程基準貨幣計算，正值代表應收回、負值代表應付出） }
+// 回傳 { memberId: 淨餘額（以旅程基準貨幣計算，正值代表應收回、負值代表應付出） }，
+// 同時也回傳 paid（每人實際付款總額）跟 spent（每人實際分攤/花費總額）——
+// 淨餘額只是 paid - spent，但畫面上「每人實際花費多少」「每人實際付了多少」
+// 這兩個數字本身也有意義，不是只看淨額，所以這裡一次算好一起回傳，
+// 不用另外重複跑一次一模一樣的分攤邏輯。
 export function computeBalances(trip, ratesCache) {
   const balances = {};
+  const paid = {};
+  const spent = {};
   trip.members.forEach((m) => {
     balances[m.id] = 0;
+    paid[m.id] = 0;
+    spent[m.id] = 0;
   });
 
   const unresolved = [];
@@ -17,12 +25,18 @@ export function computeBalances(trip, ratesCache) {
       unresolved.push(exp);
       return;
     }
-    if (exp.paidBy in balances) balances[exp.paidBy] += amountInBase;
+    if (exp.paidBy in balances) {
+      balances[exp.paidBy] += amountInBase;
+      paid[exp.paidBy] += amountInBase;
+    }
 
     if (exp.splitType === 'custom' && exp.splitCustom) {
       Object.entries(exp.splitCustom).forEach(([memberId, amt]) => {
         const shareInBase = convertToBase(Number(amt) || 0, exp.currency, trip.baseCurrency, ratesCache);
-        if (shareInBase !== null && memberId in balances) balances[memberId] -= shareInBase;
+        if (shareInBase !== null && memberId in balances) {
+          balances[memberId] -= shareInBase;
+          spent[memberId] += shareInBase;
+        }
       });
     } else {
       const members = (exp.splitMembers || []).filter((id) => id in balances);
@@ -30,12 +44,13 @@ export function computeBalances(trip, ratesCache) {
         const share = amountInBase / members.length;
         members.forEach((memberId) => {
           balances[memberId] -= share;
+          spent[memberId] += share;
         });
       }
     }
   });
 
-  return { balances, unresolved };
+  return { balances, paid, spent, unresolved };
 }
 
 // 貪婪演算法：每次讓「餘額最多的債主」與「欠最多的債務人」互相清償，得到最少轉帳筆數

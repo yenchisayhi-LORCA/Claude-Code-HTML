@@ -321,7 +321,7 @@ function renderExpenseList(trip) {
 }
 
 function renderSplitTab(trip) {
-  const { balances } = computeBalances(trip, activeRates);
+  const { balances, paid, spent } = computeBalances(trip, activeRates);
   const findMember = (id) => trip.members.find((m) => m.id === id);
   const memberName = (id) => findMember(id)?.name || '（已刪除成員）';
 
@@ -335,7 +335,14 @@ function renderSplitTab(trip) {
       const bal = balances[m.id] || 0;
       const cls = bal > 0.01 ? 'positive' : bal < -0.01 ? 'negative' : '';
       const text = bal > 0.01 ? `應收回 ${Math.round(bal)}` : bal < -0.01 ? `應付出 ${Math.round(Math.abs(bal))}` : '已結清';
-      return `<div class="balance-chip"><div class="name">${memberAvatarHtml(m)}${escapeHtml(m.name)}</div><div class="amount ${cls}">${text} ${trip.baseCurrency} ${twdNote(Math.abs(bal))}</div></div>`;
+      return `<div class="balance-chip">
+        <div class="name">${memberAvatarHtml(m)}${escapeHtml(m.name)}</div>
+        <div class="balance-stats">
+          <div class="stat-line"><span>實際花費</span><span>${Math.round(spent[m.id] || 0)} ${trip.baseCurrency} ${twdNote(spent[m.id] || 0)}</span></div>
+          <div class="stat-line"><span>已付款</span><span>${Math.round(paid[m.id] || 0)} ${trip.baseCurrency} ${twdNote(paid[m.id] || 0)}</span></div>
+        </div>
+        <div class="amount ${cls}">${text} ${trip.baseCurrency} ${twdNote(Math.abs(bal))}</div>
+      </div>`;
     })
     .join('');
 
@@ -830,9 +837,9 @@ function wireGlobalEvents() {
   $('#btn-export-card').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
     const trip = store.getActiveTrip();
-    const { balances } = computeBalances(trip, activeRates);
+    const { balances, spent } = computeBalances(trip, activeRates);
     const transactions = simplifyDebts(balances);
-    const reportData = buildReportData(trip, activeRates, transactions);
+    const reportData = buildReportData(trip, activeRates, transactions, spent);
     btn.disabled = true;
     const originalLabel = btn.textContent;
     btn.textContent = '產生圖卡中…';
@@ -879,8 +886,8 @@ function wireGlobalEvents() {
   $('#btn-export-csv').addEventListener('click', () => exportExpensesCsv(store.getActiveTrip(), activeRates));
   $('#btn-export-xlsx').addEventListener('click', () => {
     const trip = store.getActiveTrip();
-    const { balances } = computeBalances(trip, activeRates);
-    exportExpensesXlsx(trip, activeRates, simplifyDebts(balances));
+    const { balances, paid, spent } = computeBalances(trip, activeRates);
+    exportExpensesXlsx(trip, activeRates, simplifyDebts(balances), { paid, spent });
   });
   $('#btn-print-report').addEventListener('click', () => {
     const trip = store.getActiveTrip();
