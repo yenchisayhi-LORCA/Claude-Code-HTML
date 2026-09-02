@@ -148,6 +148,10 @@ export function buildReportData(trip, ratesCache, transactions) {
     .map((exp) => {
       const cat = categoryOf(exp.categoryId);
       const showTwd = needsTwd && exp.currency.toUpperCase() !== 'TWD';
+      const splitNames =
+        exp.splitType === 'custom' && exp.splitCustom
+          ? Object.keys(exp.splitCustom).map(memberName).join('、')
+          : (exp.splitMembers || []).map(memberName).join('、');
       return {
         date: exp.date || '',
         type: iconKeyFor(cat ? cat.id : 'other'),
@@ -157,6 +161,7 @@ export function buildReportData(trip, ratesCache, transactions) {
         currency: exp.currency,
         twdAmount: showTwd ? convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache) : null,
         payer: memberName(exp.paidBy),
+        splitNames,
       };
     });
 
