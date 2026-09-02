@@ -129,9 +129,9 @@ export function renderExpenseReport(data) {
 }
 
 // 把系統內的 trip/expense/分帳結果轉成 renderExpenseReport 要的 ReportData 格式。
-// spent 是 split.js computeBalances() 算出來的「每人實際花費（分攤到的金額）」，
-// 選填——只有匯出圖卡需要顯示這個區塊，列印/PDF 報表目前沒有用到就不用特別傳。
-export function buildReportData(trip, ratesCache, transactions, spent) {
+// memberStats 是 split.js computeBalances() 的完整回傳值（{ balances, paid, spent }），
+// 選填——只有匯出圖卡需要顯示每人統計，列印/PDF 報表目前沒有用到就不用特別傳。
+export function buildReportData(trip, ratesCache, transactions, memberStats) {
   const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
   const categoryOf = (id) => trip.categories.find((c) => c.id === id);
   const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
@@ -175,13 +175,25 @@ export function buildReportData(trip, ratesCache, transactions, spent) {
     twdAmount: needsTwd ? baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache) : null,
   }));
 
-  const memberSpend = spent
-    ? trip.members.map((m) => ({
-        name: m.name,
-        amount: spent[m.id] || 0,
-        currency: trip.baseCurrency,
-        twdAmount: needsTwd ? baseAmountToTWD(spent[m.id] || 0, trip.baseCurrency, ratesCache) : null,
-      }))
+  // 每人「實際花費」（分攤到的金額）、「已付款」（實際掏錢付款的金額）、「淨餘額」
+  // （應收/應付，正值代表應收回、負值代表應付出）——三個數字用途不同，見 split.js
+  // computeBalances() 開頭的說明，這裡一次算好給匯出圖卡的「每人結算」區塊用。
+  const memberBalance = memberStats
+    ? trip.members.map((m) => {
+        const spentAmt = memberStats.spent[m.id] || 0;
+        const paidAmt = memberStats.paid[m.id] || 0;
+        const balance = memberStats.balances[m.id] || 0;
+        return {
+          name: m.name,
+          currency: trip.baseCurrency,
+          spent: spentAmt,
+          spentTwd: needsTwd ? baseAmountToTWD(spentAmt, trip.baseCurrency, ratesCache) : null,
+          paid: paidAmt,
+          paidTwd: needsTwd ? baseAmountToTWD(paidAmt, trip.baseCurrency, ratesCache) : null,
+          balance,
+          balanceTwd: needsTwd ? baseAmountToTWD(Math.abs(balance), trip.baseCurrency, ratesCache) : null,
+        };
+      })
     : [];
 
   return {
@@ -194,7 +206,7 @@ export function buildReportData(trip, ratesCache, transactions, spent) {
     currency: trip.baseCurrency,
     total,
     totalTwd,
-    memberSpend,
+    memberBalance,
     expenses,
     settlements,
   };
