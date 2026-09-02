@@ -256,7 +256,8 @@ export function buildReportCanvas(data) {
   ctx.fillText(cur, box3X + 20 + totalWidth + 5, y + 51);
   if (data.totalTwd != null) {
     ctx.fillStyle = '#FFEBD9'; ctx.font = `700 12px ${FONT}`;
-    ctx.fillText(`≈ ${Number(data.totalTwd).toLocaleString('en-US', { maximumFractionDigits: 2 })} TWD`, box3X + 20, y + 66);
+    // 台幣是參考換算值，不需要小數，四捨五入到整數比較好讀
+    ctx.fillText(`≈ ${Math.round(Number(data.totalTwd)).toLocaleString('en-US')} TWD`, box3X + 20, y + 66);
   }
 
   y += statH + sectionGap;
@@ -295,10 +296,17 @@ export function buildReportCanvas(data) {
       const amountW = ctx.measureText(amountText).width;
       ctx.font = `900 12px ${FONT}`;
       const curW = ctx.measureText(curLabel).width;
+      const amountLeftEdgeX = SIDE_PAD + CONTENT_W - 20 - curW - 4 - amountW;
+
+      // 分攤成員獨立占一欄，畫在說明文字跟金額中間，寬度固定，跟著金額欄的實際寬度往左排
+      const SPLIT_COL_W = 150;
+      const SPLIT_COL_GAP = 18;
+      const splitColRightX = amountLeftEdgeX - SPLIT_COL_GAP;
+      const splitColLeftX = splitColRightX - SPLIT_COL_W;
 
       const textTopY = y + rowH / 2 - 15;
       ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
-      ctx.fillText(truncate(ctx, exp.title || '', CONTENT_W - 40 - badgeSize - 16 - amountW - curW - 20), textX, textTopY + 10);
+      ctx.fillText(truncate(ctx, exp.title || '', Math.max(40, splitColLeftX - textX - 12)), textX, textTopY + 10);
 
       ctx.font = `700 12.5px ${FONT}`;
       let mx = textX;
@@ -315,6 +323,13 @@ export function buildReportCanvas(data) {
       ctx.fillStyle = '#D6C6B6'; ctx.beginPath(); ctx.arc(mx, my - 4, 1.5, 0, Math.PI * 2); ctx.fill(); mx += 9;
       ctx.font = `700 12.5px ${FONT}`;
       ctx.fillStyle = '#9A8A7D'; ctx.fillText(`${exp.payer || ''} 付款`, mx, my);
+
+      if (exp.splitNames) {
+        ctx.fillStyle = '#A08C7D'; ctx.font = `700 11px ${FONT}`;
+        ctx.fillText('分攤', splitColLeftX, y + rowH / 2 - 6);
+        ctx.fillStyle = '#6B5B4E'; ctx.font = `700 13px ${FONT}`;
+        ctx.fillText(truncate(ctx, exp.splitNames, SPLIT_COL_W), splitColLeftX, y + rowH / 2 + 12);
+      }
 
       const amountCenterY = exp.twdAmount != null ? y + rowH / 2 - 8 : y + rowH / 2 + 6;
       ctx.textAlign = 'right';
