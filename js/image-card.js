@@ -163,6 +163,8 @@ const ROW_H = 60;
 const ROW_H_WITH_TWD = 76; // 多一行「≈ X TWD」參考金額
 const SETTLE_ROW_H = 62;
 const SETTLE_ROW_H_WITH_TWD = 82;
+const MEMBER_ROW_H = 62;
+const MEMBER_ROW_H_WITH_TWD = 82;
 const ROW_GAP = 10;
 
 function rowHeightFor(exp) {
@@ -171,6 +173,9 @@ function rowHeightFor(exp) {
 function settleRowHeightFor(s) {
   return s.twdAmount != null ? SETTLE_ROW_H_WITH_TWD : SETTLE_ROW_H;
 }
+function memberRowHeightFor(m) {
+  return m.twdAmount != null ? MEMBER_ROW_H_WITH_TWD : MEMBER_ROW_H;
+}
 
 export function buildReportCanvas(data) {
   const rowGap = ROW_GAP;
@@ -178,17 +183,23 @@ export function buildReportCanvas(data) {
 
   const expenses = data.expenses || [];
   const settlements = data.settlements || [];
+  const memberSpend = data.memberSpend || [];
   const expenseAreaH = expenses.length
     ? expenses.reduce((sum, e) => sum + rowHeightFor(e), 0) + (expenses.length - 1) * rowGap
     : 30;
   const settleAreaH = settlements.length
     ? settlements.reduce((sum, s) => sum + settleRowHeightFor(s), 0) + (settlements.length - 1) * rowGap
     : SETTLE_ROW_H;
+  const memberAreaH = memberSpend.length
+    ? memberSpend.reduce((sum, m) => sum + memberRowHeightFor(m), 0) + (memberSpend.length - 1) * rowGap
+    : 0;
+  const memberSectionH = memberSpend.length ? 30 + memberAreaH + sectionGap : 0; // 30 是區塊標題高度
 
   const headerH = 56 + 20; // logo 高度 + 跟下面統計卡的間距
   const statBoxH = 68; // padding 16 + 標籤 13 + 間距 6 + 數值 16 + padding 16，四捨五入
   const statH = data.totalTwd != null ? statBoxH + 20 : statBoxH; // 總花費有台幣參考時多一行，三張卡等高（對齊瀏覽器 flex 預設 stretch 行為）
-  const H = H_PAD + headerH + statH + sectionGap + 30 + expenseAreaH + sectionGap + 30 + settleAreaH + 40 + 48;
+  const H =
+    H_PAD + headerH + statH + sectionGap + memberSectionH + 30 + expenseAreaH + sectionGap + 30 + settleAreaH + 40 + 48;
 
   const scale = 2;
   const canvas = document.createElement('canvas');
@@ -262,7 +273,6 @@ export function buildReportCanvas(data) {
 
   y += statH + sectionGap;
 
-  // 花費明細
   const sectionHeader = (label, dotColor) => {
     ctx.fillStyle = dotColor; roundRect(ctx, SIDE_PAD, y - 12, 14, 14, 5); ctx.fill();
     ctx.fillStyle = '#3B3330'; ctx.font = `900 20px ${FONT}`;
@@ -272,6 +282,38 @@ export function buildReportCanvas(data) {
     ctx.beginPath(); ctx.moveTo(SIDE_PAD + 24 + labelW + 10, y - 5); ctx.lineTo(SIDE_PAD + CONTENT_W, y - 5); ctx.stroke();
   };
 
+  // 每人實際花費（放在花費明細上面，跟分帳結算的「應收/應付淨額」不同——這裡是每個人
+  // 實際分攤到的花費總額，不管實際掏錢付款的是不是自己）
+  if (memberSpend.length) {
+    sectionHeader('每人實際花費', '#6FA8DC');
+    y += 30;
+    for (const m of memberSpend) {
+      const rowH = memberRowHeightFor(m);
+      roundRect(ctx, SIDE_PAD, y, CONTENT_W, rowH, 20);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill();
+      ctx.strokeStyle = '#F2E3D2'; ctx.lineWidth = 2; roundRect(ctx, SIDE_PAD, y, CONTENT_W, rowH, 20); ctx.stroke();
+
+      const rowCenterY = m.twdAmount != null ? y + rowH / 2 - 9 : y + rowH / 2;
+      drawSettleChip(ctx, SIDE_PAD + 24, rowCenterY, m.name, '#F6EDE2', '#8A6E56');
+
+      const amt = `${Number(m.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${m.currency || cur}`;
+      ctx.font = `900 19px ${FONT}`;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#3B3330';
+      ctx.fillText(amt, SIDE_PAD + CONTENT_W - 20, rowCenterY + 6);
+      if (m.twdAmount != null) {
+        ctx.fillStyle = '#B0A093'; ctx.font = `700 11.5px ${FONT}`;
+        ctx.fillText(`≈ ${Math.round(Number(m.twdAmount)).toLocaleString('en-US')} TWD`, SIDE_PAD + CONTENT_W - 20, rowCenterY + 24);
+      }
+      ctx.textAlign = 'left';
+
+      y += rowH + rowGap;
+    }
+    y -= rowGap;
+    y += sectionGap;
+  }
+
+  // 花費明細
   sectionHeader('花費明細', '#F79256');
   y += 30;
 

@@ -257,6 +257,8 @@ input:focus, select:focus { outline: none; border-color: var(--teal); }
   min-width: 160px; display: flex; flex-direction: column; gap: 6px;
 }
 .balance-chip .name { font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.balance-chip .balance-stats { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; border-top: 2px solid var(--border); border-bottom: 2px solid var(--border); }
+.balance-chip .stat-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 0.82rem; font-weight: 700; color: var(--text-muted-2); }
 .balance-chip .amount { font-weight: 800; font-size: 1.15rem; }
 .balance-chip .amount.positive { color: var(--success); }
 .balance-chip .amount.negative { color: var(--danger); }

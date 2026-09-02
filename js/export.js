@@ -42,6 +42,34 @@ function buildExpenseTable(trip, ratesCache) {
   return [header, ...rows];
 }
 
+// 每人「實際花費」（分攤到的金額）／「已付款」（實際掏錢付款的金額）——這兩個數字
+// 不是同一件事：付款人有時候是幫大家代墊，實際分攤到自己身上的金額可能比付出去的少
+// （或反過來），淨餘額（應收/應付）只是兩者相減，看不出各自實際是多少，所以另外列出來。
+function buildMemberSummaryTable(trip, memberStats, ratesCache) {
+  const memberName = memberNameOf(trip);
+  const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
+  const { paid = {}, spent = {} } = memberStats || {};
+  const header = ['成員', '實際花費', ...(needsTwd ? ['實際花費(台幣)'] : []), '已付款', ...(needsTwd ? ['已付款(台幣)'] : [])];
+  const toTwdCell = (amount) => {
+    const twd = baseAmountToTWD(amount, trip.baseCurrency, ratesCache);
+    return twd !== null ? Number(twd.toFixed(2)) : '（無匯率資料）';
+  };
+  return [
+    header,
+    ...trip.members.map((m) => {
+      const spentAmt = spent[m.id] || 0;
+      const paidAmt = paid[m.id] || 0;
+      return [
+        memberName(m.id),
+        Number(spentAmt.toFixed(2)),
+        ...(needsTwd ? [toTwdCell(spentAmt)] : []),
+        Number(paidAmt.toFixed(2)),
+        ...(needsTwd ? [toTwdCell(paidAmt)] : []),
+      ];
+    }),
+  ];
+}
+
 function buildSettleTable(trip, transactions, ratesCache) {
   const memberName = memberNameOf(trip);
   const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
@@ -63,10 +91,15 @@ export function exportExpensesCsv(trip, ratesCache) {
   downloadBlob(csvContent, `${trip.name}-花費紀錄.csv`, 'text/csv;charset=utf-8;');
 }
 
-export function exportExpensesXlsx(trip, ratesCache, transactions) {
+export function exportExpensesXlsx(trip, ratesCache, transactions, memberStats) {
+  // 「分帳結算」這張工作表裡放兩張表：上面是每人實際花費/已付款的摘要，下面是建議轉帳
+  // 明細，中間留一個空白列隔開（.xlsx 這裡沒有「表格」這種結構，整張工作表本來就是
+  // 一格一格的儲存格，兩張表接在一起、留白列隔開是最簡單可靠的做法）。
+  const summaryRows = buildMemberSummaryTable(trip, memberStats, ratesCache);
+  const settleRows = buildSettleTable(trip, transactions, ratesCache);
   const bytes = buildXlsx([
     { name: '花費明細', rows: buildExpenseTable(trip, ratesCache) },
-    { name: '分帳結算', rows: buildSettleTable(trip, transactions, ratesCache) },
+    { name: '分帳結算', rows: [...summaryRows, [], ...settleRows] },
   ]);
   downloadBlob(bytes, `${trip.name}-花費紀錄.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }

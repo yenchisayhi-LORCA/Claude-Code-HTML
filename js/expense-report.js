@@ -128,8 +128,10 @@ export function renderExpenseReport(data) {
   '</div>';
 }
 
-// 把系統內的 trip/expense/分帳結果轉成 renderExpenseReport 要的 ReportData 格式
-export function buildReportData(trip, ratesCache, transactions) {
+// 把系統內的 trip/expense/分帳結果轉成 renderExpenseReport 要的 ReportData 格式。
+// spent 是 split.js computeBalances() 算出來的「每人實際花費（分攤到的金額）」，
+// 選填——只有匯出圖卡需要顯示這個區塊，列印/PDF 報表目前沒有用到就不用特別傳。
+export function buildReportData(trip, ratesCache, transactions, spent) {
   const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
   const categoryOf = (id) => trip.categories.find((c) => c.id === id);
   const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
@@ -173,6 +175,15 @@ export function buildReportData(trip, ratesCache, transactions) {
     twdAmount: needsTwd ? baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache) : null,
   }));
 
+  const memberSpend = spent
+    ? trip.members.map((m) => ({
+        name: m.name,
+        amount: spent[m.id] || 0,
+        currency: trip.baseCurrency,
+        twdAmount: needsTwd ? baseAmountToTWD(spent[m.id] || 0, trip.baseCurrency, ratesCache) : null,
+      }))
+    : [];
+
   return {
     // 旅程名稱通常使用者自己就會輸入年月（例如「2026/8暑假趴趴走」），標題前面不再自動疊加
     // 一次年月，避免重複；titleDate 改放到頁尾當作小備註就好。
@@ -183,6 +194,7 @@ export function buildReportData(trip, ratesCache, transactions) {
     currency: trip.baseCurrency,
     total,
     totalTwd,
+    memberSpend,
     expenses,
     settlements,
   };
