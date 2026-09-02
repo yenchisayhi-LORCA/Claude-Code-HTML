@@ -837,14 +837,16 @@ function wireGlobalEvents() {
   $('#btn-export-card').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
     const trip = store.getActiveTrip();
-    const { balances, spent } = computeBalances(trip, activeRates);
-    const transactions = simplifyDebts(balances);
-    const reportData = buildReportData(trip, activeRates, transactions, spent);
+    const memberStats = computeBalances(trip, activeRates);
+    const transactions = simplifyDebts(memberStats.balances);
+    const reportData = buildReportData(trip, activeRates, transactions, memberStats);
     btn.disabled = true;
     const originalLabel = btn.textContent;
     btn.textContent = '產生圖卡中…';
     try {
-      await downloadExpenseReportCard(reportData, `${trip.name}-花費報表.png`);
+      // 圖卡拆成兩張各自獨立下載（總覽/明細），檔名不含副檔名，image-card.js 會自己
+      // 補上「-總覽」「-明細」跟 .png
+      await downloadExpenseReportCard(reportData, `${trip.name}-花費報表`);
     } finally {
       btn.disabled = false;
       btn.textContent = originalLabel;
