@@ -35,9 +35,13 @@ export async function initShareView(tripId) {
 
   // 用一個物件包住 conn 再讀取（而不是直接在 closure 裡抓 const conn），避免 onUser 萬一在
   // initShareViewerAuth 的 await 完成、conn 被賦值「之前」就被呼叫時抓到 undefined。
-  const box = {};
+  const box = { signInError: null };
   box.conn = await initShareViewerAuth({
-    onUser: (user) => handleAuthChange(tripId, shareRoot, box.conn, user),
+    onUser: (user) => handleAuthChange(tripId, shareRoot, box.conn, user, box.signInError),
+    // 點信件連結完成登入那一步失敗了（連結過期/已經用過、Email 跟收信的不一致……），
+    // 先記下這個錯誤，讓等一下 onAuthStateChanged 用 user=null 觸發、跳回登入表單時，
+    // 表單上能直接帶出真正的失敗原因，而不是空白表單讓人以為「什麼事都沒發生」。
+    onSignInError: (err) => { box.signInError = err; },
     onError: () => {
       shareRoot.innerHTML = errorScreen('分享功能載入失敗，請檢查網路連線後重新整理頁面。');
     },
@@ -45,19 +49,23 @@ export async function initShareView(tripId) {
   if (!box.conn) return;
 }
 
-function handleAuthChange(tripId, shareRoot, conn, user) {
+function handleAuthChange(tripId, shareRoot, conn, user, signInError) {
   if (!user) {
-    renderLoginForm(tripId, shareRoot, conn);
+    renderLoginForm(tripId, shareRoot, conn, signInError);
     return;
   }
   loadSharedTrip(tripId, shareRoot, conn, user);
 }
 
-function renderLoginForm(tripId, shareRoot, conn) {
+function renderLoginForm(tripId, shareRoot, conn, signInError) {
+  const errorHtml = signInError
+    ? `<p class="hint error-hint">登入失敗：${escapeHtml(signInError.code || signInError.message)}。連結通常是一次性的，過期或已經用過都會失敗，請重新輸入 Email 索取一次新的連結。</p>`
+    : '';
   shareRoot.innerHTML = `
     <div class="share-login-box">
       <h1>檢視分享的旅程</h1>
       <p class="hint">分享者已經把這趟旅程設定成你可以用 Email 登入唯讀檢視。輸入你的 Email，我們會寄一封登入連結給你（不需要密碼，也不會建立額外的記帳資料）。</p>
+      ${errorHtml}
       <form id="share-login-form" class="inline-form">
         <input type="email" id="share-login-email" required placeholder="you@example.com" />
         <button type="submit" class="btn btn-primary">傳送登入連結</button>

@@ -113,6 +113,10 @@ h1, h2, h3, .app-title, .btn, .tab-btn, select, button {
 }
 .share-login-box h1 { color: var(--primary); }
 .share-login-box .inline-form { justify-content: center; }
+.share-login-box .error-hint {
+  background: var(--danger-tint); color: var(--danger-dark); border-radius: var(--radius);
+  padding: 10px 14px; text-align: left;
+}
 .share-view-header {
   margin-bottom: 20px; background: var(--surface); border-radius: var(--radius-lg);
   padding: 20px; box-shadow: 0 10px 0 rgba(24, 32, 80, .18);
