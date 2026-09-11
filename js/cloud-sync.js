@@ -712,7 +712,12 @@ async function runShareSync() {
 // 同一個 Firebase 專案、同一套 Email 連結登入機制，做一個獨立、輕量、不碰本機旅程資料的
 // 登入流程，登入完只回傳 { auth, db, firestoreModule, user }，剩下的（讀取/訂閱 shared_trips
 // 文件、畫面渲染）交給呼叫者（js/share-view.js）自己處理。
-export async function initShareViewerAuth({ onUser, onError } = {}) {
+// onError：Firebase SDK 本身載入失敗（網路、廣告攔截器擋掉 gstatic.com 之類）。
+// onSignInError：SDK 載入沒問題，但點連結完成登入那一步失敗了（連結過期/已經用過、
+// 輸入的 Email 跟收信的不一致……）——這是使用者操作/連結本身的問題，不是「網路連線」
+// 或「這個網站故障」，錯誤訊息要分開處理，不能沿用 onError 那個「請檢查網路連線」的
+// 講法，不然同行者會被導向完全錯誤的排查方向。
+export async function initShareViewerAuth({ onUser, onError, onSignInError } = {}) {
   if (!isFirebaseConfigured) {
     onError && onError(new Error('not-configured'));
     return null;
@@ -755,7 +760,7 @@ export async function initShareViewerAuth({ onUser, onError } = {}) {
         window.localStorage.removeItem(EMAIL_STORAGE_KEY);
       } catch (err) {
         console.error('分享檢視登入失敗', err);
-        onError && onError(err);
+        onSignInError && onSignInError(err);
       }
     }
   }
