@@ -164,24 +164,41 @@ let justCompletedEmailLinkSignIn = false;
 
 async function completeEmailLinkSignInIfPresent(authModule) {
   const { isSignInWithEmailLink, signInWithEmailLink } = authModule;
-  if (!isSignInWithEmailLink(auth, window.location.href)) return;
-
-  const signInHref = window.location.href;
-  // Firebase 的登入連結是一次性的，成功用過一次、或連結本身已經過期/失效之後，網址上帶的
-  // 那組參數就沒有用了。原本只有登入「成功」才會清掉網址上的參數，一旦連結過期、或使用者
-  // 在等一下的 Email 輸入框按了取消，網址上的參數會一直留著——這個分頁只要重新整理、或是
-  // 被系統從背景還原，就會又被誤判成「剛點了登入連結」，重新跳出輸入 Email 的提示、再拿
-  // 同一組已經失效的連結試一次，註定失敗，不斷重複。不管接下來成功、失敗、還是使用者取消，
-  // 都先把網址清乾淨，這組連結不會再被用第二次。
-  window.history.replaceState({}, document.title, window.location.pathname);
-
-  let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
-  if (!email) {
-    email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
-  }
-  if (!email) return;
-
+  // 這整個函式包在同一個 try/catch 裡（不是只包 signInWithEmailLink 那一步）：window.prompt()
+  // 在某些行動裝置瀏覽器/內嵌瀏覽器（例如某些 App 內建的網頁檢視、或瀏覽器設定關閉 JS 對話框）
+  // 底下可能直接丟出例外，而不是單純回傳 null。這一步如果沒被接住，例外會一路往外傳，讓呼叫端
+  // initCloudSync() 那個 await 整個中斷、後面的 onAuthStateChanged() 訂閱永遠不會被註冊——
+  // 等於這個分頁剩下的時間，雲端同步功能整個靜默失效，畫面上不會有任何錯誤訊息，使用者只會
+  // 看到「點了登入連結、跳回瀏覽器，卻完全沒有反應、還是未登入狀態」，卻不知道發生了什麼事。
   try {
+    if (!isSignInWithEmailLink(auth, window.location.href)) return;
+
+    const signInHref = window.location.href;
+    // Firebase 的登入連結是一次性的，成功用過一次、或連結本身已經過期/失效之後，網址上帶的
+    // 那組參數就沒有用了。原本只有登入「成功」才會清掉網址上的參數，一旦連結過期、或使用者
+    // 在等一下的 Email 輸入框按了取消，網址上的參數會一直留著——這個分頁只要重新整理、或是
+    // 被系統從背景還原，就會又被誤判成「剛點了登入連結」，重新跳出輸入 Email 的提示、再拿
+    // 同一組已經失效的連結試一次，註定失敗，不斷重複。不管接下來成功、失敗、還是使用者取消，
+    // 都先把網址清乾淨，這組連結不會再被用第二次。
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    let email = window.localStorage.getItem(EMAIL_STORAGE_KEY);
+    if (!email) {
+      email = window.prompt('請輸入你用來收登入連結的 Email，以完成登入：');
+    }
+    if (!email) {
+      // 沒有跳出過輸入框（localStorage 剛好還留著上次的 Email）不會走到這裡；會走到這裡
+      // 代表使用者被要求輸入 Email、卻沒有輸入任何內容（按了取消，或瀏覽器把 prompt() 直接
+      // 擋掉變成回傳空值）——這種情況下不能什麼都不說就默默結束，不然畫面上就是「什麼事都
+      // 沒發生」，使用者根本不知道剛剛那個登入連結已經失效、需要重新索取一次。
+      setStatus({
+        signedIn: false,
+        available: true,
+        error: '登入已取消：沒有取得 Email，這組登入連結已經失效，請重新點擊「登入同步」寄一次新的連結。',
+      });
+      return;
+    }
+
     await signInWithEmailLink(auth, email, signInHref);
     window.localStorage.removeItem(EMAIL_STORAGE_KEY);
     justCompletedEmailLinkSignIn = true;
