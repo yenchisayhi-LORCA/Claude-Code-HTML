@@ -19,7 +19,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --blue:#2F5FD1;
@@ -39,12 +39,13 @@
   body{
     min-height:100vh;
     background:var(--cream);
-    font-family:'Nunito','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif;
+    font-family:'Klee One','Nunito','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif;
+    font-size:18px;
     color:var(--text);
     overflow-x:hidden;
     padding-bottom:40px;
   }
-  h1,h2,.brand-font{font-family:'Baloo 2','Nunito','PingFang TC',sans-serif;}
+  h1,h2,.brand-font{font-family:inherit;}
 
   /* decorative background blobs — big & saturated for a bright, lively backdrop */
   .bg-decor{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
@@ -66,90 +67,67 @@
     position:relative;
   }
 
-  /* header */
-  .header-card{display:flex;flex-direction:column;gap:12px;}
-  .title-row{display:flex;align-items:center;gap:12px;}
-  .title-icon{
-    flex:0 0 auto;width:46px;height:46px;border-radius:16px;background:var(--coral);
-    display:flex;align-items:center;justify-content:center;font-size:24px;
-    box-shadow:0 4px 0 #d4451f;
-  }
-  .title-text{flex:1;min-width:0;}
-  .title-text h1{margin:0;font-size:19px;color:var(--blue-dark);}
-  .title-sub{font-size:12.5px;color:var(--text-soft);margin-top:2px;}
-  .summary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-  .summary-text{font-family:'Baloo 2';font-size:14px;color:var(--blue-dark);}
-  .summary-text b{color:var(--coral);}
-  .progress-track{height:10px;border-radius:6px;background:var(--line);overflow:hidden;flex:1;margin-left:10px;}
-  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--teal),var(--yellow),var(--coral));border-radius:6px;transition:width .35s ease;}
-
   /* add form */
   .add-card form{display:flex;flex-direction:column;gap:8px;}
   .row{display:flex;gap:8px;}
   .row > *{flex:1;min-width:0;}
   input,select{
-    font-family:inherit;font-size:15px;color:var(--text);
+    font-family:inherit;font-size:20px;color:var(--text);
     background:var(--cream);border:2px solid transparent;border-radius:12px;
-    padding:10px 11px;outline:none;width:100%;
+    padding:11px 12px;outline:none;width:100%;
   }
   input:focus,select:focus{border-color:var(--teal);}
-  .add-row1 input[type="date"]{flex:0 0 148px;}
+  .add-row1 input[type="date"]{flex:0 0 168px;}
   .add-row1 input[type="text"]{flex:1;}
   .btn-add{
-    font-family:'Baloo 2';font-weight:700;font-size:15px;color:#fff;
-    background:var(--blue);border:none;border-radius:12px;padding:11px 16px;cursor:pointer;
+    font-family:inherit;font-weight:700;font-size:20px;color:#fff;
+    background:var(--blue);border:none;border-radius:12px;padding:12px 16px;cursor:pointer;
     box-shadow:0 4px 0 #1d3f96;transition:transform .05s;
   }
   .btn-add:active{transform:translateY(2px);box-shadow:0 2px 0 #1d3f96;}
 
   /* list */
   .list-title{display:flex;align-items:center;justify-content:space-between;margin:2px 6px 10px;}
-  .list-title h2{margin:0;font-size:15px;color:var(--blue-dark);}
+  .list-title h2{margin:0;font-size:20px;color:var(--blue-dark);}
   .list-title button{
-    font-family:'Baloo 2';font-size:12px;color:var(--text-soft);background:#fff;
-    border:2px solid var(--line);border-radius:12px;padding:5px 10px;cursor:pointer;
+    font-family:inherit;font-size:16px;color:var(--text-soft);background:#fff;
+    border:2px solid var(--line);border-radius:12px;padding:6px 11px;cursor:pointer;
   }
 
   .task-row{
     display:flex;align-items:flex-start;gap:10px;border-radius:16px;
-    padding:12px 12px;margin-bottom:10px;box-shadow:0 3px 10px rgba(30,58,138,.08);
+    padding:13px 13px;margin-bottom:10px;box-shadow:0 3px 10px rgba(30,58,138,.08);
     transition:opacity .2s;
   }
   .task-row.done{opacity:.6;}
   .checkbox{
-    flex:0 0 auto;width:28px;height:28px;border-radius:50%;
+    flex:0 0 auto;width:34px;height:34px;border-radius:50%;
     border:2.5px solid #999;display:flex;align-items:center;justify-content:center;
-    cursor:pointer;font-size:15px;background:#fff;transition:transform .15s;margin-top:1px;
+    cursor:pointer;font-size:19px;background:#fff;transition:transform .15s;margin-top:1px;
   }
   .checkbox:active{transform:scale(.85);}
   .checkbox.checked{color:#fff;}
   .row-content{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
-  .row-date{flex:0 0 auto;font-family:'Baloo 2';font-size:12px;font-weight:700;padding:2px 9px;border-radius:9px;background:rgba(255,255,255,.65);white-space:nowrap;}
-  .row-text{flex:1 1 120px;font-size:15px;font-weight:700;word-break:break-word;color:var(--text);}
+  .row-date{flex:0 0 auto;font-size:16px;font-weight:700;padding:2px 10px;border-radius:9px;background:rgba(255,255,255,.65);white-space:nowrap;}
+  .row-text{flex:1 1 120px;font-size:20px;font-weight:700;word-break:break-word;color:var(--text);}
   .task-row.done .row-text{text-decoration:line-through;color:var(--text-soft);}
   .row-actions{display:flex;gap:4px;flex:0 0 auto;}
   .icon-btn{
-    border:none;background:rgba(255,255,255,.65);width:28px;height:28px;border-radius:9px;
-    display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;
+    border:none;background:rgba(255,255,255,.65);width:34px;height:34px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;
   }
 
-  .empty-state{text-align:center;padding:36px 10px;color:var(--text-soft);}
-  .empty-state .emoji{font-size:44px;display:block;margin-bottom:8px;}
-
-  .footer-actions{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
-  .footer-actions button{
-    flex:1;min-width:100px;font-family:'Baloo 2';font-size:12.5px;color:var(--blue);
-    background:#fff;border:2px solid var(--line);border-radius:12px;padding:8px 6px;cursor:pointer;
-  }
+  .empty-state{text-align:center;padding:36px 10px;color:var(--text-soft);font-size:19px;}
+  .empty-state .emoji{font-size:56px;display:block;margin-bottom:8px;}
 
   /* modal */
   .modal-backdrop{position:fixed;inset:0;background:rgba(30,58,138,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center;}
   .modal-backdrop[hidden]{display:none;}
   .modal-sheet{background:#fff;border-radius:22px 22px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;box-shadow:0 -6px 20px rgba(0,0,0,.15);}
-  .modal-sheet h2{margin:0 0 10px;font-size:17px;color:var(--blue-dark);}
+  .modal-sheet h2{margin:0 0 10px;font-size:22px;color:var(--blue-dark);}
   .modal-sheet .row{margin-bottom:8px;}
   .modal-btns{display:flex;gap:8px;margin-top:10px;}
-  .modal-btns button{flex:1;font-family:'Baloo 2';font-weight:700;border:none;border-radius:12px;padding:10px;cursor:pointer;}
+  .modal-btns button{flex:1;font-family:inherit;font-weight:700;font-size:18px;border:none;border-radius:12px;padding:11px;cursor:pointer;}
   .btn-save{background:var(--teal);color:#fff;}
   .btn-cancel{background:var(--cream);color:var(--text-soft);}
 
@@ -157,10 +135,10 @@
   .toast{
     position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
     background:var(--blue-dark);color:#fff;padding:10px 18px;border-radius:16px;
-    font-size:13.5px;z-index:30;box-shadow:0 6px 16px rgba(0,0,0,.2);
+    font-size:18px;z-index:30;box-shadow:0 6px 16px rgba(0,0,0,.2);
     display:flex;align-items:center;gap:8px;
   }
-  .toast button{background:none;border:none;color:var(--yellow);font-weight:800;cursor:pointer;font-size:13px;}
+  .toast button{background:none;border:none;color:var(--yellow);font-weight:800;cursor:pointer;font-size:17px;}
   .toast[hidden]{display:none;}
 </style>
 </head>
@@ -168,20 +146,6 @@
   <div class="bg-decor"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
 
   <div class="app">
-    <header class="card header-card">
-      <div class="title-row">
-        <div class="title-icon">📝</div>
-        <div class="title-text">
-          <h1>我的待辦清單</h1>
-          <div class="title-sub" id="todayBadge">—</div>
-        </div>
-      </div>
-      <div class="summary-row">
-        <div class="summary-text"><b id="doneCount">0</b>/<span id="totalCount">0</span> 已完成</div>
-        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-      </div>
-    </header>
-
     <section class="card add-card">
       <form id="addForm">
         <div class="row add-row1">
@@ -202,13 +166,6 @@
     <div id="emptyState" class="empty-state" hidden>
       <span class="emoji">📝</span>
       <div id="emptyText">還沒有任何事項，新增一個開始吧！</div>
-    </div>
-
-    <div class="footer-actions">
-      <button id="exportBtn">⬇️ 匯出備份</button>
-      <button id="importBtn">⬆️ 匯入備份</button>
-      <button id="clearDoneBtn">🧹 清除已完成</button>
-      <input type="file" id="importFile" accept="application/json" hidden />
     </div>
   </div>
 
@@ -271,10 +228,6 @@
   var editingId = null;
 
   var els = {
-    todayBadge: document.getElementById("todayBadge"),
-    doneCount: document.getElementById("doneCount"),
-    totalCount: document.getElementById("totalCount"),
-    progressFill: document.getElementById("progressFill"),
     addForm: document.getElementById("addForm"),
     taskDate: document.getElementById("taskDate"),
     taskText: document.getElementById("taskText"),
@@ -282,10 +235,6 @@
     taskListWrap: document.getElementById("taskListWrap"),
     emptyState: document.getElementById("emptyState"),
     emptyText: document.getElementById("emptyText"),
-    exportBtn: document.getElementById("exportBtn"),
-    importBtn: document.getElementById("importBtn"),
-    importFile: document.getElementById("importFile"),
-    clearDoneBtn: document.getElementById("clearDoneBtn"),
     toast: document.getElementById("toast"),
     editModal: document.getElementById("editModal"),
     editDate: document.getElementById("editDate"),
@@ -297,15 +246,9 @@
   els.taskDate.value = todayStr();
 
   function init(){
-    renderTodayBadge();
     updateHideDoneBtn();
     render();
     bindEvents();
-  }
-
-  function renderTodayBadge(){
-    var d = new Date();
-    els.todayBadge.textContent = "今天是 "+(d.getMonth()+1)+"月"+d.getDate()+"日 · "+WEEKDAYS[d.getDay()];
   }
 
   function updateHideDoneBtn(){
@@ -333,11 +276,6 @@
       var delBtn = e.target.closest("[data-action='delete']");
       if(delBtn){ deleteTask(delBtn.getAttribute("data-id")); return; }
     });
-
-    els.exportBtn.addEventListener("click", exportBackup);
-    els.importBtn.addEventListener("click", function(){ els.importFile.click(); });
-    els.importFile.addEventListener("change", importBackup);
-    els.clearDoneBtn.addEventListener("click", clearCompleted);
 
     els.editCancelBtn.addEventListener("click", closeEdit);
     els.editSaveBtn.addEventListener("click", saveEdit);
@@ -390,16 +328,6 @@
       els.toast.hidden = true;
       render();
     });
-  }
-
-  function clearCompleted(){
-    var before = tasks.length;
-    tasks = tasks.filter(function(t){ return !t.done; });
-    if(tasks.length !== before){
-      saveTasks(tasks);
-      render();
-      showToast("已清除已完成的事項", null);
-    }
   }
 
   function openEdit(id){
@@ -466,8 +394,6 @@
       els.emptyState.hidden = true;
       visible.forEach(function(t){ els.taskListWrap.appendChild(renderTaskItem(t)); });
     }
-
-    updateStats();
   }
 
   function renderTaskItem(t){
@@ -515,47 +441,6 @@
     item.appendChild(actions);
 
     return item;
-  }
-
-  function updateStats(){
-    var doneCount = tasks.filter(function(t){ return t.done; }).length;
-    els.doneCount.textContent = doneCount;
-    els.totalCount.textContent = tasks.length;
-    var pct = tasks.length ? Math.round(doneCount/tasks.length*100) : 0;
-    els.progressFill.style.width = pct+"%";
-  }
-
-  function exportBackup(){
-    var data = { tasks: tasks, exportedAt: new Date().toISOString() };
-    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "todo-list-backup-"+todayStr()+".json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function importBackup(e){
-    var file = e.target.files[0];
-    if(!file) return;
-    var reader = new FileReader();
-    reader.onload = function(){
-      try{
-        var data = JSON.parse(reader.result);
-        if(!Array.isArray(data.tasks)) throw new Error("invalid");
-        tasks = data.tasks;
-        saveTasks(tasks);
-        render();
-        showToast("匯入成功！", null);
-      }catch(err){
-        showToast("匯入失敗，檔案格式不正確", null);
-      }
-      els.importFile.value = "";
-    };
-    reader.readAsText(file);
   }
 
   init();
