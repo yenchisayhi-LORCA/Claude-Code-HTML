@@ -113,8 +113,6 @@
   .checkbox.checked{color:#fff;}
   .row-content{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
   .row-date{flex:0 0 auto;font-size:16px;font-weight:700;padding:2px 10px;border-radius:9px;background:rgba(255,255,255,.65);white-space:nowrap;}
-  .row-date.overdue{background:var(--coral);color:#fff;}
-  .task-row.overdue{border:2px solid var(--coral);}
   .row-text{flex:1 1 120px;font-size:20px;font-weight:700;word-break:break-word;color:var(--text);}
   .task-row.done .row-text{text-decoration:line-through;color:var(--text-soft);}
   .row-actions{display:flex;gap:4px;flex:0 0 auto;}
@@ -384,15 +382,13 @@
     }
   }
 
-  function formatDateChip(dateStr, done){
+  function formatDateChip(dateStr){
     var today = todayStr();
     var tomorrow = addDays(today, 1);
     var d = parseDateStr(dateStr);
-    var md = (d.getMonth()+1)+"/"+d.getDate();
-    if(dateStr === today) return "今天 "+md;
-    if(dateStr === tomorrow) return "明天 "+md;
-    if(!done && dateStr < today) return "⚠️ 已過期 "+md;
-    return md+" "+WEEKDAYS[d.getDay()];
+    if(dateStr === today) return "今天 "+(d.getMonth()+1)+"/"+d.getDate();
+    if(dateStr === tomorrow) return "明天 "+(d.getMonth()+1)+"/"+d.getDate();
+    return (d.getMonth()+1)+"/"+d.getDate()+" "+WEEKDAYS[d.getDay()];
   }
 
   function render(){
@@ -416,10 +412,9 @@
 
   function renderTaskItem(t){
     var color = PALETTE[t.colorIndex % PALETTE.length];
-    var overdue = !t.done && t.date < todayStr();
 
     var item = document.createElement("div");
-    item.className = "task-row" + (t.done ? " done" : "") + (overdue ? " overdue" : "");
+    item.className = "task-row" + (t.done ? " done" : "");
     item.style.background = color.bg;
 
     var checkbox = document.createElement("div");
@@ -433,9 +428,9 @@
     var content = document.createElement("div");
     content.className = "row-content";
     var dateChip = document.createElement("span");
-    dateChip.className = "row-date" + (overdue ? " overdue" : "");
-    if(!overdue){ dateChip.style.color = color.accent; }
-    dateChip.textContent = formatDateChip(t.date, t.done);
+    dateChip.className = "row-date";
+    dateChip.style.color = color.accent;
+    dateChip.textContent = formatDateChip(t.date);
     content.appendChild(dateChip);
     var textEl = document.createElement("span");
     textEl.className = "row-text";
