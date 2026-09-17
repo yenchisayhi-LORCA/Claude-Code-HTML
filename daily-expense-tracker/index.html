@@ -179,11 +179,17 @@
   .quick-add-hint{font-size:12.5px;color:var(--text-soft);margin:6px 10px 0;}
 
   .entry-list{display:flex;flex-direction:column;gap:2px;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 4px 12px rgba(30,58,138,.08);}
-  .entry-row{
-    display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;
-    border-bottom:1px solid var(--line);background:var(--card);
+  .entry-row-wrap{position:relative;overflow:hidden;border-bottom:1px solid var(--line);}
+  .entry-row-wrap:last-child{border-bottom:none;}
+  .entry-row-delete-bg{
+    position:absolute;inset:0;background:var(--danger);color:#fff;
+    display:flex;align-items:center;justify-content:flex-end;padding-right:22px;
   }
-  .entry-row:last-child{border-bottom:none;}
+  .entry-row-delete-bg svg{width:22px;height:22px;}
+  .entry-row{
+    position:relative;display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;
+    background:var(--card);touch-action:pan-y;
+  }
   .entry-row:active{background:var(--primary-tint);}
   .entry-amount{font-family:var(--font-display);font-weight:800;font-size:25px;color:var(--primary-dark);flex:0 0 auto;min-width:80px;}
   .entry-note{flex:1;min-width:0;color:var(--text-soft);font-size:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -205,8 +211,6 @@
     font-size:14px;color:var(--text-soft);background:var(--cream);border-radius:12px;
     padding:10px 12px;
   }
-  .field-time label{font-size:17.5px;}
-  .field-time .field-static{font-size:18px;}
   .icon-grid{display:flex;flex-wrap:wrap;gap:9px;}
   .icon-opt{
     width:48px;height:48px;border-radius:14px;border:none;background:var(--cream);color:var(--ink);
@@ -221,8 +225,9 @@
   .btn-delete-row{
     width:100%;margin-top:10px;background:var(--danger-tint);color:var(--danger-dark);
     font-family:var(--font-display);font-weight:700;font-size:15px;border:none;border-radius:12px;
-    padding:11px;cursor:pointer;
+    padding:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;
   }
+  .btn-delete-row svg{width:18px;height:18px;flex:0 0 auto;}
 
   /* toast */
   .toast{
@@ -357,15 +362,14 @@
         <label>備註（選填）</label>
         <input type="text" id="entryNoteInput" maxlength="40" placeholder="例如：午餐、計程車" />
       </div>
-      <div class="field field-time">
-        <label>記錄時間</label>
-        <div class="field-static" id="entryTimeStatic">—</div>
-      </div>
       <div class="modal-btns">
         <button class="btn-cancel" id="entryCancelBtn" type="button">取消</button>
         <button class="btn-save" id="entrySaveBtn" type="button">儲存</button>
       </div>
-      <button class="btn-delete-row" id="entryDeleteBtn" type="button" hidden>🗑 刪除這筆紀錄</button>
+      <button class="btn-delete-row" id="entryDeleteBtn" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+        刪除這筆紀錄
+      </button>
     </div>
   </div>
 
@@ -451,6 +455,58 @@
     return AMOUNT_COLORS[hash % AMOUNT_COLORS.length];
   }
 
+  // ---------------------------------------------------------- 紀錄列表：左滑刪除
+  var TRASH_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+  var SWIPE_DELETE_THRESHOLD = 90;
+
+  function bindSwipeToDelete(row, onDelete){
+    var startX = 0, startY = 0, dx = 0, dragging = false, decided = false, isHorizontal = false;
+
+    function onStart(e){
+      startX = e.clientX;
+      startY = e.clientY;
+      dx = 0;
+      dragging = true;
+      decided = false;
+      isHorizontal = false;
+      row.style.transition = "none";
+      if(row.setPointerCapture){ try{ row.setPointerCapture(e.pointerId); }catch(err){} }
+    }
+    function onMove(e){
+      if(!dragging) return;
+      var deltaX = e.clientX - startX;
+      var deltaY = e.clientY - startY;
+      if(!decided){
+        if(Math.abs(deltaX) < 6 && Math.abs(deltaY) < 6) return;
+        decided = true;
+        isHorizontal = Math.abs(deltaX) > Math.abs(deltaY);
+      }
+      if(!isHorizontal) return;
+      if(e.cancelable) e.preventDefault();
+      dx = Math.min(0, deltaX);
+      row.style.transform = "translateX(" + dx + "px)";
+      row.dataset.swiped = dx < -10 ? "1" : "0";
+    }
+    function onEnd(e){
+      if(!dragging) return;
+      dragging = false;
+      if(row.releasePointerCapture && e && e.pointerId !== undefined){ try{ row.releasePointerCapture(e.pointerId); }catch(err){} }
+      row.style.transition = "transform .18s ease";
+      if(isHorizontal && dx < -SWIPE_DELETE_THRESHOLD){
+        row.style.transform = "translateX(-100%)";
+        setTimeout(onDelete, 150);
+      } else {
+        row.style.transform = "translateX(0)";
+        setTimeout(function(){ row.dataset.swiped = "0"; }, 50);
+      }
+    }
+
+    row.addEventListener("pointerdown", onStart);
+    row.addEventListener("pointermove", onMove);
+    row.addEventListener("pointerup", onEnd);
+    row.addEventListener("pointercancel", onEnd);
+  }
+
   function loadCats(){ try{ return JSON.parse(localStorage.getItem(CATS_KEY)) || []; }catch(e){ return []; } }
   function saveCats(v){ localStorage.setItem(CATS_KEY, JSON.stringify(v)); }
   function loadEntries(){ try{ return JSON.parse(localStorage.getItem(ENTRIES_KEY)) || []; }catch(e){ return []; } }
@@ -522,7 +578,6 @@
     entryModalTitle: document.getElementById("entryModalTitle"),
     entryAmountInput: document.getElementById("entryAmountInput"),
     entryNoteInput: document.getElementById("entryNoteInput"),
-    entryTimeStatic: document.getElementById("entryTimeStatic"),
     entryCancelBtn: document.getElementById("entryCancelBtn"),
     entrySaveBtn: document.getElementById("entrySaveBtn"),
     entryDeleteBtn: document.getElementById("entryDeleteBtn"),
@@ -727,6 +782,14 @@
       els.detailEmptyState.hidden = true;
       els.entryListWrap.style.display = "flex";
       list.forEach(function(entry){
+        var wrap = document.createElement("div");
+        wrap.className = "entry-row-wrap";
+
+        var deleteBg = document.createElement("div");
+        deleteBg.className = "entry-row-delete-bg";
+        deleteBg.innerHTML = TRASH_ICON_SVG;
+        wrap.appendChild(deleteBg);
+
         var row = document.createElement("div");
         row.className = "entry-row";
         row.setAttribute("data-id", entry.id);
@@ -747,8 +810,13 @@
         dateEl.textContent = formatDate(entry.ts);
         row.appendChild(dateEl);
 
-        row.addEventListener("click", function(){ openEditEntry(entry.id); });
-        els.entryListWrap.appendChild(row);
+        row.addEventListener("click", function(){
+          if(row.dataset.swiped === "1") return;
+          openEditEntry(entry.id);
+        });
+        wrap.appendChild(row);
+        bindSwipeToDelete(row, function(){ deleteEntry(entry.id); });
+        els.entryListWrap.appendChild(wrap);
       });
     }
   }
@@ -835,7 +903,6 @@
     els.entryModalTitle.textContent = "新增紀錄";
     els.entryAmountInput.value = "";
     els.entryNoteInput.value = "";
-    els.entryTimeStatic.textContent = formatDateTime(Date.now()) + "（自動帶入現在時間）";
     els.entryDeleteBtn.hidden = true;
     els.entryModal.hidden = false;
     setTimeout(function(){ els.entryAmountInput.focus(); }, 50);
@@ -848,7 +915,6 @@
     els.entryModalTitle.textContent = "編輯紀錄";
     els.entryAmountInput.value = entry.amount;
     els.entryNoteInput.value = entry.note || "";
-    els.entryTimeStatic.textContent = formatDateTime(entry.ts) + "（儲存後會更新為現在時間）";
     els.entryDeleteBtn.hidden = false;
     els.entryModal.hidden = false;
   }
