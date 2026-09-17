@@ -7,7 +7,7 @@
 這個 repo 裡還有其他完全獨立的小工具，跟本文件描述的旅遊記帳系統無關，只是共用同一個 repo：
 
 - [🌟 小孩獎勵紀錄本](kids-reward-tracker/README.md)（作業給星星、獎狀、儲蓄挑戰）
-- [✅ 獎勵待辦清單](reward-todo-list/README.md)（單一 HTML 檔案的每日待辦清單，打勾集星星、連續天數，純本機不同步）
+- [📝 待辦清單](reward-todo-list/README.md)（單一 HTML 檔案的每日待辦清單，日期＋事項欄位、彩色分行、純本機不同步）
 - [🖼️ 照片沖印排版](photo-print-layout/README.md)（自訂底稿樣板，套照片匯出 4×6／5×7 沖印用圖檔）
 
 ## 功能

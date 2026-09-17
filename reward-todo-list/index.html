@@ -3,25 +3,23 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>🌟 我的獎勵清單</title>
+<title>📝 我的待辦清單</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --blue:#3B4B96;
-    --blue-dark:#2E3A6E;
-    --teal:#4FBDB0;
-    --teal-light:#CDEFE8;
-    --yellow:#F5C242;
-    --yellow-dark:#E8A93A;
-    --coral:#EB5F45;
-    --pink:#F7B8C4;
-    --cream:#FFF8EE;
+    --blue:#2F5FD1;
+    --blue-dark:#1E3A8A;
+    --teal:#12B8A0;
+    --yellow:#F5B700;
+    --coral:#FF5A3C;
+    --pink:#F03E7A;
+    --cream:#FFF9EF;
     --card:#FFFFFF;
-    --line:#CFE8DA;
-    --text:#33406B;
-    --text-soft:#7480A6;
+    --line:#E4E9F5;
+    --text:#28305A;
+    --text-soft:#727DA3;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;}
@@ -35,98 +33,90 @@
   }
   h1,h2,.brand-font{font-family:'Baloo 2','Nunito','PingFang TC',sans-serif;}
 
-  /* decorative background blobs */
+  /* decorative background blobs — big & saturated for a bright, lively backdrop */
   .bg-decor{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-  .bg-decor span{position:absolute;border-radius:50%;filter:blur(2px);opacity:.55;}
-  .bg-decor .b1{width:260px;height:260px;background:var(--blue);top:-110px;left:-90px;}
-  .bg-decor .b2{width:220px;height:220px;background:var(--teal);top:-90px;right:-70px;}
-  .bg-decor .b3{width:280px;height:280px;background:var(--yellow);bottom:-140px;right:-90px;opacity:.5;}
-  .bg-decor .b4{width:180px;height:180px;background:var(--coral);bottom:-80px;left:-70px;opacity:.35;}
+  .bg-decor span{position:absolute;border-radius:50%;opacity:.9;}
+  .bg-decor .b1{width:320px;height:320px;background:var(--blue);top:-150px;left:-120px;}
+  .bg-decor .b2{width:260px;height:130px;border-radius:50% 50% 40% 60%/60% 60% 40% 40%;background:var(--teal);top:-40px;right:-60px;transform:rotate(-8deg);}
+  .bg-decor .b3{width:320px;height:320px;background:var(--yellow);bottom:-170px;right:-110px;}
+  .bg-decor .b4{width:220px;height:220px;background:var(--coral);bottom:-110px;left:-90px;}
+  .bg-decor .b5{width:90px;height:90px;background:var(--pink);top:120px;right:14px;opacity:.55;}
 
   .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:18px 14px 0;}
 
   .card{
     background:var(--card);
     border-radius:24px;
-    box-shadow:0 8px 24px rgba(46,58,110,.12);
+    box-shadow:0 8px 24px rgba(30,58,138,.14);
     padding:16px 16px 18px;
     margin-bottom:14px;
     position:relative;
   }
 
   /* header */
-  .header-card{background:linear-gradient(180deg,#ffffff 0%,#ffffff 70%,#fbf3e3 100%);overflow:hidden;}
-  .decor-sticker{position:absolute;font-size:22px;opacity:.9;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.08));}
-  .decor-sticker.s1{top:-6px;left:-6px;transform:rotate(-18deg);font-size:30px;}
-  .decor-sticker.s2{top:-4px;right:6px;transform:rotate(15deg);font-size:24px;}
-  .decor-sticker.s3{bottom:2px;right:-4px;transform:rotate(10deg);font-size:26px;}
-  .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;position:relative;z-index:1;}
-  .title-row h1{margin:0;font-size:20px;color:var(--blue-dark);display:flex;align-items:center;gap:6px;}
-  .today-badge{font-family:'Baloo 2';font-size:13px;color:#fff;background:var(--blue);padding:5px 10px;border-radius:12px;white-space:nowrap;}
-  .stats-row{display:flex;gap:8px;margin-top:14px;}
-  .stat{flex:1;background:var(--cream);border-radius:16px;padding:8px 4px;text-align:center;}
-  .stat span{display:block;font-family:'Baloo 2';font-size:20px;color:var(--blue-dark);}
-  .stat small{font-size:10.5px;color:var(--text-soft);}
-  .progress-track{margin-top:12px;height:10px;border-radius:6px;background:var(--teal-light);overflow:hidden;}
-  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--yellow));border-radius:6px;transition:width .35s ease;}
+  .header-card{display:flex;flex-direction:column;gap:12px;}
+  .title-row{display:flex;align-items:center;gap:12px;}
+  .title-icon{
+    flex:0 0 auto;width:46px;height:46px;border-radius:16px;background:var(--coral);
+    display:flex;align-items:center;justify-content:center;font-size:24px;
+    box-shadow:0 4px 0 #d4451f;
+  }
+  .title-text{flex:1;min-width:0;}
+  .title-text h1{margin:0;font-size:19px;color:var(--blue-dark);}
+  .title-sub{font-size:12.5px;color:var(--text-soft);margin-top:2px;}
+  .summary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .summary-text{font-family:'Baloo 2';font-size:14px;color:var(--blue-dark);}
+  .summary-text b{color:var(--coral);}
+  .progress-track{height:10px;border-radius:6px;background:var(--line);overflow:hidden;flex:1;margin-left:10px;}
+  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--teal),var(--yellow),var(--coral));border-radius:6px;transition:width .35s ease;}
 
   /* add form */
   .add-card form{display:flex;flex-direction:column;gap:8px;}
   .row{display:flex;gap:8px;}
   .row > *{flex:1;min-width:0;}
   input,select{
-    font-family:inherit;font-size:14.5px;color:var(--text);
+    font-family:inherit;font-size:15px;color:var(--text);
     background:var(--cream);border:2px solid transparent;border-radius:12px;
-    padding:9px 10px;outline:none;width:100%;
+    padding:10px 11px;outline:none;width:100%;
   }
   input:focus,select:focus{border-color:var(--teal);}
-  input[type="date"]{color:var(--text);}
+  .add-row1 input[type="date"]{flex:0 0 148px;}
+  .add-row1 input[type="text"]{flex:1;}
   .btn-add{
-    flex:0 0 auto;font-family:'Baloo 2';font-weight:700;font-size:14.5px;color:#fff;
-    background:var(--coral);border:none;border-radius:12px;padding:9px 16px;cursor:pointer;
-    box-shadow:0 4px 0 #c94a34;transition:transform .05s;
+    font-family:'Baloo 2';font-weight:700;font-size:15px;color:#fff;
+    background:var(--blue);border:none;border-radius:12px;padding:11px 16px;cursor:pointer;
+    box-shadow:0 4px 0 #1d3f96;transition:transform .05s;
   }
-  .btn-add:active{transform:translateY(2px);box-shadow:0 2px 0 #c94a34;}
+  .btn-add:active{transform:translateY(2px);box-shadow:0 2px 0 #1d3f96;}
 
-  /* filter tabs */
-  .filter-tabs{display:flex;gap:6px;margin:4px 4px 12px;}
-  .filter-tabs button{
-    flex:1;font-family:'Baloo 2';font-size:13px;color:var(--blue);
-    background:#fff;border:2px solid var(--line);border-radius:14px;padding:7px 4px;cursor:pointer;
+  /* list */
+  .list-title{display:flex;align-items:center;justify-content:space-between;margin:2px 6px 10px;}
+  .list-title h2{margin:0;font-size:15px;color:var(--blue-dark);}
+  .list-title button{
+    font-family:'Baloo 2';font-size:12px;color:var(--text-soft);background:#fff;
+    border:2px solid var(--line);border-radius:12px;padding:5px 10px;cursor:pointer;
   }
-  .filter-tabs button.active{background:var(--blue);border-color:var(--blue);color:#fff;}
 
-  /* task groups */
-  .date-group{margin-bottom:10px;}
-  .date-group h2{
-    font-size:13px;color:var(--blue-dark);margin:0 0 6px 6px;
-    display:flex;align-items:center;gap:6px;
-  }
-  .date-group h2 .cnt{font-family:'Baloo 2';color:var(--text-soft);font-size:11.5px;}
-
-  .task-item{
-    display:flex;align-items:center;gap:10px;background:var(--card);
-    border-radius:16px;padding:10px 10px;margin-bottom:8px;
-    box-shadow:0 3px 10px rgba(46,58,110,.07);
-    border-left:6px solid var(--teal);
+  .task-row{
+    display:flex;align-items:flex-start;gap:10px;border-radius:16px;
+    padding:12px 12px;margin-bottom:10px;box-shadow:0 3px 10px rgba(30,58,138,.08);
     transition:opacity .2s;
   }
-  .task-item.done{border-left-color:var(--yellow);opacity:.68;}
+  .task-row.done{opacity:.6;}
   .checkbox{
-    flex:0 0 auto;width:30px;height:30px;border-radius:50%;
-    border:2.5px solid var(--teal);display:flex;align-items:center;justify-content:center;
-    cursor:pointer;font-size:16px;background:#fff;transition:transform .15s;
+    flex:0 0 auto;width:28px;height:28px;border-radius:50%;
+    border:2.5px solid #999;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:15px;background:#fff;transition:transform .15s;margin-top:1px;
   }
-  .checkbox.checked{background:var(--yellow);border-color:var(--yellow-dark);}
   .checkbox:active{transform:scale(.85);}
-  .task-body{flex:1;min-width:0;}
-  .task-text{font-size:14.5px;font-weight:700;word-break:break-word;}
-  .task-item.done .task-text{text-decoration:line-through;color:var(--text-soft);}
-  .task-meta{display:flex;gap:6px;margin-top:3px;flex-wrap:wrap;}
-  .badge{font-size:11px;background:var(--cream);color:var(--text-soft);border-radius:8px;padding:1px 6px;}
-  .task-actions{display:flex;gap:4px;flex:0 0 auto;}
+  .checkbox.checked{color:#fff;}
+  .row-content{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .row-date{flex:0 0 auto;font-family:'Baloo 2';font-size:12px;font-weight:700;padding:2px 9px;border-radius:9px;background:rgba(255,255,255,.65);white-space:nowrap;}
+  .row-text{flex:1 1 120px;font-size:15px;font-weight:700;word-break:break-word;color:var(--text);}
+  .task-row.done .row-text{text-decoration:line-through;color:var(--text-soft);}
+  .row-actions{display:flex;gap:4px;flex:0 0 auto;}
   .icon-btn{
-    border:none;background:var(--cream);width:28px;height:28px;border-radius:9px;
+    border:none;background:rgba(255,255,255,.65);width:28px;height:28px;border-radius:9px;
     display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;
   }
 
@@ -140,7 +130,7 @@
   }
 
   /* modal */
-  .modal-backdrop{position:fixed;inset:0;background:rgba(46,58,110,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(30,58,138,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center;}
   .modal-backdrop[hidden]{display:none;}
   .modal-sheet{background:#fff;border-radius:22px 22px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;box-shadow:0 -6px 20px rgba(0,0,0,.15);}
   .modal-sheet h2{margin:0 0 10px;font-size:17px;color:var(--blue-dark);}
@@ -159,87 +149,46 @@
   }
   .toast button{background:none;border:none;color:var(--yellow);font-weight:800;cursor:pointer;font-size:13px;}
   .toast[hidden]{display:none;}
-
-  /* celebration overlay */
-  .celebrate-overlay{
-    position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
-    background:rgba(59,75,150,.55);
-  }
-  .celebrate-overlay[hidden]{display:none;}
-  .celebrate-card{
-    background:#fff;border-radius:24px;padding:30px 26px;text-align:center;max-width:300px;
-    box-shadow:0 10px 30px rgba(0,0,0,.3);
-  }
-  .celebrate-card .emoji{font-size:52px;display:block;margin-bottom:6px;}
-  .celebrate-card h2{margin:0 0 6px;color:var(--blue-dark);font-size:20px;}
-  .celebrate-card p{margin:0 0 14px;color:var(--text-soft);font-size:13.5px;}
-  .celebrate-card button{font-family:'Baloo 2';background:var(--coral);color:#fff;border:none;border-radius:14px;padding:10px 22px;font-size:14px;cursor:pointer;}
-
-  .confetti{position:fixed;top:0;left:0;pointer-events:none;z-index:50;font-size:20px;will-change:transform,opacity;}
-
-  @media (min-width:520px){ body{background:linear-gradient(180deg,var(--cream),var(--cream));} }
 </style>
 </head>
 <body>
-  <div class="bg-decor"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
+  <div class="bg-decor"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
 
   <div class="app">
     <header class="card header-card">
-      <span class="decor-sticker s1">📚</span>
-      <span class="decor-sticker s2">📎</span>
-      <span class="decor-sticker s3">✏️</span>
       <div class="title-row">
-        <h1>🌟 我的獎勵清單</h1>
-        <div class="today-badge" id="todayBadge">—</div>
+        <div class="title-icon">📝</div>
+        <div class="title-text">
+          <h1>我的待辦清單</h1>
+          <div class="title-sub" id="todayBadge">—</div>
+        </div>
       </div>
-      <div class="stats-row">
-        <div class="stat">⭐<span id="starCount">0</span><small>累積星星</small></div>
-        <div class="stat">🔥<span id="streakCount">0</span><small>連續天數</small></div>
-        <div class="stat">✅<span id="doneTodayCount">0/0</span><small>今日進度</small></div>
+      <div class="summary-row">
+        <div class="summary-text"><b id="doneCount">0</b>/<span id="totalCount">0</span> 已完成</div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
       </div>
-      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
     </header>
 
     <section class="card add-card">
       <form id="addForm">
-        <div class="row">
+        <div class="row add-row1">
           <input type="date" id="taskDate" />
-          <select id="taskCategory">
-            <option value="📖 學習">📖 學習</option>
-            <option value="🧹 家事">🧹 家事</option>
-            <option value="🏃 運動">🏃 運動</option>
-            <option value="🎨 玩樂">🎨 玩樂</option>
-            <option value="🦷 生活習慣">🦷 生活習慣</option>
-            <option value="🍎 飲食">🍎 飲食</option>
-            <option value="⭐ 其他">⭐ 其他</option>
-          </select>
+          <input type="text" id="taskText" placeholder="輸入要做的事情..." maxlength="80" required />
         </div>
-        <div class="row">
-          <input type="text" id="taskText" placeholder="輸入要做的事情，例如：練琴 15 分鐘" maxlength="60" required />
-        </div>
-        <div class="row">
-          <select id="taskRepeat">
-            <option value="none">不重複</option>
-            <option value="daily">每天重複</option>
-            <option value="weekly">每週重複</option>
-          </select>
-          <button type="submit" class="btn-add">➕ 新增任務</button>
-        </div>
+        <button type="submit" class="btn-add">➕ 新增事項</button>
       </form>
     </section>
 
-    <nav class="filter-tabs">
-      <button data-filter="today" class="active">今天</button>
-      <button data-filter="week">本週</button>
-      <button data-filter="done">已完成</button>
-      <button data-filter="all">全部</button>
-    </nav>
+    <div class="list-title">
+      <h2>📋 事項列表</h2>
+      <button id="hideDoneBtn">隱藏已完成</button>
+    </div>
 
     <section id="taskListWrap"></section>
 
     <div id="emptyState" class="empty-state" hidden>
-      <span class="emoji">🌈</span>
-      <div id="emptyText">還沒有任務，新增一個開始集星星吧！</div>
+      <span class="emoji">📝</span>
+      <div id="emptyText">還沒有任何事項，新增一個開始吧！</div>
     </div>
 
     <div class="footer-actions">
@@ -254,27 +203,9 @@
 
   <div class="modal-backdrop" id="editModal" hidden>
     <div class="modal-sheet">
-      <h2>✏️ 編輯任務</h2>
+      <h2>✏️ 編輯事項</h2>
       <div class="row"><input type="date" id="editDate" /></div>
-      <div class="row">
-        <select id="editCategory">
-          <option value="📖 學習">📖 學習</option>
-          <option value="🧹 家事">🧹 家事</option>
-          <option value="🏃 運動">🏃 運動</option>
-          <option value="🎨 玩樂">🎨 玩樂</option>
-          <option value="🦷 生活習慣">🦷 生活習慣</option>
-          <option value="🍎 飲食">🍎 飲食</option>
-          <option value="⭐ 其他">⭐ 其他</option>
-        </select>
-      </div>
-      <div class="row"><input type="text" id="editText" maxlength="60" /></div>
-      <div class="row">
-        <select id="editRepeat">
-          <option value="none">不重複</option>
-          <option value="daily">每天重複</option>
-          <option value="weekly">每週重複</option>
-        </select>
-      </div>
+      <div class="row"><input type="text" id="editText" maxlength="80" /></div>
       <div class="modal-btns">
         <button class="btn-cancel" id="editCancelBtn" type="button">取消</button>
         <button class="btn-save" id="editSaveBtn" type="button">儲存</button>
@@ -282,25 +213,23 @@
     </div>
   </div>
 
-  <div class="celebrate-overlay" id="celebrateOverlay" hidden>
-    <div class="celebrate-card">
-      <span class="emoji">🎉</span>
-      <h2>太棒了！</h2>
-      <p id="celebrateMsg">今天的任務全部完成了！</p>
-      <button id="celebrateCloseBtn">耶！</button>
-    </div>
-  </div>
-
 <script>
 (function(){
   "use strict";
-  var STORAGE_KEY = "rewardTodoList.tasks.v1";
-  var STARS_KEY = "rewardTodoList.stars.v1";
-  var STREAK_KEY = "rewardTodoList.streakDates.v1";
-  var CELEBRATED_KEY = "rewardTodoList.celebratedDates.v1";
+  var STORAGE_KEY = "todoList.tasks.v2";
+  var HIDE_DONE_KEY = "todoList.hideDone.v2";
 
-  var CATEGORY_OPTIONS = ["📖 學習","🧹 家事","🏃 運動","🎨 玩樂","🦷 生活習慣","🍎 飲食","⭐ 其他"];
   var WEEKDAYS = ["週日","週一","週二","週三","週四","週五","週六"];
+
+  // bright pastel row colors, each paired with a saturated accent for the
+  // checkbox / date chip so every row reads as a distinct colour block
+  var PALETTE = [
+    { bg:"#DCEAFB", accent:"#2F5FD1" },
+    { bg:"#D2F5EE", accent:"#0E9C86" },
+    { bg:"#FFF2C2", accent:"#D99A00" },
+    { bg:"#FFE1D6", accent:"#E8562F" },
+    { bg:"#FDE0EC", accent:"#E23E7A" }
+  ];
 
   function pad(n){ return n<10 ? "0"+n : ""+n; }
   function toDateStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
@@ -319,35 +248,24 @@
   function loadTasks(){
     try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ return []; }
   }
-  function saveTasks(tasks){ localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
-  function loadStars(){ return parseInt(localStorage.getItem(STARS_KEY) || "0", 10); }
-  function saveStars(n){ localStorage.setItem(STARS_KEY, String(n)); }
-  function loadStreakDates(){
-    try{ return JSON.parse(localStorage.getItem(STREAK_KEY)) || []; }catch(e){ return []; }
-  }
-  function saveStreakDates(arr){ localStorage.setItem(STREAK_KEY, JSON.stringify(arr)); }
-  function loadCelebrated(){
-    try{ return JSON.parse(localStorage.getItem(CELEBRATED_KEY)) || []; }catch(e){ return []; }
-  }
-  function saveCelebrated(arr){ localStorage.setItem(CELEBRATED_KEY, JSON.stringify(arr)); }
+  function saveTasks(t){ localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); }
+  function loadHideDone(){ return localStorage.getItem(HIDE_DONE_KEY) === "1"; }
+  function saveHideDone(v){ localStorage.setItem(HIDE_DONE_KEY, v ? "1" : "0"); }
 
   var tasks = loadTasks();
-  var currentFilter = "today";
-  var pendingDelete = null; // {task, timeoutId}
+  var hideDone = loadHideDone();
+  var pendingDelete = null;
   var editingId = null;
 
   var els = {
     todayBadge: document.getElementById("todayBadge"),
-    starCount: document.getElementById("starCount"),
-    streakCount: document.getElementById("streakCount"),
-    doneTodayCount: document.getElementById("doneTodayCount"),
+    doneCount: document.getElementById("doneCount"),
+    totalCount: document.getElementById("totalCount"),
     progressFill: document.getElementById("progressFill"),
     addForm: document.getElementById("addForm"),
     taskDate: document.getElementById("taskDate"),
-    taskCategory: document.getElementById("taskCategory"),
     taskText: document.getElementById("taskText"),
-    taskRepeat: document.getElementById("taskRepeat"),
-    filterTabs: document.querySelector(".filter-tabs"),
+    hideDoneBtn: document.getElementById("hideDoneBtn"),
     taskListWrap: document.getElementById("taskListWrap"),
     emptyState: document.getElementById("emptyState"),
     emptyText: document.getElementById("emptyText"),
@@ -358,27 +276,27 @@
     toast: document.getElementById("toast"),
     editModal: document.getElementById("editModal"),
     editDate: document.getElementById("editDate"),
-    editCategory: document.getElementById("editCategory"),
     editText: document.getElementById("editText"),
-    editRepeat: document.getElementById("editRepeat"),
     editSaveBtn: document.getElementById("editSaveBtn"),
-    editCancelBtn: document.getElementById("editCancelBtn"),
-    celebrateOverlay: document.getElementById("celebrateOverlay"),
-    celebrateMsg: document.getElementById("celebrateMsg"),
-    celebrateCloseBtn: document.getElementById("celebrateCloseBtn")
+    editCancelBtn: document.getElementById("editCancelBtn")
   };
 
   els.taskDate.value = todayStr();
 
   function init(){
     renderTodayBadge();
+    updateHideDoneBtn();
     render();
     bindEvents();
   }
 
   function renderTodayBadge(){
     var d = new Date();
-    els.todayBadge.textContent = (d.getMonth()+1)+"月"+d.getDate()+"日 · "+WEEKDAYS[d.getDay()];
+    els.todayBadge.textContent = "今天是 "+(d.getMonth()+1)+"月"+d.getDate()+"日 · "+WEEKDAYS[d.getDay()];
+  }
+
+  function updateHideDoneBtn(){
+    els.hideDoneBtn.textContent = hideDone ? "顯示已完成" : "隱藏已完成";
   }
 
   function bindEvents(){
@@ -387,13 +305,10 @@
       addTask();
     });
 
-    els.filterTabs.addEventListener("click", function(e){
-      var btn = e.target.closest("button[data-filter]");
-      if(!btn) return;
-      currentFilter = btn.getAttribute("data-filter");
-      Array.prototype.forEach.call(els.filterTabs.querySelectorAll("button"), function(b){
-        b.classList.toggle("active", b === btn);
-      });
+    els.hideDoneBtn.addEventListener("click", function(){
+      hideDone = !hideDone;
+      saveHideDone(hideDone);
+      updateHideDoneBtn();
       render();
     });
 
@@ -413,7 +328,6 @@
 
     els.editCancelBtn.addEventListener("click", closeEdit);
     els.editSaveBtn.addEventListener("click", saveEdit);
-    els.celebrateCloseBtn.addEventListener("click", function(){ els.celebrateOverlay.hidden = true; });
   }
 
   function addTask(){
@@ -422,10 +336,9 @@
     var task = {
       id: uid(),
       date: els.taskDate.value || todayStr(),
-      category: els.taskCategory.value,
       text: text,
-      repeat: els.taskRepeat.value,
       done: false,
+      colorIndex: tasks.length % PALETTE.length,
       createdAt: Date.now()
     };
     tasks.push(task);
@@ -439,76 +352,8 @@
     var task = tasks.find(function(t){ return t.id === id; });
     if(!task) return;
     task.done = !task.done;
-
-    if(task.done){
-      task.doneAt = Date.now();
-      awardStar();
-      spawnConfetti();
-      recordStreak(task.date);
-      showToast("+1 ⭐ 太棒了！", null);
-
-      if(task.repeat === "daily" || task.repeat === "weekly"){
-        var nextDate = addDays(task.date, task.repeat === "daily" ? 1 : 7);
-        var alreadyExists = tasks.some(function(x){
-          return x.text === task.text && x.category === task.category &&
-            x.date === nextDate && x.repeat === task.repeat;
-        });
-        if(!alreadyExists){
-          tasks.push({
-            id: uid(), date: nextDate, category: task.category, text: task.text,
-            repeat: task.repeat, done: false, createdAt: Date.now()
-          });
-        }
-      }
-    }
-
     saveTasks(tasks);
     render();
-
-    if(task.done) maybeCelebrateToday();
-  }
-
-  function awardStar(){
-    var n = loadStars() + 1;
-    saveStars(n);
-  }
-
-  function recordStreak(dateStr){
-    var dates = loadStreakDates();
-    if(dates.indexOf(dateStr) === -1){
-      dates.push(dateStr);
-      saveStreakDates(dates);
-    }
-  }
-
-  function computeStreak(){
-    var dates = loadStreakDates();
-    var set = {};
-    dates.forEach(function(d){ set[d] = true; });
-    var count = 0;
-    var cursor = todayStr();
-    if(!set[cursor]){
-      cursor = addDays(cursor, -1);
-    }
-    while(set[cursor]){
-      count++;
-      cursor = addDays(cursor, -1);
-    }
-    return count;
-  }
-
-  function maybeCelebrateToday(){
-    var today = todayStr();
-    var todays = tasks.filter(function(t){ return t.date === today; });
-    if(todays.length === 0) return;
-    var allDone = todays.every(function(t){ return t.done; });
-    if(!allDone) return;
-    var celebrated = loadCelebrated();
-    if(celebrated.indexOf(today) !== -1) return;
-    celebrated.push(today);
-    saveCelebrated(celebrated);
-    els.celebrateMsg.textContent = "今天的 "+todays.length+" 個任務全部完成了！繼續保持喔！";
-    els.celebrateOverlay.hidden = false;
   }
 
   function deleteTask(id){
@@ -524,7 +369,7 @@
       els.toast.hidden = true;
     }, 5000);
     pendingDelete = { task: removed, idx: idx, timeoutId: timeoutId };
-    showToast("已刪除任務", function(){
+    showToast("已刪除事項", function(){
       tasks.splice(Math.min(pendingDelete.idx, tasks.length), 0, pendingDelete.task);
       saveTasks(tasks);
       clearTimeout(pendingDelete.timeoutId);
@@ -540,7 +385,7 @@
     if(tasks.length !== before){
       saveTasks(tasks);
       render();
-      showToast("已清除已完成的任務", null);
+      showToast("已清除已完成的事項", null);
     }
   }
 
@@ -549,9 +394,7 @@
     if(!task) return;
     editingId = id;
     els.editDate.value = task.date;
-    els.editCategory.value = task.category;
     els.editText.value = task.text;
-    els.editRepeat.value = task.repeat;
     els.editModal.hidden = false;
   }
   function closeEdit(){ els.editModal.hidden = true; editingId = null; }
@@ -561,9 +404,7 @@
     var text = els.editText.value.trim();
     if(!text){ return; }
     task.date = els.editDate.value || task.date;
-    task.category = els.editCategory.value;
     task.text = text;
-    task.repeat = els.editRepeat.value;
     saveTasks(tasks);
     closeEdit();
     render();
@@ -586,121 +427,66 @@
     }
   }
 
-  function spawnConfetti(){
-    var emojis = ["⭐","✨","🎊","🌟"];
-    for(var i=0;i<10;i++){
-      (function(){
-        var el = document.createElement("div");
-        el.className = "confetti";
-        el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
-        var startX = window.innerWidth/2 + (Math.random()*160-80);
-        el.style.left = startX+"px";
-        el.style.top = (window.innerHeight*0.35)+"px";
-        document.body.appendChild(el);
-        var dx = (Math.random()*220-110);
-        var dy = -(120 + Math.random()*160);
-        var rot = (Math.random()*360-180);
-        el.animate([
-          { transform:"translate(0,0) rotate(0deg)", opacity:1 },
-          { transform:"translate("+dx+"px,"+dy+"px) rotate("+rot+"deg)", opacity:0 }
-        ], { duration: 900 + Math.random()*400, easing:"cubic-bezier(.2,.7,.3,1)" });
-        setTimeout(function(){ el.remove(); }, 1400);
-      })();
-    }
-  }
-
-  function formatDateLabel(dateStr){
+  function formatDateChip(dateStr){
     var today = todayStr();
     var tomorrow = addDays(today, 1);
     var d = parseDateStr(dateStr);
-    if(dateStr === today) return "🔵 今天 "+(d.getMonth()+1)+"/"+d.getDate();
-    if(dateStr === tomorrow) return "🟡 明天 "+(d.getMonth()+1)+"/"+d.getDate();
+    if(dateStr === today) return "今天 "+(d.getMonth()+1)+"/"+d.getDate();
+    if(dateStr === tomorrow) return "明天 "+(d.getMonth()+1)+"/"+d.getDate();
     return (d.getMonth()+1)+"/"+d.getDate()+" "+WEEKDAYS[d.getDay()];
   }
 
-  function getFilteredTasks(){
-    var today = todayStr();
-    var weekEnd = addDays(today, 6);
-    return tasks.filter(function(t){
-      if(currentFilter === "today") return t.date === today;
-      if(currentFilter === "week") return t.date >= today && t.date <= weekEnd;
-      if(currentFilter === "done") return t.done;
-      return true; // all
-    });
-  }
-
   function render(){
-    var filtered = getFilteredTasks();
-    filtered.sort(function(a,b){
+    var visible = hideDone ? tasks.filter(function(t){ return !t.done; }) : tasks.slice();
+    visible.sort(function(a,b){
       if(a.date !== b.date) return a.date < b.date ? -1 : 1;
       return a.createdAt - b.createdAt;
     });
 
-    var groups = {};
-    var order = [];
-    filtered.forEach(function(t){
-      if(!groups[t.date]){ groups[t.date] = []; order.push(t.date); }
-      groups[t.date].push(t);
-    });
-    order.sort();
-
     els.taskListWrap.innerHTML = "";
-    if(order.length === 0){
+    if(visible.length === 0){
       els.emptyState.hidden = false;
-      els.emptyText.textContent = currentFilter === "done"
-        ? "還沒有完成的任務，加油完成第一個吧！"
-        : "還沒有任務，新增一個開始集星星吧！";
+      els.emptyText.textContent = (hideDone && tasks.length > 0)
+        ? "已完成的事項都藏起來了，按上面按鈕可以再顯示"
+        : "還沒有任何事項，新增一個開始吧！";
     } else {
       els.emptyState.hidden = true;
-      order.forEach(function(dateStr){
-        var groupTasks = groups[dateStr];
-        var doneCount = groupTasks.filter(function(t){ return t.done; }).length;
-        var section = document.createElement("div");
-        section.className = "date-group";
-        var h2 = document.createElement("h2");
-        h2.innerHTML = formatDateLabel(dateStr) + " <span class=\"cnt\">"+doneCount+"/"+groupTasks.length+"</span>";
-        section.appendChild(h2);
-        groupTasks.forEach(function(t){ section.appendChild(renderTaskItem(t)); });
-        els.taskListWrap.appendChild(section);
-      });
+      visible.forEach(function(t){ els.taskListWrap.appendChild(renderTaskItem(t)); });
     }
 
     updateStats();
   }
 
   function renderTaskItem(t){
+    var color = PALETTE[t.colorIndex % PALETTE.length];
+
     var item = document.createElement("div");
-    item.className = "task-item" + (t.done ? " done" : "");
+    item.className = "task-row" + (t.done ? " done" : "");
+    item.style.background = color.bg;
 
     var checkbox = document.createElement("div");
     checkbox.className = "checkbox" + (t.done ? " checked" : "");
     checkbox.setAttribute("data-id", t.id);
+    checkbox.style.borderColor = color.accent;
+    if(t.done){ checkbox.style.background = color.accent; }
     checkbox.textContent = t.done ? "✔" : "";
     item.appendChild(checkbox);
 
-    var body = document.createElement("div");
-    body.className = "task-body";
-    var textEl = document.createElement("div");
-    textEl.className = "task-text";
+    var content = document.createElement("div");
+    content.className = "row-content";
+    var dateChip = document.createElement("span");
+    dateChip.className = "row-date";
+    dateChip.style.color = color.accent;
+    dateChip.textContent = formatDateChip(t.date);
+    content.appendChild(dateChip);
+    var textEl = document.createElement("span");
+    textEl.className = "row-text";
     textEl.textContent = t.text;
-    body.appendChild(textEl);
-    var meta = document.createElement("div");
-    meta.className = "task-meta";
-    var catBadge = document.createElement("span");
-    catBadge.className = "badge";
-    catBadge.textContent = t.category;
-    meta.appendChild(catBadge);
-    if(t.repeat && t.repeat !== "none"){
-      var repBadge = document.createElement("span");
-      repBadge.className = "badge";
-      repBadge.textContent = t.repeat === "daily" ? "🔁 每天" : "🔁 每週";
-      meta.appendChild(repBadge);
-    }
-    body.appendChild(meta);
-    item.appendChild(body);
+    content.appendChild(textEl);
+    item.appendChild(content);
 
     var actions = document.createElement("div");
-    actions.className = "task-actions";
+    actions.className = "row-actions";
     var editBtn = document.createElement("button");
     editBtn.className = "icon-btn";
     editBtn.setAttribute("data-action", "edit");
@@ -719,29 +505,20 @@
   }
 
   function updateStats(){
-    els.starCount.textContent = loadStars();
-    els.streakCount.textContent = computeStreak();
-    var today = todayStr();
-    var todays = tasks.filter(function(t){ return t.date === today; });
-    var doneCount = todays.filter(function(t){ return t.done; }).length;
-    els.doneTodayCount.textContent = doneCount+"/"+todays.length;
-    var pct = todays.length ? Math.round(doneCount/todays.length*100) : 0;
+    var doneCount = tasks.filter(function(t){ return t.done; }).length;
+    els.doneCount.textContent = doneCount;
+    els.totalCount.textContent = tasks.length;
+    var pct = tasks.length ? Math.round(doneCount/tasks.length*100) : 0;
     els.progressFill.style.width = pct+"%";
   }
 
   function exportBackup(){
-    var data = {
-      tasks: tasks,
-      stars: loadStars(),
-      streakDates: loadStreakDates(),
-      celebratedDates: loadCelebrated(),
-      exportedAt: new Date().toISOString()
-    };
+    var data = { tasks: tasks, exportedAt: new Date().toISOString() };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "reward-todo-list-backup-"+todayStr()+".json";
+    a.download = "todo-list-backup-"+todayStr()+".json";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -758,9 +535,6 @@
         if(!Array.isArray(data.tasks)) throw new Error("invalid");
         tasks = data.tasks;
         saveTasks(tasks);
-        if(typeof data.stars === "number") saveStars(data.stars);
-        if(Array.isArray(data.streakDates)) saveStreakDates(data.streakDates);
-        if(Array.isArray(data.celebratedDates)) saveCelebrated(data.celebratedDates);
         render();
         showToast("匯入成功！", null);
       }catch(err){
