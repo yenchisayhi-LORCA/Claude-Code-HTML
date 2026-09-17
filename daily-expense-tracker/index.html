@@ -6,7 +6,7 @@
 <title>日常記帳</title>
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#FFF8EC">
+<meta name="theme-color" content="#FBE3E0">
 
 <!-- iOS「加入主畫面」設定：用主畫面圖示開啟、不顯示網址列 -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,24 +22,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --primary:#3B4CB8;
-    --primary-dark:#2A3789;
-    --primary-tint:#EDEFFB;
-    --teal:#4CBFB5;
-    --teal-dark:#2E8C84;
-    --teal-tint:#EDF9F4;
-    --warn:#F5B324;
-    --warn-dark:#D9971A;
-    --warn-tint:#FEF6E4;
-    --danger:#E8574B;
-    --danger-dark:#B93E34;
-    --danger-tint:#FDECEA;
+    --primary:#6C93D6;
+    --primary-dark:#C1546B;
+    --primary-tint:#E8F0FC;
+    --warn:#F0B23C;
+    --warn-dark:#C98A24;
+    --warn-tint:#FDEFCB;
+    --danger:#E2636F;
+    --danger-dark:#B23F4C;
+    --danger-tint:#FBE5E7;
+    --ink:#3A3050;
     --cream:#FFFBF2;
-    --page-bg:#FFF8EC;
+    --page-bg:#FBE3E0;
     --card:#FFFFFF;
-    --line:#EDE7D6;
+    --line:#F3D9D8;
     --text:#2B3159;
-    --text-soft:#8A93B5;
+    --text-soft:#A68990;
     --radius:16px;
     --radius-lg:26px;
     --font-display:'Baloo 2','Noto Sans TC',sans-serif;
@@ -58,12 +56,12 @@
   h1,h2,h3,.brand-font,button,select,input{font-family:inherit;}
   button{-webkit-appearance:none;appearance:none;}
 
-  /* ---------------------------------------------------------------- 背景裝飾色塊：奶油底、淡色系大色塊，走溫暖插畫風 */
+  /* ---------------------------------------------------------------- 背景裝飾色塊：粉嫩派對色（粉紅／粉藍／鵝黃） */
   .bg-decor{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
   .bg-decor span{position:absolute;border-radius:50%;}
-  .bg-decor .b1{width:480px;height:260px;background:#CFEFE6;top:-70px;left:-60px;opacity:.75;}
-  .bg-decor .b2{width:420px;height:420px;background:#FFE7B3;bottom:-190px;right:-140px;opacity:.7;}
-  .bg-decor .b3{width:380px;height:380px;background:#FFD9CE;bottom:-160px;left:-140px;opacity:.65;}
+  .bg-decor .b1{width:480px;height:260px;background:#D7E4F7;top:-70px;left:-60px;opacity:.8;}
+  .bg-decor .b2{width:420px;height:420px;background:#FBE9BE;bottom:-190px;right:-140px;opacity:.75;}
+  .bg-decor .b3{width:380px;height:380px;background:#F6D3D2;bottom:-160px;left:-140px;opacity:.7;}
 
   .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:18px 14px 0;}
 
@@ -76,10 +74,10 @@
   }
   .header-left,.header-right{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
   .header-title{
-    flex:1;text-align:center;font-size:28px;font-weight:800;color:var(--primary-dark);
+    flex:1;text-align:center;font-size:22px;font-weight:800;color:var(--primary-dark);
     display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;
   }
-  .header-title img{width:38px;height:38px;border-radius:11px;flex:0 0 auto;}
+  .header-title img{width:46px;height:46px;border-radius:13px;flex:0 0 auto;}
   .header-title span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .icon-round-btn{
     width:38px;height:38px;border-radius:12px;border:none;background:var(--primary-tint);
@@ -97,9 +95,10 @@
     border:2px solid transparent;
   }
   .cat-icon{
-    width:54px;height:54px;border-radius:16px;flex:0 0 auto;
-    display:flex;align-items:center;justify-content:center;font-size:27px;
+    width:54px;height:54px;border-radius:16px;flex:0 0 auto;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
   }
+  .cat-icon svg{width:30px;height:30px;}
   .cat-name{flex:1;min-width:0;font-weight:700;font-size:25px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cat-total{font-family:var(--font-display);font-weight:800;font-size:27px;color:var(--warn-dark);flex:0 0 auto;}
   .cat-chevron{flex:0 0 auto;color:var(--text-soft);width:18px;height:18px;}
@@ -205,10 +204,11 @@
   }
   .icon-grid{display:flex;flex-wrap:wrap;gap:9px;}
   .icon-opt{
-    width:48px;height:48px;border-radius:14px;border:3px solid transparent;
-    font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    width:48px;height:48px;border-radius:14px;border:none;background:var(--cream);color:var(--ink);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
-  .icon-opt.selected{border-color:var(--warn-dark);box-shadow:0 2px 0 rgba(0,0,0,.06);}
+  .icon-opt svg{width:26px;height:26px;}
+  .icon-opt.selected{background:var(--warn);box-shadow:0 2px 0 rgba(0,0,0,.08);}
   .modal-btns{display:flex;gap:8px;margin-top:16px;}
   .modal-btns button{flex:1;font-family:var(--font-display);font-weight:700;font-size:17px;border:none;border-radius:12px;padding:12px;cursor:pointer;}
   .btn-save{background:var(--warn);color:#fff;box-shadow:0 4px 0 var(--warn-dark);}
@@ -385,14 +385,38 @@
   var CATS_KEY = "dailyExpense.categories.v1";
   var ENTRIES_KEY = "dailyExpense.entries.v1";
 
-  var ICONS = ["💰","🍚","🍔","☕","🚗","🏠","🛒","🎬","💊","📱","🎓","✈️","🐾","👕","🎁","💡"];
+  var ICONS = ["money","rice","burger","coffee","car","house","cart","movie","medicine","phone","education","travel","pets","clothes","gift","idea"];
 
-  // 圖示徽章配色循環，走鮮明的粉彩手繪貼紙風（粉紅／黃／藍／綠輪流）
+  // 手繪線條風圖示庫（24x24，細線條＋圓角，取代 emoji）
+  var ICON_SVGS = {
+    money: '<ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v10a7 3 0 0 0 14 0V7"/><path d="M5 12a7 3 0 0 0 14 0"/>',
+    rice: '<path d="M4 11h16a8 6 0 0 1-16 0Z"/><path d="M12 11V9"/><circle cx="9" cy="6.5" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="5.3" r=".6" fill="currentColor" stroke="none"/><circle cx="15" cy="6.5" r=".6" fill="currentColor" stroke="none"/>',
+    burger: '<path d="M4 10c0-3 3.5-5 8-5s8 2 8 5"/><line x1="3.5" y1="10" x2="20.5" y2="10"/><line x1="4" y1="13" x2="20" y2="13"/><path d="M4 16c0 1.7 3.5 3 8 3s8-1.3 8-3"/>',
+    coffee: '<path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4Z"/><path d="M16 10.5h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M8 5.2c0 1-1 1-1 2M12 5.2c0 1-1 1-1 2"/>',
+    car: '<path d="M4 16V12l2-4h12l2 4v4"/><path d="M4 16h16"/><circle cx="7.5" cy="16.5" r="1.6"/><circle cx="16.5" cy="16.5" r="1.6"/>',
+    house: '<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>',
+    cart: '<path d="M4 5h2l1.5 10h9L18 8H7.5"/><circle cx="9.5" cy="18.5" r="1.3"/><circle cx="16" cy="18.5" r="1.3"/>',
+    movie: '<path d="M4 10 5 6h14l1 4Z"/><path d="M4 10h16v8H4Z"/><path d="M8 6l1.5 4M13 6l1.5 4"/>',
+    medicine: '<rect x="4" y="9" width="16" height="6" rx="3"/><line x1="12" y1="9" x2="12" y2="15"/>',
+    phone: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><line x1="10.5" y1="18" x2="13.5" y2="18"/>',
+    education: '<path d="M2 9l10-4 10 4-10 4Z"/><path d="M6 11v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4"/><line x1="20" y1="9" x2="20" y2="15"/>',
+    travel: '<path d="M21 4 3 11l6 2 2 6 3-4 5 3Z"/>',
+    pets: '<circle cx="12" cy="15" r="3.4"/><circle cx="6.5" cy="10" r="1.6"/><circle cx="10" cy="7" r="1.6"/><circle cx="14" cy="7" r="1.6"/><circle cx="17.5" cy="10" r="1.6"/>',
+    clothes: '<path d="M8 4 4 7l2 3 2-1.3V20h8V8.7L18 10l2-3-4-3-2 1.5h-4Z"/>',
+    gift: '<rect x="4" y="10" width="16" height="10" rx="1.5"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="12" y1="10" x2="12" y2="20"/><path d="M12 10c-2-4-6-3-6-1s3 1 6 1Zm0 0c2-4 6-3 6-1s-3 1-6 1Z"/>',
+    idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5a2.6 2.6 0 0 1 1.1-2.2A6 6 0 0 0 12 3Z"/>'
+  };
+
+  function iconSvgMarkup(key){
+    var inner = ICON_SVGS[key] || ICON_SVGS[ICONS[0]];
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+  }
+
+  // 圖示徽章底色循環，走粉嫩派對色（粉紅／粉藍／鵝黃輪流）
   var PALETTE = [
-    { bg:"#FFD9DE", accent:"#E8574B" },
-    { bg:"#FFEFC2", accent:"#D9971A" },
-    { bg:"#DCEAFB", accent:"#3B4CB8" },
-    { bg:"#D8F3E9", accent:"#2E8C84" }
+    { bg:"#FBE1DD" },
+    { bg:"#DCE8F7" },
+    { bg:"#FDEFCB" }
   ];
 
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -536,7 +560,7 @@
       var iconEl = document.createElement("div");
       iconEl.className = "cat-icon";
       iconEl.style.background = color.bg;
-      iconEl.textContent = cat.icon || "💰";
+      iconEl.innerHTML = iconSvgMarkup(cat.icon);
       row.appendChild(iconEl);
 
       var nameEl = document.createElement("div");
@@ -624,13 +648,11 @@
   // ---------------------------------------------------------- 帳本 新增／編輯／刪除
   function renderIconGrid(){
     els.categoryIconGrid.innerHTML = "";
-    ICONS.forEach(function(icon, idx){
-      var color = PALETTE[idx % PALETTE.length];
+    ICONS.forEach(function(icon){
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "icon-opt" + (icon === selectedIcon ? " selected" : "");
-      btn.style.background = color.bg;
-      btn.textContent = icon;
+      btn.innerHTML = iconSvgMarkup(icon);
       btn.addEventListener("click", function(){
         selectedIcon = icon;
         renderIconGrid();
