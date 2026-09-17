@@ -211,6 +211,8 @@
     font-size:14px;color:var(--text-soft);background:var(--cream);border-radius:12px;
     padding:10px 12px;
   }
+  .field-time label{font-size:17.5px;}
+  .field-time .field-static{font-size:18px;}
   .icon-grid{display:flex;flex-wrap:wrap;gap:9px;}
   .icon-opt{
     width:48px;height:48px;border-radius:14px;border:none;background:var(--cream);color:var(--ink);
@@ -361,6 +363,10 @@
       <div class="field">
         <label>備註（選填）</label>
         <input type="text" id="entryNoteInput" maxlength="40" placeholder="例如：午餐、計程車" />
+      </div>
+      <div class="field field-time">
+        <label>記錄時間</label>
+        <div class="field-static" id="entryTimeStatic">—</div>
       </div>
       <div class="modal-btns">
         <button class="btn-cancel" id="entryCancelBtn" type="button">取消</button>
@@ -576,6 +582,7 @@
 
     entryModal: document.getElementById("entryModal"),
     entryModalTitle: document.getElementById("entryModalTitle"),
+    entryTimeStatic: document.getElementById("entryTimeStatic"),
     entryAmountInput: document.getElementById("entryAmountInput"),
     entryNoteInput: document.getElementById("entryNoteInput"),
     entryCancelBtn: document.getElementById("entryCancelBtn"),
@@ -903,6 +910,7 @@
     els.entryModalTitle.textContent = "新增紀錄";
     els.entryAmountInput.value = "";
     els.entryNoteInput.value = "";
+    els.entryTimeStatic.textContent = formatDateTime(Date.now());
     els.entryDeleteBtn.hidden = true;
     els.entryModal.hidden = false;
     setTimeout(function(){ els.entryAmountInput.focus(); }, 50);
@@ -915,6 +923,7 @@
     els.entryModalTitle.textContent = "編輯紀錄";
     els.entryAmountInput.value = entry.amount;
     els.entryNoteInput.value = entry.note || "";
+    els.entryTimeStatic.textContent = formatDateTime(entry.ts);
     els.entryDeleteBtn.hidden = false;
     els.entryModal.hidden = false;
   }
