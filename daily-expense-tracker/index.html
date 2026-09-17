@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>日常記帳</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3B4CB8">
+
+<!-- iOS「加入主畫面」設定：用主畫面圖示開啟、不顯示網址列 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="日常記帳">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#3B4CB8;
+    --primary-dark:#2A3789;
+    --primary-tint:#EDEFFB;
+    --teal:#4CBFB5;
+    --teal-dark:#2E8C84;
+    --teal-tint:#EDF9F4;
+    --warn:#F5B324;
+    --warn-dark:#D9971A;
+    --warn-tint:#FEF6E4;
+    --danger:#E8574B;
+    --danger-dark:#B93E34;
+    --danger-tint:#FDECEA;
+    --cream:#FFFDF7;
+    --card:#FFFFFF;
+    --line:#EDE7D6;
+    --text:#2B3159;
+    --text-soft:#8A93B5;
+    --radius:16px;
+    --radius-lg:26px;
+    --font-display:'Baloo 2','Noto Sans TC',sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:var(--primary);
+    font-family:'Noto Sans TC',-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC",sans-serif;
+    font-size:16px;
+    color:var(--text);
+    overflow-x:hidden;
+    padding-bottom:100px;
+  }
+  h1,h2,h3,.brand-font,button,select,input{font-family:inherit;}
+  button{-webkit-appearance:none;appearance:none;}
+
+  /* ---------------------------------------------------------------- 背景裝飾色塊 */
+  .bg-decor{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+  .bg-decor span{position:absolute;border-radius:50%;opacity:.95;}
+  .bg-decor .b1{width:520px;height:260px;background:var(--teal);top:-70px;left:-60px;}
+  .bg-decor .b2{width:460px;height:460px;background:var(--warn);bottom:-210px;right:-150px;}
+  .bg-decor .b3{width:420px;height:420px;background:var(--danger);bottom:-170px;left:-150px;}
+
+  .app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:18px 14px 0;}
+
+  /* header */
+  .header-card{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--card);border-radius:var(--radius-lg);
+    box-shadow:0 8px 24px rgba(30,58,138,.16);
+    padding:14px 14px;margin-bottom:14px;
+  }
+  .header-left,.header-right{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .header-title{
+    flex:1;text-align:center;font-size:20px;font-weight:800;color:var(--primary-dark);
+    display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;
+  }
+  .header-title img{width:30px;height:30px;border-radius:9px;flex:0 0 auto;}
+  .header-title span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .icon-round-btn{
+    width:38px;height:38px;border-radius:12px;border:none;background:var(--primary-tint);
+    color:var(--primary);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .icon-round-btn.active{background:var(--primary);color:#fff;}
+  .icon-round-btn svg{width:20px;height:20px;}
+  .icon-round-btn.plus{background:var(--warn);color:#fff;}
+
+  /* category list */
+  .cat-list{display:flex;flex-direction:column;gap:10px;}
+  .cat-row{
+    display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--radius);
+    padding:12px 14px;box-shadow:0 4px 12px rgba(30,58,138,.08);cursor:pointer;
+    border:2px solid transparent;
+  }
+  .cat-icon{
+    width:44px;height:44px;border-radius:14px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+  }
+  .cat-name{flex:1;min-width:0;font-weight:700;font-size:18px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cat-total{font-family:var(--font-display);font-weight:800;font-size:19px;color:var(--warn-dark);flex:0 0 auto;}
+  .cat-chevron{flex:0 0 auto;color:var(--text-soft);width:18px;height:18px;}
+  .cat-del-btn{
+    flex:0 0 auto;width:32px;height:32px;border-radius:50%;border:none;background:var(--danger);
+    color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+
+  .empty-state{text-align:center;padding:60px 16px;color:#EAF0FF;}
+  .empty-state .emoji{font-size:54px;display:block;margin-bottom:10px;}
+  .empty-state .btn-primary{
+    margin-top:14px;font-family:var(--font-display);font-weight:700;font-size:17px;color:#fff;
+    background:var(--warn);border:none;border-radius:14px;padding:12px 22px;cursor:pointer;
+    box-shadow:0 4px 0 var(--warn-dark);
+  }
+
+  /* bottom bar */
+  .bottom-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:5;
+    background:var(--card);box-shadow:0 -6px 18px rgba(30,58,138,.14);
+    padding:10px 26px calc(10px + env(safe-area-inset-bottom));
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .bottom-bar-inner{max-width:480px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between;}
+  .bar-btn{
+    background:none;border:none;color:var(--primary);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;width:44px;height:44px;
+  }
+  .bar-btn svg{width:24px;height:24px;}
+  .bar-btn.danger{color:var(--danger);}
+  .bar-btn.plus-big{
+    width:54px;height:54px;border-radius:50%;background:var(--warn);color:#fff;
+    box-shadow:0 5px 0 var(--warn-dark);
+  }
+  .bar-btn.plus-big svg{width:26px;height:26px;}
+
+  /* detail view */
+  #view-detail{display:none;}
+  #view-detail.active{display:block;}
+  #view-home.hidden{display:none;}
+
+  .detail-header{
+    display:flex;align-items:center;gap:10px;background:var(--card);border-radius:var(--radius-lg);
+    box-shadow:0 8px 24px rgba(30,58,138,.16);padding:14px 10px;margin-bottom:14px;
+  }
+  .detail-back{
+    flex:0 0 auto;width:38px;height:38px;border-radius:12px;border:none;background:none;
+    color:var(--warn-dark);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .detail-back svg{width:24px;height:24px;}
+  .detail-title{
+    flex:1;text-align:center;font-size:20px;font-weight:800;color:var(--primary-dark);
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .detail-edit{
+    flex:0 0 auto;width:38px;height:38px;border-radius:12px;border:none;background:none;
+    color:var(--text-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .detail-edit svg{width:19px;height:19px;}
+
+  .sum-row{
+    display:flex;align-items:center;justify-content:space-between;background:var(--warn-tint);
+    border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;cursor:pointer;
+    border:2px solid transparent;
+  }
+  .sum-row .sum-label{font-family:var(--font-display);font-weight:800;font-size:24px;color:var(--warn-dark);}
+  .sum-row .sum-chevron{color:var(--warn-dark);width:18px;height:18px;opacity:.7;}
+
+  .quick-add-row{margin-bottom:14px;}
+  .quick-add-row input{
+    width:100%;font-size:17px;color:var(--text);background:var(--card);
+    border:2.5px solid var(--line);border-radius:14px;padding:13px 16px;outline:none;
+  }
+  .quick-add-row input:focus{border-color:var(--warn);}
+  .quick-add-hint{font-size:12.5px;color:#EAF0FF;opacity:.85;margin:6px 10px 0;}
+
+  .entry-list{display:flex;flex-direction:column;gap:2px;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 4px 12px rgba(30,58,138,.08);}
+  .entry-row{
+    display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;
+    border-bottom:1px solid var(--line);background:var(--card);
+  }
+  .entry-row:last-child{border-bottom:none;}
+  .entry-row:active{background:var(--primary-tint);}
+  .entry-amount{font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--primary-dark);flex:0 0 auto;min-width:64px;}
+  .entry-note{flex:1;min-width:0;color:var(--text-soft);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .entry-date{flex:0 0 auto;font-size:13px;color:var(--text-soft);}
+
+  /* modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(30,58,138,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center;}
+  .modal-backdrop[hidden]{display:none;}
+  .modal-sheet{background:#fff;border-radius:22px 22px 0 0;padding:18px 18px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px;box-shadow:0 -6px 20px rgba(0,0,0,.15);max-height:88vh;overflow-y:auto;}
+  .modal-sheet h2{margin:0 0 14px;font-size:21px;color:var(--primary-dark);font-family:var(--font-display);}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:13.5px;font-weight:700;color:var(--text-soft);margin-bottom:5px;}
+  .field input{
+    width:100%;font-size:18px;color:var(--text);background:var(--cream);
+    border:2.5px solid var(--line);border-radius:12px;padding:11px 12px;outline:none;
+  }
+  .field input:focus{border-color:var(--warn);}
+  .field-static{
+    font-size:14px;color:var(--text-soft);background:var(--cream);border-radius:12px;
+    padding:10px 12px;
+  }
+  .icon-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .icon-opt{
+    width:42px;height:42px;border-radius:12px;border:2.5px solid var(--line);background:var(--cream);
+    font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .icon-opt.selected{border-color:var(--warn);background:var(--warn-tint);}
+  .modal-btns{display:flex;gap:8px;margin-top:16px;}
+  .modal-btns button{flex:1;font-family:var(--font-display);font-weight:700;font-size:17px;border:none;border-radius:12px;padding:12px;cursor:pointer;}
+  .btn-save{background:var(--warn);color:#fff;box-shadow:0 4px 0 var(--warn-dark);}
+  .btn-cancel{background:var(--cream);color:var(--text-soft);}
+  .btn-delete-row{
+    width:100%;margin-top:10px;background:var(--danger-tint);color:var(--danger-dark);
+    font-family:var(--font-display);font-weight:700;font-size:15px;border:none;border-radius:12px;
+    padding:11px;cursor:pointer;
+  }
+
+  /* toast */
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translateX(-50%);
+    background:var(--primary-dark);color:#fff;padding:10px 18px;border-radius:16px;
+    font-size:15px;z-index:40;box-shadow:0 6px 16px rgba(0,0,0,.2);
+    display:flex;align-items:center;gap:10px;max-width:90vw;
+  }
+  .toast button{background:none;border:none;color:var(--warn);font-weight:800;cursor:pointer;font-size:15px;flex:0 0 auto;}
+  .toast[hidden]{display:none;}
+</style>
+</head>
+<body>
+  <div class="bg-decor"><span class="b1"></span><span class="b2"></span><span class="b3"></span></div>
+
+  <div class="app">
+
+    <!-- ============ 首頁：帳本清單 ============ -->
+    <section id="view-home">
+      <header class="header-card">
+        <div class="header-left">
+          <button id="btnManage" class="icon-round-btn" title="管理帳本" aria-label="管理帳本">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="11" cy="17" r="2" fill="currentColor" stroke="none"/></svg>
+          </button>
+        </div>
+        <div class="header-title"><img src="icons/icon-192.png" alt=""><span>日常記帳</span></div>
+        <div class="header-right">
+          <button id="btnAddCategory" class="icon-round-btn plus" title="新增帳本" aria-label="新增帳本">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div id="catListWrap" class="cat-list"></div>
+
+      <div id="homeEmptyState" class="empty-state" hidden>
+        <span class="emoji">🧾</span>
+        <div>還沒有任何帳本，新增一個開始記帳吧！</div>
+        <button id="btnEmptyAddCategory" class="btn-primary">＋ 新增帳本</button>
+      </div>
+    </section>
+
+    <!-- ============ 明細頁：單一帳本的紀錄 ============ -->
+    <section id="view-detail">
+      <header class="detail-header">
+        <button id="btnBack" class="detail-back" title="返回" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div id="detailTitle" class="detail-title"></div>
+        <button id="btnEditCategory" class="detail-edit" title="編輯帳本" aria-label="編輯帳本">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        </button>
+      </header>
+
+      <div id="sumRow" class="sum-row">
+        <div class="sum-label">Σ <span id="sumAmount">0.00</span></div>
+        <svg class="sum-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <div class="quick-add-row">
+        <input type="text" id="quickAddInput" placeholder="輸入金額，例如：250 午餐" inputmode="decimal" />
+      </div>
+      <div class="quick-add-hint">直接輸入數字送出即可快速新增，數字後面加空白再打字可以順便寫備註</div>
+
+      <div id="entryListWrap" class="entry-list" style="margin-top:14px;"></div>
+
+      <div id="detailEmptyState" class="empty-state" hidden>
+        <span class="emoji">✏️</span>
+        <div>這本帳還沒有任何紀錄，上面輸入金額就能新增！</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 首頁底部工具列 -->
+  <div id="bottomBarHome" class="bottom-bar">
+    <div class="bottom-bar-inner">
+      <button id="btnMenu" class="bar-btn" title="選單" aria-label="選單">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
+      <button id="btnExportAll" class="bar-btn" title="匯出全部" aria-label="匯出全部">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><polyline points="7 9 12 4 17 9"/><line x1="12" y1="4" x2="12" y2="15"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 明細頁底部工具列 -->
+  <div id="bottomBarDetail" class="bottom-bar" hidden>
+    <div class="bottom-bar-inner">
+      <button id="btnClearEntries" class="bar-btn danger" title="清空這本帳的紀錄" aria-label="清空這本帳的紀錄">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
+      <button id="btnShareCategory" class="bar-btn" title="分享 / 匯出" aria-label="分享 / 匯出">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+      </button>
+      <button id="btnAddEntry" class="bar-btn plus-big" title="新增紀錄" aria-label="新增紀錄">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <!-- 新增／編輯帳本 -->
+  <div class="modal-backdrop" id="categoryModal" hidden>
+    <div class="modal-sheet">
+      <h2 id="categoryModalTitle">新增帳本</h2>
+      <div class="field">
+        <label>帳本名稱</label>
+        <input type="text" id="categoryNameInput" maxlength="20" placeholder="例如：日常、旅遊、餐飲" />
+      </div>
+      <div class="field">
+        <label>選個圖示</label>
+        <div class="icon-grid" id="categoryIconGrid"></div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="categoryCancelBtn" type="button">取消</button>
+        <button class="btn-save" id="categorySaveBtn" type="button">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增／編輯紀錄 -->
+  <div class="modal-backdrop" id="entryModal" hidden>
+    <div class="modal-sheet">
+      <h2 id="entryModalTitle">新增紀錄</h2>
+      <div class="field">
+        <label>金額</label>
+        <input type="number" id="entryAmountInput" inputmode="decimal" step="0.01" placeholder="0" />
+      </div>
+      <div class="field">
+        <label>備註（選填）</label>
+        <input type="text" id="entryNoteInput" maxlength="40" placeholder="例如：午餐、計程車" />
+      </div>
+      <div class="field">
+        <label>記錄時間</label>
+        <div class="field-static" id="entryTimeStatic">—</div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="entryCancelBtn" type="button">取消</button>
+        <button class="btn-save" id="entrySaveBtn" type="button">儲存</button>
+      </div>
+      <button class="btn-delete-row" id="entryDeleteBtn" type="button" hidden>🗑 刪除這筆紀錄</button>
+    </div>
+  </div>
+
+  <!-- 選單／關於 -->
+  <div class="modal-backdrop" id="menuModal" hidden>
+    <div class="modal-sheet">
+      <h2>📒 日常記帳</h2>
+      <p class="field-static" style="margin-bottom:12px;line-height:1.6;">
+        資料只存在這個瀏覽器的 localStorage，換瀏覽器、換裝置或清除瀏覽器資料都會遺失紀錄，請記得用「匯出全部」定期備份。
+      </p>
+      <button class="btn-delete-row" id="btnResetAll" type="button">🗑 清除所有帳本與紀錄</button>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="menuCloseBtn" type="button" style="flex:1;">關閉</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CATS_KEY = "dailyExpense.categories.v1";
+  var ENTRIES_KEY = "dailyExpense.entries.v1";
+
+  var ICONS = ["💰","🍚","🍔","☕","🚗","🏠","🛒","🎬","💊","📱","🎓","✈️","🐾","👕","🎁","💡"];
+
+  // 卡片配色循環，跟 primary/teal/warn/danger 幾組色階對應
+  var PALETTE = [
+    { bg:"#EDEFFB", accent:"#3B4CB8" },
+    { bg:"#EDF9F4", accent:"#2E8C84" },
+    { bg:"#FEF6E4", accent:"#D9971A" },
+    { bg:"#FDECEA", accent:"#B93E34" }
+  ];
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  function loadCats(){ try{ return JSON.parse(localStorage.getItem(CATS_KEY)) || []; }catch(e){ return []; } }
+  function saveCats(v){ localStorage.setItem(CATS_KEY, JSON.stringify(v)); }
+  function loadEntries(){ try{ return JSON.parse(localStorage.getItem(ENTRIES_KEY)) || []; }catch(e){ return []; } }
+  function saveEntries(v){ localStorage.setItem(ENTRIES_KEY, JSON.stringify(v)); }
+
+  var categories = loadCats();
+  var entries = loadEntries();
+  var currentCategoryId = null;
+  var editingEntryId = null;
+  var editingCategoryId = null;
+  var selectedIcon = ICONS[0];
+  var pendingUndo = null;
+
+  function pad(n){ return n < 10 ? "0" + n : "" + n; }
+  function formatDate(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+  }
+  function formatDateTime(ts){
+    var d = new Date(ts);
+    return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function formatAmount(n){
+    n = Number(n) || 0;
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
+  }
+
+  function categoryTotal(catId){
+    return entries.filter(function(e){ return e.categoryId === catId; })
+      .reduce(function(sum, e){ return sum + (Number(e.amount) || 0); }, 0);
+  }
+
+  var els = {
+    viewHome: document.getElementById("view-home"),
+    viewDetail: document.getElementById("view-detail"),
+    catListWrap: document.getElementById("catListWrap"),
+    homeEmptyState: document.getElementById("homeEmptyState"),
+    bottomBarHome: document.getElementById("bottomBarHome"),
+    bottomBarDetail: document.getElementById("bottomBarDetail"),
+
+    btnManage: document.getElementById("btnManage"),
+    btnAddCategory: document.getElementById("btnAddCategory"),
+    btnEmptyAddCategory: document.getElementById("btnEmptyAddCategory"),
+    btnMenu: document.getElementById("btnMenu"),
+    btnExportAll: document.getElementById("btnExportAll"),
+
+    detailTitle: document.getElementById("detailTitle"),
+    btnBack: document.getElementById("btnBack"),
+    btnEditCategory: document.getElementById("btnEditCategory"),
+    sumRow: document.getElementById("sumRow"),
+    sumAmount: document.getElementById("sumAmount"),
+    quickAddInput: document.getElementById("quickAddInput"),
+    entryListWrap: document.getElementById("entryListWrap"),
+    detailEmptyState: document.getElementById("detailEmptyState"),
+    btnClearEntries: document.getElementById("btnClearEntries"),
+    btnShareCategory: document.getElementById("btnShareCategory"),
+    btnAddEntry: document.getElementById("btnAddEntry"),
+
+    toast: document.getElementById("toast"),
+
+    categoryModal: document.getElementById("categoryModal"),
+    categoryModalTitle: document.getElementById("categoryModalTitle"),
+    categoryNameInput: document.getElementById("categoryNameInput"),
+    categoryIconGrid: document.getElementById("categoryIconGrid"),
+    categoryCancelBtn: document.getElementById("categoryCancelBtn"),
+    categorySaveBtn: document.getElementById("categorySaveBtn"),
+
+    entryModal: document.getElementById("entryModal"),
+    entryModalTitle: document.getElementById("entryModalTitle"),
+    entryAmountInput: document.getElementById("entryAmountInput"),
+    entryNoteInput: document.getElementById("entryNoteInput"),
+    entryTimeStatic: document.getElementById("entryTimeStatic"),
+    entryCancelBtn: document.getElementById("entryCancelBtn"),
+    entrySaveBtn: document.getElementById("entrySaveBtn"),
+    entryDeleteBtn: document.getElementById("entryDeleteBtn"),
+
+    menuModal: document.getElementById("menuModal"),
+    btnResetAll: document.getElementById("btnResetAll"),
+    menuCloseBtn: document.getElementById("menuCloseBtn")
+  };
+
+  var manageMode = false;
+
+  function init(){
+    renderHome();
+    bindEvents();
+  }
+
+  // ---------------------------------------------------------- 畫面切換
+  function showHome(){
+    currentCategoryId = null;
+    els.viewDetail.classList.remove("active");
+    els.viewHome.classList.remove("hidden");
+    els.bottomBarDetail.hidden = true;
+    els.bottomBarHome.hidden = false;
+    renderHome();
+  }
+
+  function showDetail(catId){
+    currentCategoryId = catId;
+    manageMode = false;
+    updateManageBtn();
+    els.viewHome.classList.add("hidden");
+    els.viewDetail.classList.add("active");
+    els.bottomBarHome.hidden = true;
+    els.bottomBarDetail.hidden = false;
+    renderDetail();
+  }
+
+  // ---------------------------------------------------------- 首頁渲染
+  function updateManageBtn(){
+    els.btnManage.classList.toggle("active", manageMode);
+  }
+
+  function renderHome(){
+    els.catListWrap.innerHTML = "";
+    if(categories.length === 0){
+      els.homeEmptyState.hidden = false;
+      return;
+    }
+    els.homeEmptyState.hidden = true;
+
+    categories.forEach(function(cat, idx){
+      var color = PALETTE[idx % PALETTE.length];
+      var row = document.createElement("div");
+      row.className = "cat-row";
+
+      if(manageMode){
+        var delBtn = document.createElement("button");
+        delBtn.className = "cat-del-btn";
+        delBtn.textContent = "×";
+        delBtn.setAttribute("data-action", "delete-cat");
+        delBtn.setAttribute("data-id", cat.id);
+        row.appendChild(delBtn);
+      }
+
+      var iconEl = document.createElement("div");
+      iconEl.className = "cat-icon";
+      iconEl.style.background = color.bg;
+      iconEl.textContent = cat.icon || "💰";
+      row.appendChild(iconEl);
+
+      var nameEl = document.createElement("div");
+      nameEl.className = "cat-name";
+      nameEl.textContent = cat.name;
+      row.appendChild(nameEl);
+
+      var totalEl = document.createElement("div");
+      totalEl.className = "cat-total";
+      totalEl.textContent = formatAmount(categoryTotal(cat.id));
+      row.appendChild(totalEl);
+
+      var chev = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      chev.setAttribute("class", "cat-chevron");
+      chev.setAttribute("viewBox", "0 0 24 24");
+      chev.setAttribute("fill", "none");
+      chev.setAttribute("stroke", "currentColor");
+      chev.setAttribute("stroke-width", "2.5");
+      chev.setAttribute("stroke-linecap", "round");
+      chev.setAttribute("stroke-linejoin", "round");
+      chev.innerHTML = '<polyline points="9 18 15 12 9 6"/>';
+      row.appendChild(chev);
+
+      row.addEventListener("click", function(e){
+        if(e.target.closest("[data-action='delete-cat']")) return;
+        showDetail(cat.id);
+      });
+
+      els.catListWrap.appendChild(row);
+    });
+  }
+
+  // ---------------------------------------------------------- 明細頁渲染
+  function currentCategory(){
+    return categories.find(function(c){ return c.id === currentCategoryId; });
+  }
+
+  function categoryEntries(){
+    return entries.filter(function(e){ return e.categoryId === currentCategoryId; })
+      .sort(function(a, b){ return b.ts - a.ts; });
+  }
+
+  function renderDetail(){
+    var cat = currentCategory();
+    if(!cat){ showHome(); return; }
+
+    els.detailTitle.textContent = cat.name;
+    var list = categoryEntries();
+    var total = list.reduce(function(s, e){ return s + (Number(e.amount) || 0); }, 0);
+    els.sumAmount.textContent = total.toFixed(2);
+
+    els.entryListWrap.innerHTML = "";
+    if(list.length === 0){
+      els.detailEmptyState.hidden = false;
+      els.entryListWrap.style.display = "none";
+    } else {
+      els.detailEmptyState.hidden = true;
+      els.entryListWrap.style.display = "flex";
+      list.forEach(function(entry){
+        var row = document.createElement("div");
+        row.className = "entry-row";
+        row.setAttribute("data-id", entry.id);
+
+        var amountEl = document.createElement("div");
+        amountEl.className = "entry-amount";
+        amountEl.textContent = formatAmount(entry.amount);
+        row.appendChild(amountEl);
+
+        var noteEl = document.createElement("div");
+        noteEl.className = "entry-note";
+        noteEl.textContent = entry.note || "";
+        row.appendChild(noteEl);
+
+        var dateEl = document.createElement("div");
+        dateEl.className = "entry-date";
+        dateEl.textContent = formatDate(entry.ts);
+        row.appendChild(dateEl);
+
+        row.addEventListener("click", function(){ openEditEntry(entry.id); });
+        els.entryListWrap.appendChild(row);
+      });
+    }
+  }
+
+  // ---------------------------------------------------------- 帳本 新增／編輯／刪除
+  function renderIconGrid(){
+    els.categoryIconGrid.innerHTML = "";
+    ICONS.forEach(function(icon){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "icon-opt" + (icon === selectedIcon ? " selected" : "");
+      btn.textContent = icon;
+      btn.addEventListener("click", function(){
+        selectedIcon = icon;
+        renderIconGrid();
+      });
+      els.categoryIconGrid.appendChild(btn);
+    });
+  }
+
+  function openAddCategory(){
+    editingCategoryId = null;
+    els.categoryModalTitle.textContent = "新增帳本";
+    els.categoryNameInput.value = "";
+    selectedIcon = ICONS[0];
+    renderIconGrid();
+    els.categoryModal.hidden = false;
+    setTimeout(function(){ els.categoryNameInput.focus(); }, 50);
+  }
+
+  function openEditCategory(catId){
+    var cat = categories.find(function(c){ return c.id === catId; });
+    if(!cat) return;
+    editingCategoryId = catId;
+    els.categoryModalTitle.textContent = "編輯帳本";
+    els.categoryNameInput.value = cat.name;
+    selectedIcon = cat.icon || ICONS[0];
+    renderIconGrid();
+    els.categoryModal.hidden = false;
+  }
+
+  function closeCategoryModal(){ els.categoryModal.hidden = true; }
+
+  function saveCategory(){
+    var name = els.categoryNameInput.value.trim();
+    if(!name){ els.categoryNameInput.focus(); return; }
+
+    if(editingCategoryId){
+      var cat = categories.find(function(c){ return c.id === editingCategoryId; });
+      if(cat){ cat.name = name; cat.icon = selectedIcon; }
+    } else {
+      categories.push({ id: uid(), name: name, icon: selectedIcon, createdAt: Date.now() });
+    }
+    saveCats(categories);
+    closeCategoryModal();
+    if(currentCategoryId){ renderDetail(); } else { renderHome(); }
+  }
+
+  function deleteCategory(catId){
+    var idx = categories.findIndex(function(c){ return c.id === catId; });
+    if(idx === -1) return;
+    var removedCat = categories[idx];
+    var removedEntries = entries.filter(function(e){ return e.categoryId === catId; });
+
+    categories.splice(idx, 1);
+    entries = entries.filter(function(e){ return e.categoryId !== catId; });
+    saveCats(categories);
+    saveEntries(entries);
+    renderHome();
+
+    showUndoToast("已刪除「" + removedCat.name + "」", function(){
+      categories.splice(idx, 0, removedCat);
+      entries = entries.concat(removedEntries);
+      saveCats(categories);
+      saveEntries(entries);
+      renderHome();
+    });
+  }
+
+  // ---------------------------------------------------------- 紀錄 新增／編輯／刪除
+  function openAddEntry(){
+    if(!currentCategoryId) return;
+    editingEntryId = null;
+    els.entryModalTitle.textContent = "新增紀錄";
+    els.entryAmountInput.value = "";
+    els.entryNoteInput.value = "";
+    els.entryTimeStatic.textContent = formatDateTime(Date.now()) + "（自動帶入現在時間）";
+    els.entryDeleteBtn.hidden = true;
+    els.entryModal.hidden = false;
+    setTimeout(function(){ els.entryAmountInput.focus(); }, 50);
+  }
+
+  function openEditEntry(entryId){
+    var entry = entries.find(function(e){ return e.id === entryId; });
+    if(!entry) return;
+    editingEntryId = entryId;
+    els.entryModalTitle.textContent = "編輯紀錄";
+    els.entryAmountInput.value = entry.amount;
+    els.entryNoteInput.value = entry.note || "";
+    els.entryTimeStatic.textContent = formatDateTime(entry.ts) + "（儲存後會更新為現在時間）";
+    els.entryDeleteBtn.hidden = false;
+    els.entryModal.hidden = false;
+  }
+
+  function closeEntryModal(){ els.entryModal.hidden = true; }
+
+  function saveEntry(){
+    var amount = parseFloat(els.entryAmountInput.value);
+    if(isNaN(amount)){ els.entryAmountInput.focus(); return; }
+    var note = els.entryNoteInput.value.trim();
+
+    if(editingEntryId){
+      var entry = entries.find(function(e){ return e.id === editingEntryId; });
+      if(entry){ entry.amount = amount; entry.note = note; entry.ts = Date.now(); }
+    } else {
+      entries.push({ id: uid(), categoryId: currentCategoryId, amount: amount, note: note, ts: Date.now() });
+    }
+    saveEntries(entries);
+    closeEntryModal();
+    renderDetail();
+  }
+
+  function deleteEntry(entryId){
+    var idx = entries.findIndex(function(e){ return e.id === entryId; });
+    if(idx === -1) return;
+    var removed = entries.splice(idx, 1)[0];
+    saveEntries(entries);
+    closeEntryModal();
+    renderDetail();
+
+    showUndoToast("已刪除這筆紀錄", function(){
+      entries.splice(Math.min(idx, entries.length), 0, removed);
+      saveEntries(entries);
+      renderDetail();
+    });
+  }
+
+  function clearCategoryEntries(){
+    if(!currentCategoryId) return;
+    var list = categoryEntries();
+    if(list.length === 0) return;
+    if(!confirm("確定要清空「" + currentCategory().name + "」目前的所有紀錄嗎？")) return;
+
+    var removedIds = list.map(function(e){ return e.id; });
+    var removedEntries = entries.filter(function(e){ return removedIds.indexOf(e.id) !== -1; });
+    entries = entries.filter(function(e){ return removedIds.indexOf(e.id) === -1; });
+    saveEntries(entries);
+    renderDetail();
+
+    showUndoToast("已清空所有紀錄", function(){
+      entries = entries.concat(removedEntries);
+      saveEntries(entries);
+      renderDetail();
+    });
+  }
+
+  // ---------------------------------------------------------- 快速輸入（金額 + 備註）
+  function handleQuickAdd(){
+    var raw = els.quickAddInput.value.trim();
+    if(!raw) return;
+    var match = raw.match(/^(-?\d+(?:\.\d+)?)\s*(.*)$/);
+    if(!match){
+      els.quickAddInput.style.borderColor = "#E8574B";
+      setTimeout(function(){ els.quickAddInput.style.borderColor = ""; }, 600);
+      return;
+    }
+    var amount = parseFloat(match[1]);
+    var note = match[2].trim();
+    entries.push({ id: uid(), categoryId: currentCategoryId, amount: amount, note: note, ts: Date.now() });
+    saveEntries(entries);
+    els.quickAddInput.value = "";
+    renderDetail();
+  }
+
+  // ---------------------------------------------------------- 匯出／分享
+  function buildCsv(list, cats){
+    var rows = [["帳本", "金額", "備註", "時間"]];
+    list.forEach(function(e){
+      var cat = cats.find(function(c){ return c.id === e.categoryId; });
+      rows.push([cat ? cat.name : "", e.amount, e.note || "", formatDateTime(e.ts)]);
+    });
+    return rows.map(function(r){
+      return r.map(function(v){
+        var s = String(v).replace(/"/g, '""');
+        return /[",\n]/.test(s) ? '"' + s + '"' : s;
+      }).join(",");
+    }).join("\n");
+  }
+
+  function shareOrDownload(filename, text){
+    if(navigator.share){
+      navigator.share({ title: filename, text: text }).catch(function(){});
+      return;
+    }
+    var blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function exportAll(){
+    if(entries.length === 0){ showToast("目前還沒有任何紀錄"); return; }
+    var csv = buildCsv(entries.slice().sort(function(a, b){ return b.ts - a.ts; }), categories);
+    shareOrDownload("日常記帳.csv", csv);
+  }
+
+  function exportCurrentCategory(){
+    var list = categoryEntries();
+    if(list.length === 0){ showToast("這本帳還沒有任何紀錄"); return; }
+    var cat = currentCategory();
+    var csv = buildCsv(list, categories);
+    shareOrDownload((cat ? cat.name : "帳本") + ".csv", csv);
+  }
+
+  // ---------------------------------------------------------- toast
+  function showToast(message, duration){
+    els.toast.innerHTML = "";
+    var span = document.createElement("span");
+    span.textContent = message;
+    els.toast.appendChild(span);
+    els.toast.hidden = false;
+    setTimeout(function(){ els.toast.hidden = true; }, duration || 1800);
+  }
+
+  function showUndoToast(message, onUndo){
+    if(pendingUndo){ clearTimeout(pendingUndo.timeoutId); }
+    els.toast.innerHTML = "";
+    var span = document.createElement("span");
+    span.textContent = message;
+    els.toast.appendChild(span);
+    var btn = document.createElement("button");
+    btn.textContent = "復原";
+    btn.addEventListener("click", function(){
+      clearTimeout(pendingUndo.timeoutId);
+      pendingUndo = null;
+      els.toast.hidden = true;
+      onUndo();
+    });
+    els.toast.appendChild(btn);
+    els.toast.hidden = false;
+    var timeoutId = setTimeout(function(){
+      pendingUndo = null;
+      els.toast.hidden = true;
+    }, 5000);
+    pendingUndo = { timeoutId: timeoutId };
+  }
+
+  // ---------------------------------------------------------- 統計小彈窗（Σ 列）
+  function showSumStats(){
+    var list = categoryEntries();
+    if(list.length === 0){ showToast("這本帳還沒有任何紀錄"); return; }
+    var total = list.reduce(function(s, e){ return s + (Number(e.amount) || 0); }, 0);
+    var avg = total / list.length;
+    showToast("共 " + list.length + " 筆紀錄，平均每筆 " + formatAmount(avg), 2600);
+  }
+
+  // ---------------------------------------------------------- 事件綁定
+  function bindEvents(){
+    els.btnManage.addEventListener("click", function(){
+      manageMode = !manageMode;
+      updateManageBtn();
+      renderHome();
+    });
+
+    els.btnAddCategory.addEventListener("click", openAddCategory);
+    els.btnEmptyAddCategory.addEventListener("click", openAddCategory);
+
+    els.catListWrap.addEventListener("click", function(e){
+      var delBtn = e.target.closest("[data-action='delete-cat']");
+      if(delBtn){
+        e.stopPropagation();
+        deleteCategory(delBtn.getAttribute("data-id"));
+      }
+    });
+
+    els.btnBack.addEventListener("click", showHome);
+    els.btnEditCategory.addEventListener("click", function(){
+      if(currentCategoryId) openEditCategory(currentCategoryId);
+    });
+
+    els.sumRow.addEventListener("click", showSumStats);
+
+    els.quickAddInput.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); handleQuickAdd(); }
+    });
+
+    els.btnAddEntry.addEventListener("click", openAddEntry);
+    els.btnClearEntries.addEventListener("click", clearCategoryEntries);
+    els.btnShareCategory.addEventListener("click", exportCurrentCategory);
+
+    els.btnMenu.addEventListener("click", function(){ els.menuModal.hidden = false; });
+    els.menuCloseBtn.addEventListener("click", function(){ els.menuModal.hidden = true; });
+    els.btnResetAll.addEventListener("click", function(){
+      if(!confirm("確定要清除所有帳本與紀錄嗎？這個動作無法復原。")) return;
+      categories = [];
+      entries = [];
+      saveCats(categories);
+      saveEntries(entries);
+      els.menuModal.hidden = true;
+      showHome();
+    });
+    els.btnExportAll.addEventListener("click", exportAll);
+
+    // 帳本 modal
+    els.categoryCancelBtn.addEventListener("click", closeCategoryModal);
+    els.categorySaveBtn.addEventListener("click", saveCategory);
+    els.categoryNameInput.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); saveCategory(); }
+    });
+
+    // 紀錄 modal
+    els.entryCancelBtn.addEventListener("click", closeEntryModal);
+    els.entrySaveBtn.addEventListener("click", saveEntry);
+    els.entryDeleteBtn.addEventListener("click", function(){
+      if(editingEntryId) deleteEntry(editingEntryId);
+    });
+    els.entryNoteInput.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); saveEntry(); }
+    });
+
+    // 點背景關閉 modal
+    [els.categoryModal, els.entryModal, els.menuModal].forEach(function(modal){
+      modal.addEventListener("click", function(e){
+        if(e.target === modal) modal.hidden = true;
+      });
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
