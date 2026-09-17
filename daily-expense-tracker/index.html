@@ -417,7 +417,19 @@
     lion: '<line x1="17.5" y1="13" x2="19.7" y2="13"/><line x1="15.9" y1="9.1" x2="17.4" y2="7.6"/><line x1="12" y1="7.5" x2="12" y2="5.3"/><line x1="8.1" y1="9.1" x2="6.6" y2="7.6"/><line x1="6.5" y1="13" x2="4.3" y2="13"/><line x1="8.1" y1="16.9" x2="6.6" y2="18.4"/><line x1="12" y1="18.5" x2="12" y2="20.7"/><line x1="15.9" y1="16.9" x2="17.4" y2="18.4"/><circle cx="12" cy="13" r="5.5"/><ellipse cx="12" cy="15.2" rx="2" ry="1.4"/><circle cx="9.9" cy="11.7" r=".5" fill="currentColor" stroke="none"/><circle cx="14.1" cy="11.7" r=".5" fill="currentColor" stroke="none"/>'
   };
 
+  // 動物頭像圖示改用實際插畫照片（裁自氣球動物園素材），不是線條 SVG
+  var ICON_IMAGES = {
+    pig: "icons/animal-pig.png",
+    giraffe: "icons/animal-giraffe.png",
+    bear: "icons/animal-bear.png",
+    monkey: "icons/animal-monkey.png",
+    lion: "icons/animal-lion.png"
+  };
+
   function iconSvgMarkup(key){
+    if(ICON_IMAGES[key]){
+      return '<img src="' + ICON_IMAGES[key] + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+    }
     var inner = ICON_SVGS[key] || ICON_SVGS[ICONS[0]];
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
   }
