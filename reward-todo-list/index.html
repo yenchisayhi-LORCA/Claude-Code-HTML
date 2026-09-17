@@ -19,7 +19,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --blue:#2F5FD1;
@@ -39,7 +39,7 @@
   body{
     min-height:100vh;
     background:var(--blue);
-    font-family:'Klee One','Nunito','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif;
+    font-family:'Mochiy Pop P One','Nunito','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif;
     font-size:18px;
     color:var(--text);
     overflow-x:hidden;
@@ -117,8 +117,9 @@
   .row-actions{display:flex;gap:4px;flex:0 0 auto;}
   .icon-btn{
     border:none;background:rgba(255,255,255,.65);width:34px;height:34px;border-radius:9px;
-    display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:var(--text);cursor:pointer;
   }
+  .icon-btn svg{width:18px;height:18px;display:block;}
 
   .empty-state{text-align:center;padding:36px 10px;color:#EAF0FF;font-size:19px;}
   .empty-state .emoji{font-size:56px;display:block;margin-bottom:8px;}
@@ -198,6 +199,10 @@
   var HIDE_DONE_KEY = "todoList.hideDone.v2";
 
   var WEEKDAYS = ["週日","週一","週二","週三","週四","週五","週六"];
+
+  // outline-style icons (thin stroke, rounded caps) to match the line-icon look
+  var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+  var ICON_DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 
   // bright pastel row colors, each paired with a saturated accent for the
   // checkbox / date chip so every row reads as a distinct colour block
@@ -438,12 +443,12 @@
     editBtn.className = "icon-btn";
     editBtn.setAttribute("data-action", "edit");
     editBtn.setAttribute("data-id", t.id);
-    editBtn.textContent = "✏️";
+    editBtn.innerHTML = ICON_EDIT;
     var delBtn = document.createElement("button");
     delBtn.className = "icon-btn";
     delBtn.setAttribute("data-action", "delete");
     delBtn.setAttribute("data-id", t.id);
-    delBtn.textContent = "🗑";
+    delBtn.innerHTML = ICON_DELETE;
     actions.appendChild(editBtn);
     actions.appendChild(delBtn);
     item.appendChild(actions);
