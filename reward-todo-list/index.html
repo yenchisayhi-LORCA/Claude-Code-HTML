@@ -132,7 +132,6 @@
   .modal-backdrop[hidden]{display:none;}
   .modal-sheet{background:#fff;border-radius:22px 22px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;box-shadow:0 -6px 20px rgba(0,0,0,.15);}
   .modal-sheet h2{margin:0 0 10px;font-size:22px;color:var(--blue-dark);}
-  .modal-sheet p{margin:0 0 16px;font-size:18px;color:var(--text);line-height:1.5;}
   .modal-sheet .row{margin-bottom:8px;}
   .modal-btns{display:flex;gap:8px;margin-top:10px;}
   .modal-btns button{flex:1;font-family:inherit;font-weight:700;font-size:18px;border:none;border-radius:12px;padding:11px;cursor:pointer;}
@@ -183,16 +182,6 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
-
-  <div class="modal-backdrop" id="reminderModal" hidden>
-    <div class="modal-sheet">
-      <h2>⏰ 提醒</h2>
-      <p id="reminderMsg"></p>
-      <div class="modal-btns">
-        <button class="btn-save" id="reminderCloseBtn" type="button">知道了</button>
-      </div>
-    </div>
-  </div>
 
   <div class="modal-backdrop" id="editModal" hidden>
     <div class="modal-sheet">
@@ -267,10 +256,7 @@
     editDate: document.getElementById("editDate"),
     editText: document.getElementById("editText"),
     editSaveBtn: document.getElementById("editSaveBtn"),
-    editCancelBtn: document.getElementById("editCancelBtn"),
-    reminderModal: document.getElementById("reminderModal"),
-    reminderMsg: document.getElementById("reminderMsg"),
-    reminderCloseBtn: document.getElementById("reminderCloseBtn")
+    editCancelBtn: document.getElementById("editCancelBtn")
   };
 
   els.taskDate.value = todayStr();
@@ -279,20 +265,6 @@
     updateHideDoneBtn();
     render();
     bindEvents();
-    checkReminders();
-  }
-
-  function checkReminders(){
-    var today = todayStr();
-    var overdueCount = tasks.filter(function(t){ return !t.done && t.date < today; }).length;
-    var todayCount = tasks.filter(function(t){ return !t.done && t.date === today; }).length;
-    if(overdueCount === 0 && todayCount === 0) return;
-
-    var parts = [];
-    if(todayCount > 0) parts.push("今天有 "+todayCount+" 件事要做");
-    if(overdueCount > 0) parts.push(overdueCount+" 件已經過期了");
-    els.reminderMsg.textContent = parts.join("，")+"，記得處理一下喔！";
-    els.reminderModal.hidden = false;
   }
 
   function updateHideDoneBtn(){
@@ -323,8 +295,6 @@
 
     els.editCancelBtn.addEventListener("click", closeEdit);
     els.editSaveBtn.addEventListener("click", saveEdit);
-
-    els.reminderCloseBtn.addEventListener("click", function(){ els.reminderModal.hidden = true; });
   }
 
   function addTask(){
