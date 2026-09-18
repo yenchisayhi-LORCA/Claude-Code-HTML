@@ -672,14 +672,16 @@
     { type:"dot", color:"#F0C23C", size:12, bottom:48, left:166 }
   ];
 
+  var DECO_SCALE = 1.8;
+
   function renderDecor(){
     var wrap = document.querySelector(".bg-decor");
     if(!wrap) return;
     DECORATIONS.forEach(function(d){
       var el = document.createElement("div");
       el.className = "deco";
-      el.style.width = d.size + "px";
-      el.style.height = (d.sizeH || d.size) + "px";
+      el.style.width = (d.size * DECO_SCALE) + "px";
+      el.style.height = ((d.sizeH || d.size) * DECO_SCALE) + "px";
       if(d.top !== undefined) el.style.top = d.top + "px";
       if(d.bottom !== undefined) el.style.bottom = d.bottom + "px";
       if(d.left !== undefined) el.style.left = d.left + "px";
