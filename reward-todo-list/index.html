@@ -68,7 +68,8 @@
   /* header */
   .header-card{display:flex;align-items:center;gap:14px;}
   .title-icon-img{width:54px;height:54px;border-radius:16px;object-fit:cover;flex:0 0 auto;box-shadow:0 3px 8px rgba(30,58,138,.2);}
-  .header-card h1{margin:0;font-size:26px;color:var(--blue-dark);}
+  .header-card h1{margin:0;font-size:26px;color:var(--blue-dark);flex:1;min-width:0;overflow-wrap:break-word;}
+  .header-card .icon-btn{flex:0 0 auto;background:var(--cream);}
 
   /* add form */
   .add-card form{display:flex;flex-direction:column;gap:8px;}
@@ -153,7 +154,8 @@
   <div class="app">
     <header class="card header-card">
       <img class="title-icon-img" src="icons/icon-192.png" alt="">
-      <h1>大小事在這</h1>
+      <h1 id="appTitle">大小事在這</h1>
+      <button class="icon-btn" id="renameTitleBtn" type="button" aria-label="修改標題"></button>
     </header>
 
     <section class="card add-card">
@@ -181,6 +183,17 @@
 
   <div class="toast" id="toast" hidden></div>
 
+  <div class="modal-backdrop" id="titleModal" hidden>
+    <div class="modal-sheet">
+      <h2>✏️ 修改標題</h2>
+      <div class="row"><input type="text" id="titleInput" maxlength="20" /></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="titleCancelBtn" type="button">取消</button>
+        <button class="btn-save" id="titleSaveBtn" type="button">儲存</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="editModal" hidden>
     <div class="modal-sheet">
       <h2>✏️ 編輯事項</h2>
@@ -198,6 +211,8 @@
   "use strict";
   var STORAGE_KEY = "todoList.tasks.v2";
   var HIDE_DONE_KEY = "todoList.hideDone.v2";
+  var TITLE_KEY = "todoList.title.v1";
+  var DEFAULT_TITLE = "大小事在這";
 
   var WEEKDAYS = ["週日","週一","週二","週三","週四","週五","週六"];
 
@@ -235,6 +250,8 @@
   function saveTasks(t){ localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); }
   function loadHideDone(){ return localStorage.getItem(HIDE_DONE_KEY) === "1"; }
   function saveHideDone(v){ localStorage.setItem(HIDE_DONE_KEY, v ? "1" : "0"); }
+  function loadTitle(){ return localStorage.getItem(TITLE_KEY) || DEFAULT_TITLE; }
+  function saveTitle(v){ localStorage.setItem(TITLE_KEY, v); }
 
   var tasks = loadTasks();
   var hideDone = loadHideDone();
@@ -254,15 +271,45 @@
     editDate: document.getElementById("editDate"),
     editText: document.getElementById("editText"),
     editSaveBtn: document.getElementById("editSaveBtn"),
-    editCancelBtn: document.getElementById("editCancelBtn")
+    editCancelBtn: document.getElementById("editCancelBtn"),
+    appTitle: document.getElementById("appTitle"),
+    renameTitleBtn: document.getElementById("renameTitleBtn"),
+    titleModal: document.getElementById("titleModal"),
+    titleInput: document.getElementById("titleInput"),
+    titleSaveBtn: document.getElementById("titleSaveBtn"),
+    titleCancelBtn: document.getElementById("titleCancelBtn")
   };
 
   els.taskDate.value = todayStr();
+  els.renameTitleBtn.innerHTML = ICON_EDIT;
 
   function init(){
+    applyTitle(loadTitle());
     updateHideDoneBtn();
     render();
     bindEvents();
+  }
+
+  function applyTitle(title){
+    els.appTitle.textContent = title;
+    document.title = title;
+    var homeScreenMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+    if(homeScreenMeta){ homeScreenMeta.setAttribute("content", title); }
+  }
+
+  function openTitleEdit(){
+    els.titleInput.value = els.appTitle.textContent;
+    els.titleModal.hidden = false;
+    els.titleInput.focus();
+    els.titleInput.select();
+  }
+  function closeTitleEdit(){ els.titleModal.hidden = true; }
+  function saveTitleEdit(){
+    var value = els.titleInput.value.trim();
+    if(!value) return;
+    saveTitle(value);
+    applyTitle(value);
+    closeTitleEdit();
   }
 
   function updateHideDoneBtn(){
@@ -293,6 +340,13 @@
 
     els.editCancelBtn.addEventListener("click", closeEdit);
     els.editSaveBtn.addEventListener("click", saveEdit);
+
+    els.renameTitleBtn.addEventListener("click", openTitleEdit);
+    els.titleCancelBtn.addEventListener("click", closeTitleEdit);
+    els.titleSaveBtn.addEventListener("click", saveTitleEdit);
+    els.titleInput.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); saveTitleEdit(); }
+    });
   }
 
   function addTask(){
