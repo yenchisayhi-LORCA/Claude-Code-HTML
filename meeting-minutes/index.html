@@ -79,6 +79,10 @@
     border-color:#c7cbd4; background:#fafbfd;
   }
   .record-item .record-meta{ font-size:12px; color:#888; margin-top:2px; padding:0 5px; }
+  .record-item .record-move{
+    display:flex; align-items:center; gap:6px; font-size:12px; color:#555; margin-top:6px; padding:0 5px;
+  }
+  .record-item .record-move-select{ font-size:12px; padding:3px 6px; }
   .record-item .record-actions{ display:flex; gap:6px; flex-wrap:wrap; }
   .status-line{
     max-width:900px; margin:8px auto 0; padding:0 16px;
@@ -1877,12 +1881,31 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     return null;
   }
 
-  function upsertIndexEntry(id, title, updatedAt, grade){
+  function upsertIndexEntry(id, title, updatedAt, grade, folderOverride){
     var list = loadIndexList();
     var entry = list.filter(function(e){ return e.id === id; })[0];
-    if (entry){ entry.title = title; entry.updatedAt = updatedAt; entry.grade = grade; }
-    else { list.unshift({ id: id, title: title, updatedAt: updatedAt, grade: grade }); }
+    if (entry){
+      entry.title = title; entry.updatedAt = updatedAt; entry.grade = grade;
+      if (typeof folderOverride !== "undefined") entry.folderOverride = folderOverride;
+    } else {
+      list.unshift({ id: id, title: title, updatedAt: updatedAt, grade: grade, folderOverride: folderOverride || null });
+    }
     saveIndexList(list);
+  }
+
+  // Manually filing a record into a folder always wins over its grade field
+  // or title — this is the escape hatch for records with no clean grade
+  // (e.g. cross-grade meetings) or whichever folder someone just prefers.
+  function moveRecordToFolder(id, folderKey){
+    var list = loadIndexList();
+    var entry = list.filter(function(e){ return e.id === id; })[0];
+    if (entry) entry.folderOverride = folderKey;
+    saveIndexList(list);
+    var full = readRecordRaw(id);
+    if (full){
+      full.folderOverride = folderKey;
+      writeRecordRaw(id, full);
+    }
   }
 
   function migrateLegacySingleRecord(){
@@ -1952,11 +1975,15 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     try { return localStorage.getItem(LAST_OPEN_KEY); } catch (e){ return null; }
   }
 
-  // Prefer the record's own saved grade, but fall back to parsing it out of
-  // the title — this keeps older index entries (saved before grade tracking
-  // existed, or from a stale browser tab) sorted into the right folder
-  // without needing the record to be re-saved first.
+  // A manual folder placement always wins. Otherwise prefer the record's own
+  // saved grade, falling back to parsing it out of the title — this keeps
+  // older index entries (saved before grade tracking existed, or from a
+  // stale browser tab) sorted into the right folder without needing the
+  // record to be re-saved first.
   function resolveGradeFolder(entry){
+    if (entry.folderOverride){
+      return entry.folderOverride === "未分類" ? null : entry.folderOverride;
+    }
     var fromGrade = normalizeGradeFolder(entry.grade);
     if (fromGrade) return fromGrade;
     var m = String(entry.title || "").match(/([一二三四五六1-6])\s*年級/);
@@ -1996,18 +2023,20 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     try {
       var data = serialize();
       data.id = currentRecordId;
+      var idxEntry = loadIndexList().filter(function(e){ return e.id === currentRecordId; })[0];
       var title;
       if (currentRecordTitleIsCustom){
-        var idxEntry = loadIndexList().filter(function(e){ return e.id === currentRecordId; })[0];
         title = (idxEntry && idxEntry.title) || "未命名紀錄";
       } else {
         title = deriveTitleFromFields(state.fields) || "未命名紀錄";
       }
+      var folderOverride = idxEntry ? (idxEntry.folderOverride || null) : null;
       data.title = title;
       data.titleIsCustom = currentRecordTitleIsCustom;
+      data.folderOverride = folderOverride;
 
       writeRecordRaw(currentRecordId, data);
-      upsertIndexEntry(currentRecordId, title, data.savedAt, state.fields.f_grade || "");
+      upsertIndexEntry(currentRecordId, title, data.savedAt, state.fields.f_grade || "", folderOverride);
 
       updateSaveStatus("已儲存（" + new Date(data.savedAt).toLocaleString() + "）");
       updateCurrentRecordTitleDisplay(title);
@@ -2125,6 +2154,29 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     var d = entry.updatedAt ? new Date(entry.updatedAt) : null;
     meta.textContent = d ? ("最後更新：" + d.toLocaleString()) : "";
     info.appendChild(meta);
+
+    var moveWrap = document.createElement("div");
+    moveWrap.className = "record-move";
+    var moveLabel = document.createElement("span");
+    moveLabel.textContent = "📁 資料夾：";
+    moveWrap.appendChild(moveLabel);
+    var moveSelect = document.createElement("select");
+    moveSelect.className = "record-move-select";
+    GRADE_FOLDER_ORDER.concat(["未分類"]).forEach(function(key){
+      var opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = folderLabel(key);
+      moveSelect.appendChild(opt);
+    });
+    moveSelect.value = resolveGradeFolder(entry) || "未分類";
+    moveSelect.addEventListener("change", function(){
+      moveRecordToFolder(entry.id, moveSelect.value);
+      renderRecordList();
+      toast("已移到「" + folderLabel(moveSelect.value) + "」");
+    });
+    moveWrap.appendChild(moveSelect);
+    info.appendChild(moveWrap);
+
     item.appendChild(info);
 
     var actions = document.createElement("div");
@@ -2175,7 +2227,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   }
 
   function folderLabel(folderKey){
-    return folderKey === "未分類" ? "未分類（尚未填年級）" : (folderKey + "年級");
+    return folderKey === "未分類" ? "未分類" : (folderKey + "年級");
   }
 
   function renderRecordList(){
@@ -2289,8 +2341,9 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     if (!copy.title) copy.title = deriveTitleFromFields(copy.fields) || "未命名紀錄";
     if (typeof copy.titleIsCustom !== "boolean") copy.titleIsCustom = false;
     if (!copy.savedAt) copy.savedAt = new Date().toISOString();
+    var folderOverride = copy.folderOverride || null;
     writeRecordRaw(id, copy);
-    upsertIndexEntry(id, copy.title, copy.savedAt, copy.fields.f_grade || "");
+    upsertIndexEntry(id, copy.title, copy.savedAt, copy.fields.f_grade || "", folderOverride);
     return id;
   }
 
@@ -2340,7 +2393,15 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   }
 
   document.getElementById("btnSwitchRecord").addEventListener("click", function(){
-    var folder = currentRecordId ? (normalizeGradeFolder(state.fields.f_grade) || "未分類") : null;
+    var folder = null;
+    if (currentRecordId){
+      var idxEntry = loadIndexList().filter(function(e){ return e.id === currentRecordId; })[0];
+      folder = resolveGradeFolder({
+        grade: state.fields.f_grade,
+        title: idxEntry ? idxEntry.title : "",
+        folderOverride: idxEntry ? idxEntry.folderOverride : null
+      }) || "未分類";
+    }
     showPickerScreen(folder);
   });
   document.getElementById("btnNewRecord").addEventListener("click", function(){
