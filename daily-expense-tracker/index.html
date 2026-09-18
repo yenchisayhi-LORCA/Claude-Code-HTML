@@ -1112,22 +1112,22 @@
       var rightX = W - pad - innerPad;
       var y = pad + innerPad;
 
-      // 標頭第一行：App 圖示徽章 + 日常記帳
-      var appIconSize = 56;
+      // 標頭第一行：App 圖示徽章 + 日常記帳（放大 1.2 倍）
+      var appIconSize = 67;
       if(appIcon){
-        roundRectPath(ctx, x, y, appIconSize, appIconSize, 15);
+        roundRectPath(ctx, x, y, appIconSize, appIconSize, 18);
         ctx.save(); ctx.clip();
         ctx.drawImage(appIcon, x, y, appIconSize, appIconSize);
         ctx.restore();
       }
       ctx.fillStyle = "#6E74C7";
-      ctx.font = "700 34px " + fontFamily;
+      ctx.font = "700 41px " + fontFamily;
       ctx.textBaseline = "middle";
       ctx.fillText("日常記帳", x + appIconSize + 20, y + appIconSize / 2 + 2);
 
-      // 標頭第二行：帳本自己的圖示 + 帳本名稱
+      // 標頭第二行：帳本自己的圖示（縮小 0.9 倍） + 帳本名稱
       var catRowY = y + appIconSize + 32;
-      var catIconSize = 84;
+      var catIconSize = 76;
       if(catIcon){
         roundRectPath(ctx, x, catRowY, catIconSize, catIconSize, 22);
         ctx.save(); ctx.clip();
@@ -1211,7 +1211,7 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       var today = new Date();
-      var footText = "日常記帳 · " + cat.name + " · 匯出於 " + formatDate(today.getTime());
+      var footText = "日常記帳 · " + cat.name + " · " + formatDate(today.getTime());
       ctx.fillText(footText, W / 2, H - pad - footerH / 2 + 10);
       ctx.textAlign = "left";
 
