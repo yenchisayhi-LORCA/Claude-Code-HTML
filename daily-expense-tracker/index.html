@@ -119,13 +119,16 @@
     box-shadow:0 4px 0 var(--warn-dark);
   }
 
-  /* bottom bar */
+  /* bottom bar：顯示與否直接綁定 #view-detail 的 active class，跟畫面本身同一個開關，不會不同步 */
   .bottom-bar{
     position:fixed;left:0;right:0;bottom:0;z-index:5;
     background:var(--card);box-shadow:0 -6px 18px rgba(30,58,138,.14);
     padding:10px 26px calc(10px + env(safe-area-inset-bottom));
     display:flex;align-items:center;justify-content:space-between;
   }
+  #bottomBarDetail{display:none;}
+  body:has(#view-detail.active) #bottomBarHome{display:none;}
+  body:has(#view-detail.active) #bottomBarDetail{display:flex;}
   .bottom-bar-inner{max-width:480px;margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between;}
   .bar-btn{
     background:none;border:none;color:var(--primary);cursor:pointer;
@@ -318,7 +321,7 @@
   </div>
 
   <!-- 明細頁底部工具列 -->
-  <div id="bottomBarDetail" class="bottom-bar" hidden>
+  <div id="bottomBarDetail" class="bottom-bar">
     <div class="bottom-bar-inner">
       <button id="btnClearEntries" class="bar-btn danger" title="清空這本帳的紀錄" aria-label="清空這本帳的紀錄">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
@@ -563,8 +566,6 @@
     viewDetail: document.getElementById("view-detail"),
     catListWrap: document.getElementById("catListWrap"),
     homeEmptyState: document.getElementById("homeEmptyState"),
-    bottomBarHome: document.getElementById("bottomBarHome"),
-    bottomBarDetail: document.getElementById("bottomBarDetail"),
 
     btnManage: document.getElementById("btnManage"),
     btnAddCategory: document.getElementById("btnAddCategory"),
@@ -696,8 +697,6 @@
     currentCategoryId = null;
     els.viewDetail.classList.remove("active");
     els.viewHome.classList.remove("hidden");
-    els.bottomBarDetail.hidden = true;
-    els.bottomBarHome.hidden = false;
     renderHome();
   }
 
@@ -707,8 +706,6 @@
     updateManageBtn();
     els.viewHome.classList.add("hidden");
     els.viewDetail.classList.add("active");
-    els.bottomBarHome.hidden = true;
-    els.bottomBarDetail.hidden = false;
     renderDetail();
   }
 
