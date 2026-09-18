@@ -50,17 +50,20 @@
   }
   .picker-wrap h2{ margin:0 0 6px; }
   .picker-toolbar{ display:flex; gap:10px; flex-wrap:wrap; margin:16px 0 20px; }
-  .grade-folder{
-    border:1px solid #c7cbd4; border-radius:6px; margin-bottom:12px; overflow:hidden; background:#fafbfd;
+  .folder-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:14px;
   }
-  .grade-folder summary{
-    cursor:pointer; padding:10px 14px; font-weight:700; font-size:14px; color:var(--accent);
-    background:var(--accent-light); list-style:none; display:flex; align-items:center;
+  .folder-tile{
+    font-family:inherit; border:1px solid #c7cbd4; border-radius:8px; background:#fff;
+    padding:20px 10px; display:flex; flex-direction:column; align-items:center; gap:6px;
+    cursor:pointer;
   }
-  .grade-folder summary::-webkit-details-marker{ display:none; }
-  .grade-folder summary::before{ content:"▶"; font-size:11px; margin-right:8px; transition:transform .15s; }
-  .grade-folder[open] summary::before{ transform:rotate(90deg); }
-  .grade-folder .record-list{ padding:12px; background:#fff; }
+  .folder-tile:hover{ background:var(--accent-light); border-color:var(--accent); }
+  .folder-tile-icon{ font-size:34px; }
+  .folder-tile-label{ font-weight:700; font-size:15px; color:#1a1a1a; }
+  .folder-tile-count{ font-size:12px; color:#777; }
+  .folder-back-row{ display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .folder-detail-heading{ margin:0; font-size:16px; }
   .folder-empty-hint{ color:#999; font-size:13px; margin:2px 0; }
   .record-list{ display:flex; flex-direction:column; gap:10px; }
   .record-item{
@@ -206,12 +209,20 @@
   .attachment-richtext ul, .attachment-richtext ol{ margin:0 0 0.6em; padding-left:1.4em; }
   .attachment-richtext .xlsx-sheet-title{ font-weight:700; margin:0.8em 0 0.3em; color:var(--accent); }
   .attachment-richtext .xlsx-sheet-title:first-child{ margin-top:0; }
-  .attachment-richtext .pptx-slide{
-    border:1px solid #ccc; border-radius:4px; padding:10px 12px; margin-bottom:12px; background:#fafbfd;
+  .attachment-richtext .pptx-slide-grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:12px 16px;
   }
-  .attachment-richtext .pptx-slide-label{ font-size:11px; color:#888; font-weight:700; margin-bottom:4px; }
-  .attachment-richtext .pptx-slide h3{ margin:0.1em 0 0.3em; }
-  .attachment-richtext .pptx-slide img{ max-width:220px; max-height:160px; margin:4px 6px 4px 0; border:1px solid #ddd; }
+  .attachment-richtext .pptx-slide-cell{ display:flex; flex-direction:column; align-items:center; }
+  .attachment-richtext .pptx-slide{
+    border:1px solid #999; border-radius:4px; padding:8px 10px; background:#fff;
+    width:100%; box-shadow:0 1px 2px rgba(0,0,0,.08); font-size:11.5px; line-height:1.45; min-height:70px;
+  }
+  .attachment-richtext .pptx-slide h3{ margin:0 0 0.3em; font-size:13px; text-align:center; }
+  .attachment-richtext .pptx-slide p{ margin:0 0 0.4em; }
+  .attachment-richtext .pptx-slide ul{ margin:0 0 0.4em; padding-left:1.1em; }
+  .attachment-richtext .pptx-slide li{ margin-bottom:2px; }
+  .attachment-richtext .pptx-slide img{ max-width:100%; max-height:90px; margin:3px 4px 3px 0; border:1px solid #ddd; }
+  .attachment-richtext .pptx-slide-number{ font-size:11px; color:#666; margin-top:4px; }
   .reupload-row{ margin-top:8px; font-size:12px; color:var(--danger); }
   .toast{
     position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
@@ -399,7 +410,7 @@
   <!-- ============ PAGE 4：附件 ============ -->
   <section class="sheet" id="page4">
     <h2 class="sheet-title">附件</h2>
-    <p class="hint">可上傳任何檔案作為附件。每個附件可個別選擇在 PDF 中「只顯示檔名」或「完整顯示附件內容」（圖片、PDF、Word（.docx）、Excel（.xlsx）、PowerPoint（.pptx）、純文字檔可完整顯示；其他格式僅能顯示檔名）。PowerPoint 完整顯示僅擷取每張投影片的文字與圖片內容，不會呈現原始版面設計。</p>
+    <p class="hint">可上傳任何檔案作為附件。每個附件可個別選擇在 PDF 中「只顯示檔名」或「完整顯示附件內容」（圖片、PDF、Word（.docx）、Excel（.xlsx）、PowerPoint（.pptx）、純文字檔可完整顯示；其他格式僅能顯示檔名）。PowerPoint 完整顯示會把每張投影片的文字與圖片內容排成像「講義（6 張投影片／頁）」的兩欄小卡格式，方便一次看到較多張投影片，但不會呈現原始投影片的版面設計與色彩。</p>
     <div id="attachmentList"></div>
     <button type="button" class="add-btn" id="btnAddAttachment">＋ 新增附件</button>
   </section>
@@ -909,6 +920,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
 
   var currentRecordId = null;
   var currentRecordTitleIsCustom = false;
+  var currentFolderKey = null; // null = folder-tile view; a grade key or "未分類" = inside that folder
   var pendingImportTarget = null;
 
   var FIELD_IDS = [
@@ -1511,7 +1523,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
 
       return Promise.all(slidePromises);
     }).then(function(slides){
-      return slides.map(function(slide){
+      var cells = slides.map(function(slide){
         var innerParts = slide.parts.map(function(part){
           if (part.isTitle){
             return "<h3>" + escapeHtml(part.lines.join(" ")) + "</h3>";
@@ -1522,8 +1534,12 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
           return "<ul>" + part.lines.map(function(l){ return "<li>" + escapeHtml(l) + "</li>"; }).join("") + "</ul>";
         }).join("");
         var imagesHtml = slide.images.map(function(src){ return '<img src="' + src + '">'; }).join("");
-        return '<div class="pptx-slide"><div class="pptx-slide-label">投影片 ' + slide.index + "</div>" + innerParts + imagesHtml + "</div>";
+        return '<div class="pptx-slide-cell">' +
+          '<div class="pptx-slide">' + innerParts + imagesHtml + "</div>" +
+          '<div class="pptx-slide-number">' + slide.index + "</div>" +
+          "</div>";
       }).join("");
+      return '<div class="pptx-slide-grid">' + cells + "</div>";
     });
   }
 
@@ -1936,6 +1952,27 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     try { return localStorage.getItem(LAST_OPEN_KEY); } catch (e){ return null; }
   }
 
+  // Prefer the record's own saved grade, but fall back to parsing it out of
+  // the title — this keeps older index entries (saved before grade tracking
+  // existed, or from a stale browser tab) sorted into the right folder
+  // without needing the record to be re-saved first.
+  function resolveGradeFolder(entry){
+    var fromGrade = normalizeGradeFolder(entry.grade);
+    if (fromGrade) return fromGrade;
+    var m = String(entry.title || "").match(/([一二三四五六1-6])\s*年級/);
+    return m ? normalizeGradeFolder(m[1]) : null;
+  }
+
+  function backfillIndexGrade(id, grade){
+    if (!grade) return;
+    var list = loadIndexList();
+    var entry = list.filter(function(e){ return e.id === id; })[0];
+    if (entry && !entry.grade){
+      entry.grade = grade;
+      saveIndexList(list);
+    }
+  }
+
   function openRecord(id){
     var data = readRecordRaw(id);
     if (!data){
@@ -1946,6 +1983,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     currentRecordId = id;
     currentRecordTitleIsCustom = !!data.titleIsCustom;
     setLastOpenId(id);
+    backfillIndexGrade(id, (data.fields || {}).f_grade || "");
     loadData(data);
     var t = data.savedAt ? new Date(data.savedAt) : null;
     updateSaveStatus(t ? "已載入（" + t.toLocaleString() + "）" : "已載入");
@@ -2045,9 +2083,10 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   }
 
   // ---------- Picker screen ----------
-  function showPickerScreen(){
+  function showPickerScreen(openFolderKey){
     if (currentRecordId) saveToStorage(false);
     currentRecordId = null;
+    currentFolderKey = openFolderKey || null;
     updateCurrentRecordTitleDisplay("");
     renderRecordList();
     document.getElementById("pickerScreen").style.display = "";
@@ -2122,6 +2161,23 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     return item;
   }
 
+  function groupIndexByFolder(index){
+    var byFolder = {};
+    GRADE_FOLDER_ORDER.forEach(function(g){ byFolder[g] = []; });
+    var uncategorized = [];
+    index.forEach(function(entry){
+      var folder = resolveGradeFolder(entry);
+      if (folder) byFolder[folder].push(entry);
+      else uncategorized.push(entry);
+    });
+    if (uncategorized.length) byFolder["未分類"] = uncategorized;
+    return byFolder;
+  }
+
+  function folderLabel(folderKey){
+    return folderKey === "未分類" ? "未分類（尚未填年級）" : (folderKey + "年級");
+  }
+
   function renderRecordList(){
     var listEl = document.getElementById("recordList");
     var emptyHint = document.getElementById("recordListEmptyHint");
@@ -2129,41 +2185,64 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     listEl.innerHTML = "";
     emptyHint.style.display = index.length ? "none" : "block";
 
-    var byFolder = {};
-    GRADE_FOLDER_ORDER.forEach(function(g){ byFolder[g] = []; });
-    byFolder["未分類"] = [];
-    index.forEach(function(entry){
-      var folder = normalizeGradeFolder(entry.grade) || "未分類";
-      byFolder[folder].push(entry);
-    });
+    var byFolder = groupIndexByFolder(index);
+    var folderKeys = Object.keys(byFolder);
 
-    var folderKeys = GRADE_FOLDER_ORDER.concat(byFolder["未分類"].length ? ["未分類"] : []);
-    folderKeys.forEach(function(folderKey){
-      var entries = byFolder[folderKey].slice().sort(function(a, b){
-        return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+    if (currentFolderKey === null){
+      var grid = document.createElement("div");
+      grid.className = "folder-grid";
+      folderKeys.forEach(function(folderKey){
+        var entries = byFolder[folderKey];
+        var tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "folder-tile";
+        tile.innerHTML =
+          '<div class="folder-tile-icon">📁</div>' +
+          '<div class="folder-tile-label"></div>' +
+          '<div class="folder-tile-count"></div>';
+        tile.querySelector(".folder-tile-label").textContent = folderLabel(folderKey);
+        tile.querySelector(".folder-tile-count").textContent = entries.length + " 份";
+        tile.addEventListener("click", function(){
+          currentFolderKey = folderKey;
+          renderRecordList();
+        });
+        grid.appendChild(tile);
       });
+      listEl.appendChild(grid);
+      return;
+    }
 
-      var details = document.createElement("details");
-      details.className = "grade-folder";
-      details.open = true;
-
-      var summary = document.createElement("summary");
-      summary.textContent = (folderKey === "未分類" ? "未分類（尚未填年級）" : (folderKey + "年級")) + "（" + entries.length + "）";
-      details.appendChild(summary);
-
-      var folderList = document.createElement("div");
-      folderList.className = "record-list";
-      if (entries.length === 0){
-        var placeholder = document.createElement("p");
-        placeholder.className = "folder-empty-hint";
-        placeholder.textContent = "（這個年級目前沒有紀錄）";
-        folderList.appendChild(placeholder);
-      } else {
-        entries.forEach(function(entry){ folderList.appendChild(createRecordItemEl(entry)); });
-      }
-      details.appendChild(folderList);
-      listEl.appendChild(details);
+    var backRow = document.createElement("div");
+    backRow.className = "folder-back-row";
+    var backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "ghost-light";
+    backBtn.textContent = "← 返回資料夾列表";
+    backBtn.addEventListener("click", function(){
+      currentFolderKey = null;
+      renderRecordList();
     });
+    backRow.appendChild(backBtn);
+    var heading = document.createElement("h3");
+    heading.className = "folder-detail-heading";
+    heading.textContent = folderLabel(currentFolderKey);
+    backRow.appendChild(heading);
+    listEl.appendChild(backRow);
+
+    var entries = (byFolder[currentFolderKey] || []).slice().sort(function(a, b){
+      return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+    });
+    var folderList = document.createElement("div");
+    folderList.className = "record-list";
+    if (entries.length === 0){
+      var placeholder = document.createElement("p");
+      placeholder.className = "folder-empty-hint";
+      placeholder.textContent = "（這個資料夾目前沒有紀錄）";
+      folderList.appendChild(placeholder);
+    } else {
+      entries.forEach(function(entry){ folderList.appendChild(createRecordItemEl(entry)); });
+    }
+    listEl.appendChild(folderList);
   }
 
   // ---------- JSON backup / restore ----------
@@ -2260,7 +2339,10 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     reader.readAsText(file);
   }
 
-  document.getElementById("btnSwitchRecord").addEventListener("click", showPickerScreen);
+  document.getElementById("btnSwitchRecord").addEventListener("click", function(){
+    var folder = currentRecordId ? (normalizeGradeFolder(state.fields.f_grade) || "未分類") : null;
+    showPickerScreen(folder);
+  });
   document.getElementById("btnNewRecord").addEventListener("click", function(){
     openRecord(createNewRecord());
   });
@@ -2312,7 +2394,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
 
   var AVOID_BREAK_SELECTOR = [
     ".row", ".subblock", ".photo-block", ".sig-card",
-    ".attachment-block", ".attachment-page", ".attachment-image",
+    ".attachment-block", ".attachment-page", ".attachment-image", ".pptx-slide-cell",
     ".sign-line", ".title-line", ".letterhead"
   ].join(", ");
 
