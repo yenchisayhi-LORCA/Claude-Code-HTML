@@ -19,7 +19,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&family=Huninn&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --blue:#2F5FD1;
@@ -46,6 +46,11 @@
     padding-bottom:40px;
   }
   h1,h2,.brand-font{font-family:inherit;}
+
+  /* wider screens (desktop/tablet) get a different body font than phones */
+  @media (min-width:600px){
+    body{font-family:'Huninn','Nunito','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif;}
+  }
 
   /* decorative background blobs — big overlapping shapes on a solid blue backdrop */
   .bg-decor{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
