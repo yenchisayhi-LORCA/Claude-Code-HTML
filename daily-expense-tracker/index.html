@@ -1115,21 +1115,21 @@
       var y = pad + innerPad;
 
       // 標頭第一行：App 圖示徽章（再放大 1.3 倍） + 日常記帳
-      var appIconSize = 87;
+      var appIconSize = 113;
       if(appIcon){
-        roundRectPath(ctx, x, y, appIconSize, appIconSize, 23);
+        roundRectPath(ctx, x, y, appIconSize, appIconSize, 30);
         ctx.save(); ctx.clip();
         ctx.drawImage(appIcon, x, y, appIconSize, appIconSize);
         ctx.restore();
       }
       ctx.fillStyle = "#6E74C7";
-      ctx.font = "700 41px " + fontFamily;
+      ctx.font = "900 41px " + fontFamily;
       ctx.textBaseline = "middle";
       ctx.fillText("日常記帳", x + appIconSize + 20, y + appIconSize / 2 + 2);
 
-      // 標頭第二行：帳本自己的圖示（縮小 0.9 倍） + 帳本名稱
+      // 標頭第二行：帳本自己的圖示（再縮小 0.9 倍） + 帳本名稱
       var catRowY = y + appIconSize + 32;
-      var catIconSize = 76;
+      var catIconSize = 68;
       if(catIcon){
         roundRectPath(ctx, x, catRowY, catIconSize, catIconSize, 22);
         ctx.save(); ctx.clip();
