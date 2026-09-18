@@ -50,6 +50,18 @@
   }
   .picker-wrap h2{ margin:0 0 6px; }
   .picker-toolbar{ display:flex; gap:10px; flex-wrap:wrap; margin:16px 0 20px; }
+  .grade-folder{
+    border:1px solid #c7cbd4; border-radius:6px; margin-bottom:12px; overflow:hidden; background:#fafbfd;
+  }
+  .grade-folder summary{
+    cursor:pointer; padding:10px 14px; font-weight:700; font-size:14px; color:var(--accent);
+    background:var(--accent-light); list-style:none; display:flex; align-items:center;
+  }
+  .grade-folder summary::-webkit-details-marker{ display:none; }
+  .grade-folder summary::before{ content:"▶"; font-size:11px; margin-right:8px; transition:transform .15s; }
+  .grade-folder[open] summary::before{ transform:rotate(90deg); }
+  .grade-folder .record-list{ padding:12px; background:#fff; }
+  .folder-empty-hint{ color:#999; font-size:13px; margin:2px 0; }
   .record-list{ display:flex; flex-direction:column; gap:10px; }
   .record-item{
     border:1px solid #c7cbd4; border-radius:6px; padding:12px 14px;
@@ -1836,11 +1848,24 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     localStorage.removeItem(recordKey(id));
   }
 
-  function upsertIndexEntry(id, title, updatedAt){
+  var GRADE_FOLDER_ORDER = ["一", "二", "三", "四", "五", "六"];
+  var GRADE_DIGIT_MAP = { "1": "一", "2": "二", "3": "三", "4": "四", "5": "五", "6": "六" };
+
+  function normalizeGradeFolder(grade){
+    var g = String(grade || "").trim();
+    if (!g) return null;
+    var digitMatch = g.match(/[1-6]/);
+    if (digitMatch) return GRADE_DIGIT_MAP[digitMatch[0]];
+    var cnMatch = g.match(/[一二三四五六]/);
+    if (cnMatch) return cnMatch[0];
+    return null;
+  }
+
+  function upsertIndexEntry(id, title, updatedAt, grade){
     var list = loadIndexList();
     var entry = list.filter(function(e){ return e.id === id; })[0];
-    if (entry){ entry.title = title; entry.updatedAt = updatedAt; }
-    else { list.unshift({ id: id, title: title, updatedAt: updatedAt }); }
+    if (entry){ entry.title = title; entry.updatedAt = updatedAt; entry.grade = grade; }
+    else { list.unshift({ id: id, title: title, updatedAt: updatedAt, grade: grade }); }
     saveIndexList(list);
   }
 
@@ -1858,7 +1883,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
       data.title = title;
       data.titleIsCustom = false;
       writeRecordRaw(id, data);
-      upsertIndexEntry(id, title, data.savedAt || new Date().toISOString());
+      upsertIndexEntry(id, title, data.savedAt || new Date().toISOString(), (data.fields || {}).f_grade || "");
       localStorage.removeItem(LEGACY_SINGLE_KEY);
     } catch (e){ console.error("migration failed", e); }
   }
@@ -1871,7 +1896,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
       fields: {}, discussions: [], photos: [], signatures: [], attachments: []
     };
     writeRecordRaw(id, blank);
-    upsertIndexEntry(id, blank.title, now);
+    upsertIndexEntry(id, blank.title, now, "");
     return id;
   }
 
@@ -1944,7 +1969,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
       data.titleIsCustom = currentRecordTitleIsCustom;
 
       writeRecordRaw(currentRecordId, data);
-      upsertIndexEntry(currentRecordId, title, data.savedAt);
+      upsertIndexEntry(currentRecordId, title, data.savedAt, state.fields.f_grade || "");
 
       updateSaveStatus("已儲存（" + new Date(data.savedAt).toLocaleString() + "）");
       updateCurrentRecordTitleDisplay(title);
@@ -2038,72 +2063,106 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     document.querySelector(".status-line").style.display = "";
   }
 
+  function createRecordItemEl(entry){
+    var item = document.createElement("div");
+    item.className = "record-item";
+    item.dataset.id = entry.id;
+
+    var info = document.createElement("div");
+    info.className = "record-info";
+
+    var titleInput = document.createElement("input");
+    titleInput.type = "text";
+    titleInput.className = "record-title-input";
+    titleInput.value = entry.title || "未命名紀錄";
+    titleInput.addEventListener("change", function(){
+      renameRecord(entry.id, titleInput.value);
+      renderRecordList();
+    });
+    info.appendChild(titleInput);
+
+    var meta = document.createElement("div");
+    meta.className = "record-meta";
+    var d = entry.updatedAt ? new Date(entry.updatedAt) : null;
+    meta.textContent = d ? ("最後更新：" + d.toLocaleString()) : "";
+    info.appendChild(meta);
+    item.appendChild(info);
+
+    var actions = document.createElement("div");
+    actions.className = "record-actions";
+
+    var openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "primary";
+    openBtn.textContent = "開啟";
+    openBtn.addEventListener("click", function(){ openRecord(entry.id); });
+    actions.appendChild(openBtn);
+
+    var exportBtn = document.createElement("button");
+    exportBtn.type = "button";
+    exportBtn.className = "ghost-light";
+    exportBtn.textContent = "匯出備份";
+    exportBtn.addEventListener("click", function(){ downloadSingleRecordBackup(entry.id); });
+    actions.appendChild(exportBtn);
+
+    var deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "danger";
+    deleteBtn.textContent = "刪除";
+    deleteBtn.addEventListener("click", function(){
+      if (confirm("確定要刪除「" + (entry.title || "未命名紀錄") + "」這份紀錄嗎？此動作無法復原。")){
+        deleteRecordById(entry.id);
+        renderRecordList();
+        toast("已刪除該份紀錄");
+      }
+    });
+    actions.appendChild(deleteBtn);
+
+    item.appendChild(actions);
+    return item;
+  }
+
   function renderRecordList(){
     var listEl = document.getElementById("recordList");
     var emptyHint = document.getElementById("recordListEmptyHint");
-    var index = loadIndexList().slice().sort(function(a, b){
-      return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
-    });
+    var index = loadIndexList();
     listEl.innerHTML = "";
     emptyHint.style.display = index.length ? "none" : "block";
 
+    var byFolder = {};
+    GRADE_FOLDER_ORDER.forEach(function(g){ byFolder[g] = []; });
+    byFolder["未分類"] = [];
     index.forEach(function(entry){
-      var item = document.createElement("div");
-      item.className = "record-item";
-      item.dataset.id = entry.id;
+      var folder = normalizeGradeFolder(entry.grade) || "未分類";
+      byFolder[folder].push(entry);
+    });
 
-      var info = document.createElement("div");
-      info.className = "record-info";
-
-      var titleInput = document.createElement("input");
-      titleInput.type = "text";
-      titleInput.className = "record-title-input";
-      titleInput.value = entry.title || "未命名紀錄";
-      titleInput.addEventListener("change", function(){
-        renameRecord(entry.id, titleInput.value);
-        renderRecordList();
+    var folderKeys = GRADE_FOLDER_ORDER.concat(byFolder["未分類"].length ? ["未分類"] : []);
+    folderKeys.forEach(function(folderKey){
+      var entries = byFolder[folderKey].slice().sort(function(a, b){
+        return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
       });
-      info.appendChild(titleInput);
 
-      var meta = document.createElement("div");
-      meta.className = "record-meta";
-      var d = entry.updatedAt ? new Date(entry.updatedAt) : null;
-      meta.textContent = d ? ("最後更新：" + d.toLocaleString()) : "";
-      info.appendChild(meta);
-      item.appendChild(info);
+      var details = document.createElement("details");
+      details.className = "grade-folder";
+      details.open = true;
 
-      var actions = document.createElement("div");
-      actions.className = "record-actions";
+      var summary = document.createElement("summary");
+      summary.textContent = (folderKey === "未分類" ? "未分類（尚未填年級）" : (folderKey + "年級")) + "（" + entries.length + "）";
+      details.appendChild(summary);
 
-      var openBtn = document.createElement("button");
-      openBtn.type = "button";
-      openBtn.className = "primary";
-      openBtn.textContent = "開啟";
-      openBtn.addEventListener("click", function(){ openRecord(entry.id); });
-      actions.appendChild(openBtn);
-
-      var exportBtn = document.createElement("button");
-      exportBtn.type = "button";
-      exportBtn.className = "ghost-light";
-      exportBtn.textContent = "匯出備份";
-      exportBtn.addEventListener("click", function(){ downloadSingleRecordBackup(entry.id); });
-      actions.appendChild(exportBtn);
-
-      var deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "danger";
-      deleteBtn.textContent = "刪除";
-      deleteBtn.addEventListener("click", function(){
-        if (confirm("確定要刪除「" + (entry.title || "未命名紀錄") + "」這份紀錄嗎？此動作無法復原。")){
-          deleteRecordById(entry.id);
-          renderRecordList();
-          toast("已刪除該份紀錄");
-        }
-      });
-      actions.appendChild(deleteBtn);
-
-      item.appendChild(actions);
-      listEl.appendChild(item);
+      var folderList = document.createElement("div");
+      folderList.className = "record-list";
+      if (entries.length === 0){
+        var placeholder = document.createElement("p");
+        placeholder.className = "folder-empty-hint";
+        placeholder.textContent = "（這個年級目前沒有紀錄）";
+        folderList.appendChild(placeholder);
+      } else {
+        entries.forEach(function(entry){ folderList.appendChild(createRecordItemEl(entry)); });
+      }
+      details.appendChild(folderList);
+      listEl.appendChild(details);
     });
   }
 
@@ -2152,7 +2211,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     if (typeof copy.titleIsCustom !== "boolean") copy.titleIsCustom = false;
     if (!copy.savedAt) copy.savedAt = new Date().toISOString();
     writeRecordRaw(id, copy);
-    upsertIndexEntry(id, copy.title, copy.savedAt);
+    upsertIndexEntry(id, copy.title, copy.savedAt, copy.fields.f_grade || "");
     return id;
   }
 
