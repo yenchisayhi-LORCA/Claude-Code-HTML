@@ -10,6 +10,7 @@
 - [📝 待辦清單](reward-todo-list/README.md)（單一 HTML 檔案的每日待辦清單，日期＋事項欄位、彩色分行、純本機不同步）
 - [🖼️ 照片沖印排版](photo-print-layout/README.md)（自訂底稿樣板，套照片匯出 4×6／5×7 沖印用圖檔）
 - [🧾 日常記帳](daily-expense-tracker/README.md)（單一 HTML 檔案的多帳本記帳工具，快速輸入金額＋備註、日期自動帶入，純本機不同步）
+- [📋 會議紀錄系統](meeting-minutes/README.md)（單一 HTML 檔案，仿學校會議紀錄表格式打字填寫，可上傳照片、多人手寫簽名，匯出成每頁都有校徽浮水印的 PDF）
 
 ## 功能
 
