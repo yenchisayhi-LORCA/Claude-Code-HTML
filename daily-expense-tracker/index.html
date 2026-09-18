@@ -1114,10 +1114,10 @@
       var rightX = W - pad - innerPad;
       var y = pad + innerPad;
 
-      // 標頭第一行：App 圖示徽章 + 日常記帳（放大 1.2 倍）
-      var appIconSize = 67;
+      // 標頭第一行：App 圖示徽章（再放大 1.3 倍） + 日常記帳
+      var appIconSize = 87;
       if(appIcon){
-        roundRectPath(ctx, x, y, appIconSize, appIconSize, 18);
+        roundRectPath(ctx, x, y, appIconSize, appIconSize, 23);
         ctx.save(); ctx.clip();
         ctx.drawImage(appIcon, x, y, appIconSize, appIconSize);
         ctx.restore();
