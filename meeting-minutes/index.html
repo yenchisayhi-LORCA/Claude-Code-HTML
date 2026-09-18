@@ -1920,6 +1920,31 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
         bottom: (r.bottom - containerTop) * scale
       });
     });
+    // Keep each section heading ("會議實況" / "簽名區" / "附件"), and each
+    // attachment's filename row, glued to the start of its own content —
+    // a page break can still fall between two sections/attachments that
+    // both fit, it just can't strand a heading or filename alone.
+    rootEl.querySelectorAll(".sheet-title, .attachment-filename-row").forEach(function(headingEl){
+      if (headingEl.offsetParent === null) return;
+      var headingRect = headingEl.getBoundingClientRect();
+      var sib = headingEl.nextElementSibling;
+      var target = null;
+      while (sib){
+        if (sib.offsetParent !== null){
+          var firstChild = sib.querySelector(AVOID_BREAK_SELECTOR);
+          target = (firstChild && firstChild.offsetParent !== null) ? firstChild : sib;
+          break;
+        }
+        sib = sib.nextElementSibling;
+      }
+      if (!target) return;
+      var targetRect = target.getBoundingClientRect();
+      if (targetRect.height <= 0) return;
+      rects.push({
+        top: (headingRect.top - containerTop) * scale,
+        bottom: (targetRect.bottom - containerTop) * scale
+      });
+    });
     return rects;
   }
 
@@ -2123,17 +2148,9 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
         var MARGIN_MM = 15;
         var contentWidth = pageWidth - MARGIN_MM * 2;
         var contentHeight = pageHeight - MARGIN_MM * 2;
+        var pdfRoot = document.getElementById("pdfRoot");
 
-        var sections = ["page1", "page2", "page3", "page4"];
-        var chain = Promise.resolve();
-        sections.forEach(function(id, idx){
-          chain = chain.then(function(){
-            var el = document.getElementById(id);
-            return addSectionToPdf(pdf, el, contentWidth, contentHeight, MARGIN_MM, MARGIN_MM, idx > 0);
-          });
-        });
-
-        return chain.then(function(){
+        return addSectionToPdf(pdf, pdfRoot, contentWidth, contentHeight, MARGIN_MM, MARGIN_MM, false).then(function(){
           stampWatermarks(pdf, pageWidth, pageHeight, aspect);
           pdf.save(buildFileNameBase() + ".pdf");
           toast("PDF 已匯出！");
