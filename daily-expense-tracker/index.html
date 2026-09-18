@@ -1073,17 +1073,19 @@
     var total = list.reduce(function(s, e){ return s + (Number(e.amount) || 0); }, 0);
     var accent = colorForEntry(cat.id);
 
-    if(document.fonts && document.fonts.ready){
-      document.fonts.load("900 56px 'Zen Maru Gothic'");
-      document.fonts.load("700 34px 'Zen Maru Gothic'");
-      document.fonts.load("500 28px 'Zen Maru Gothic'");
-    }
+    var dynamicText = "日常記帳" + cat.name + "花費明細" +
+      list.map(function(e){ return e.note || "（無備註）"; }).join("");
+    var fontLoads = (document.fonts && document.fonts.load) ? [
+      document.fonts.load("900 56px 'Zen Maru Gothic'", dynamicText),
+      document.fonts.load("700 34px 'Zen Maru Gothic'", dynamicText),
+      document.fonts.load("500 28px 'Zen Maru Gothic'", dynamicText)
+    ] : [];
 
     Promise.all([
       loadImage("icons/icon-192.png").catch(function(){ return null; }),
       loadImage(iconImageSrc(cat.icon, accent)).catch(function(){ return null; }),
       (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve()
-    ]).then(function(res){
+    ].concat(fontLoads)).then(function(res){
       var appIcon = res[0];
       var catIcon = res[1];
       var canvas = document.createElement("canvas");
