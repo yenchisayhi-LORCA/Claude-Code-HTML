@@ -457,6 +457,14 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
   }
 
+  // 給 <img>/canvas 用的圖示來源：動物是真的圖片，其餘用指定顏色現畫成 SVG data URI
+  function iconImageSrc(key, color){
+    if(ICON_IMAGES[key]) return ICON_IMAGES[key];
+    var inner = ICON_SVGS[key] || ICON_SVGS[ICONS[0]];
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + color + '" style="color:' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
   // 圖示徽章底色循環，走粉嫩派對色（粉紅／粉藍／鵝黃輪流）
   var PALETTE = [
     { bg:"#FBE1DD" },
@@ -1050,7 +1058,7 @@
     var W = 1080;
     var pad = 48;
     var innerPad = 56;
-    var headerH = 200;
+    var headerH = 280;
     var totalH = 150;
     var sectionLabelH = 80;
     var rowH = 148;
@@ -1068,9 +1076,11 @@
 
     Promise.all([
       loadImage("icons/icon-192.png").catch(function(){ return null; }),
+      loadImage(iconImageSrc(cat.icon, accent)).catch(function(){ return null; }),
       (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve()
     ]).then(function(res){
       var appIcon = res[0];
+      var catIcon = res[1];
       var canvas = document.createElement("canvas");
       canvas.width = W;
       canvas.height = H;
@@ -1102,21 +1112,39 @@
       var rightX = W - pad - innerPad;
       var y = pad + innerPad;
 
-      // 標頭：App 圖示徽章 + eyebrow + 帳本名稱
+      // 標頭第一行：App 圖示徽章 + 日常記帳
+      var appIconSize = 56;
       if(appIcon){
-        roundRectPath(ctx, x, y, 84, 84, 22);
+        roundRectPath(ctx, x, y, appIconSize, appIconSize, 15);
         ctx.save(); ctx.clip();
-        ctx.drawImage(appIcon, x, y, 84, 84);
+        ctx.drawImage(appIcon, x, y, appIconSize, appIconSize);
         ctx.restore();
       }
-      var textX = x + (appIcon ? 84 + 28 : 0);
+      ctx.fillStyle = "#6E74C7";
+      ctx.font = "700 34px " + fontFamily;
+      ctx.textBaseline = "middle";
+      ctx.fillText("日常記帳", x + appIconSize + 20, y + appIconSize / 2 + 2);
+
+      // 標頭第二行：帳本自己的圖示 + 帳本名稱
+      var catRowY = y + appIconSize + 32;
+      var catIconSize = 84;
+      if(catIcon){
+        roundRectPath(ctx, x, catRowY, catIconSize, catIconSize, 22);
+        ctx.save(); ctx.clip();
+        ctx.fillStyle = "#FFFBF2";
+        ctx.fillRect(x, catRowY, catIconSize, catIconSize);
+        var pad2 = ICON_IMAGES[cat.icon] ? 0 : catIconSize * 0.22;
+        ctx.drawImage(catIcon, x + pad2, catRowY + pad2, catIconSize - pad2 * 2, catIconSize - pad2 * 2);
+        ctx.restore();
+      }
+      var textX = x + catIconSize + 28;
       ctx.fillStyle = "#A68990";
       ctx.font = "700 24px " + fontFamily;
       ctx.textBaseline = "top";
-      ctx.fillText("DAILY EXPENSE REPORT", textX, y + 6);
+      ctx.fillText("DAILY EXPENSE REPORT", textX, catRowY + 6);
       ctx.fillStyle = accent;
       ctx.font = "900 56px " + fontFamily;
-      ctx.fillText(cat.name, textX, y + 38);
+      ctx.fillText(cat.name, textX, catRowY + 38);
 
       y += headerH;
       ctx.strokeStyle = "#F3D9D8";
