@@ -694,6 +694,9 @@
     if(dateStr === tomorrow) return "明天 "+(d.getMonth()+1)+"/"+d.getDate();
     return (d.getMonth()+1)+"/"+d.getDate()+" "+WEEKDAYS[d.getDay()];
   }
+  function isTaskOverdue(task){
+    return !task.done && task.date < todayStr();
+  }
 
   function render(){
     var visible = hideDone ? tasks.filter(function(t){ return !t.done; }) : tasks.slice();
@@ -741,6 +744,12 @@
     textEl.textContent = t.text;
     content.appendChild(textEl);
     item.appendChild(content);
+
+    if(isTaskOverdue(t)){
+      var badgeWrap = document.createElement("div");
+      badgeWrap.innerHTML = REMINDER_BADGE;
+      item.appendChild(badgeWrap.firstElementChild);
+    }
 
     var actions = document.createElement("div");
     actions.className = "row-actions";
