@@ -153,10 +153,26 @@ function hashMemberName(name) {
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
   return Math.abs(hash);
 }
+// 使用者要求特定姓名固定用哪個顏色，優先於下面的姓名雜湊自動分配。
+const MEMBER_COLOR_OVERRIDES = {
+  林小琪: MEMBER_COLOR_PALETTE[3], // 黃色（--warn 色系）
+};
 function assignMemberColors(members) {
   const map = {};
   const used = new Set();
+
+  // 先處理有指定顏色的人，把顏色卡位卡住
   members.forEach((m) => {
+    const override = MEMBER_COLOR_OVERRIDES[m.name];
+    if (!override) return;
+    map[m.id] = override;
+    used.add(MEMBER_COLOR_PALETTE.indexOf(override));
+  });
+
+  // 其餘沒有指定顏色的人才用姓名雜湊分配，跳過已經被指定顏色卡位的位置，
+  // 避免自動分配的人跟被指定顏色的人撞色。
+  members.forEach((m) => {
+    if (map[m.id]) return;
     let idx = hashMemberName(m.name || '') % MEMBER_COLOR_PALETTE.length;
     let tries = 0;
     while (used.has(idx) && tries < MEMBER_COLOR_PALETTE.length) {
@@ -166,6 +182,7 @@ function assignMemberColors(members) {
     used.add(idx);
     map[m.id] = MEMBER_COLOR_PALETTE[idx];
   });
+
   return map;
 }
 
