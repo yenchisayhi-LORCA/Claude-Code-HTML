@@ -32,12 +32,13 @@ function loadRaw() {
 }
 
 function emptyState() {
-  return { activeTripId: null, trips: {}, ratesCache: {}, people: [], accountUpdatedAt: 0 };
+  return { activeTripId: null, trips: {}, ratesCache: {}, people: [], accountUpdatedAt: 0, deletedTrips: {} };
 }
 
 let state = loadRaw() || emptyState();
 if (!Array.isArray(state.people)) state.people = []; // 相容舊版本存的資料（還沒有成員名單功能）
 if (typeof state.accountUpdatedAt !== 'number') state.accountUpdatedAt = 0; // 相容舊版本存的資料
+if (!state.deletedTrips || typeof state.deletedTrips !== 'object') state.deletedTrips = {}; // 相容舊版本存的資料
 
 // 雲端同步曾經靠「這次是不是剛點信件連結登入」這種跟資料新舊完全無關的訊號，去猜「本機
 // 跟雲端不一樣時該用哪一份」——這在同一帳號同時登入多台裝置時是錯的：切到另一台裝置時，
@@ -76,9 +77,18 @@ export function persist() {
   notify();
 }
 
-// 只有 activeTripId + trips + people 需要跨裝置同步，ratesCache 只是本機快取，各裝置自己抓即可
+// 只有 activeTripId + trips + people + deletedTrips 需要跨裝置同步，ratesCache 只是本機快取，
+// 各裝置自己抓即可。deletedTrips 是「刪除旅程」的墓碑記錄（tripId -> 刪除時間），見下面
+// deleteTrip() 跟 cloud-sync.js mergeTripsByTimestamp() 開頭的說明，用來擋掉雲端同步還沒
+// 跟上刪除動作前，被舊資料誤判成「新旅程」重新救回來的問題。
 export function getSyncableState() {
-  return { activeTripId: state.activeTripId, trips: state.trips, people: state.people, accountUpdatedAt: state.accountUpdatedAt };
+  return {
+    activeTripId: state.activeTripId,
+    trips: state.trips,
+    people: state.people,
+    accountUpdatedAt: state.accountUpdatedAt,
+    deletedTrips: state.deletedTrips,
+  };
 }
 
 // 用雲端資料整批覆蓋本機的 activeTripId + trips + people（不動 ratesCache）。只有在本機根本
@@ -102,6 +112,7 @@ export function applySyncedState(remote) {
   state.trips = remoteTrips;
   state.people = remote.people || [];
   state.accountUpdatedAt = remote.accountUpdatedAt || 0;
+  state.deletedTrips = remote.deletedTrips || {};
   persist();
 }
 
@@ -113,11 +124,36 @@ export function mergeRemoteTrips(tripsById) {
   persist();
 }
 
-// 只在雲端的帳號資料（activeTripId + people）比本機新的時候呼叫，整份採用雲端版本
+// 把「別的裝置已經刪除、這裡本機還留著（比較舊的）副本」的旅程從本機移除，同時記下墓碑
+// 時間戳記——見 cloud-sync.js mergeTripsByTimestamp() 開頭的說明，這樣之後同一趟旅程的
+// 墓碑訊息即使被本機蓋掉一次，也不會又被本機這份舊資料誤判成「還存在」重新推回雲端救活。
+export function applyRemoteTripDeletions(deletions) {
+  let changed = false;
+  for (const [tripId, deletedAt] of Object.entries(deletions)) {
+    if (state.trips[tripId]) {
+      delete state.trips[tripId];
+      changed = true;
+    }
+    if (!state.deletedTrips[tripId] || state.deletedTrips[tripId] < deletedAt) {
+      state.deletedTrips[tripId] = deletedAt;
+      changed = true;
+    }
+  }
+  if (state.activeTripId && deletions[state.activeTripId] != null) {
+    const remaining = getTrips();
+    state.activeTripId = remaining.length ? remaining[0].id : null;
+  }
+  if (changed) persist();
+}
+
+// 只在雲端的帳號資料（activeTripId + people）比本機新的時候呼叫，整份採用雲端版本；
+// deletedTrips 是墓碑記錄，兩邊可能各自有本機/雲端還沒同步過去的獨立刪除紀錄，用合併
+// （而不是整份覆蓋）保留雙方都有的墓碑，避免任何一邊的刪除動作被另一邊覆蓋回去。
 export function applyRemoteAccountFields(remote) {
   state.activeTripId = remote.activeTripId ?? state.activeTripId;
   state.people = remote.people || state.people;
   state.accountUpdatedAt = remote.accountUpdatedAt || 0;
+  state.deletedTrips = { ...state.deletedTrips, ...(remote.deletedTrips || {}) };
   persist();
 }
 
@@ -289,6 +325,11 @@ export function setTripShareViewers(tripId, emails) {
 
 export function deleteTrip(tripId) {
   delete state.trips[tripId];
+  // 記一筆刪除時間的墓碑，隨帳號資料一起同步出去——雲端同步是非同步、有 debounce 延遲的，
+  // 使用者刪除後很可能在雲端還沒收到這個刪除動作前就重新整理頁面；沒有這筆墓碑的話，
+  // 下次讀到雲端那份還沒被刪除的舊資料時，會被誤判成「雲端有、本機沒有」的新旅程救回來，
+  // 造成「明明刪除了，重新整理後又跑回來」。詳見 cloud-sync.js mergeTripsByTimestamp()。
+  state.deletedTrips[tripId] = Date.now();
   if (state.activeTripId === tripId) {
     const remaining = getTrips();
     state.activeTripId = remaining.length ? remaining[0].id : null;
