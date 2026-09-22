@@ -167,6 +167,8 @@ function hashMemberName(name) {
 // 使用者要求特定姓名固定用哪個顏色，優先於下面的姓名雜湊自動分配。
 const MEMBER_COLOR_OVERRIDES = {
   林小琪: MEMBER_COLOR_PALETTE[3], // 黃色（--warn 色系）
+  范小芳: MEMBER_COLOR_PALETTE[6], // 粉紅
+  邱小芳: MEMBER_COLOR_PALETTE[8], // 淺藍
 };
 function assignMemberColors(members) {
   const map = {};
