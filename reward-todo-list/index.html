@@ -402,27 +402,18 @@
   function loadHideDoneRoutine(){ return localStorage.getItem(HIDE_DONE_ROUTINE_KEY) === "1"; }
   function saveHideDoneRoutine(v){ localStorage.setItem(HIDE_DONE_ROUTINE_KEY, v ? "1" : "0"); }
 
-  // the date this routine's current cycle last landed on — weekly picks the
-  // most recent matching weekday, monthly picks this (or last) month's day,
-  // clamped to that month's last day so e.g. "31號" still works in April
+  // the target date for the CURRENT period — weekly is this calendar
+  // week's matching weekday, monthly is this month's day (clamped to that
+  // month's last day so e.g. "31號" still works in April) — regardless of
+  // whether that date is still upcoming or already behind today
   function computeOccurrence(routine, today){
     var d = parseDateStr(today);
     if(routine.repeatType === "weekly"){
-      var diff = (d.getDay() - routine.weekday + 7) % 7;
-      return addDays(today, -diff);
+      return addDays(today, routine.weekday - d.getDay());
     }
     var y = d.getFullYear(), m = d.getMonth();
-    function clampedDate(year, month){
-      var lastDay = new Date(year, month+1, 0).getDate();
-      return toDateStr(new Date(year, month, Math.min(routine.dayOfMonth, lastDay)));
-    }
-    var candidate = clampedDate(y, m);
-    if(candidate > today){
-      m -= 1;
-      if(m < 0){ m = 11; y -= 1; }
-      candidate = clampedDate(y, m);
-    }
-    return candidate;
+    var lastDay = new Date(y, m+1, 0).getDate();
+    return toDateStr(new Date(y, m, Math.min(routine.dayOfMonth, lastDay)));
   }
   function formatRepeatBadge(routine){
     if(routine.repeatType === "weekly") return "每"+WEEKDAYS[routine.weekday];
