@@ -893,7 +893,11 @@
 
   function renderRoutines(){
     var visible = hideDoneRoutine ? routines.filter(function(r){ return !isRoutineDone(r); }) : routines.slice();
-    visible.sort(function(a,b){ return a.createdAt - b.createdAt; });
+    visible.sort(function(a,b){
+      if(a.repeatType !== b.repeatType) return a.repeatType === "monthly" ? -1 : 1;
+      if(a.repeatType === "monthly") return a.dayOfMonth - b.dayOfMonth;
+      return a.weekday - b.weekday;
+    });
 
     els.routineListWrap.innerHTML = "";
     if(visible.length === 0){
