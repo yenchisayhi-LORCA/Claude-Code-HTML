@@ -128,12 +128,19 @@ export function renderExpenseReport(data) {
   '</div>';
 }
 
-// 匯出圖卡「花費明細」每位成員的分攤標籤要各自上色，方便一眼看出同一筆花費是哪些人分攤——
-// 顏色就從網站背景色塊的四色系抽（原色見 css/style.css :root 的 --primary/--teal/--danger/--warn），
-// 這裡用對應的 -dark 版本，是因為要疊在明細卡片的白色底色上，原本偏亮的顏色可讀性不夠。
+// 匯出圖卡每位成員要各自上色，讓「花費明細」的付款人/分攤名單、「每人結算」卡片、
+// 「建議轉帳」的頭像都用同一套顏色，一眼就能對起來是同一個人——顏色就從網站背景色塊的
+// 四色系抽（原色見 css/style.css :root 的 --primary/--teal/--danger/--warn），text 用對應的
+// -dark 版本疊在白色卡片上維持可讀性，bg 用對應的 -tint 版本給頭像圓底用。
 // 每次匯出重新洗牌一次（要求是「隨機使用」），同一次匯出裡同一個成員全程同一個顏色；
 // 成員數超過 4 人時顏色會循環重複。
-const MEMBER_COLOR_PALETTE = ['#2A3789', '#2E8C84', '#B93E34', '#D9971A'];
+const MEMBER_COLOR_PALETTE = [
+  { text: '#2A3789', bg: '#EDEFFB' },
+  { text: '#2E8C84', bg: '#EDF9F4' },
+  { text: '#B93E34', bg: '#FDECEA' },
+  { text: '#D9971A', bg: '#FEF6E4' },
+];
+const DEFAULT_MEMBER_COLOR = { text: '#6B5B4E', bg: '#F6EDE2' };
 function assignMemberColors(members) {
   const shuffled = [...MEMBER_COLOR_PALETTE].sort(() => Math.random() - 0.5);
   const map = {};
@@ -169,7 +176,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
           ? Object.keys(exp.splitCustom)
           : (exp.splitMembers || []);
       const splitNames = splitIds.map(memberName).join('、');
-      const splitEntries = splitIds.map((id) => ({ name: memberName(id), color: memberColors[id] || '#6B5B4E' }));
+      const splitEntries = splitIds.map((id) => ({ name: memberName(id), color: (memberColors[id] || DEFAULT_MEMBER_COLOR).text }));
       return {
         date: exp.date || '',
         type: iconKeyFor(cat ? cat.id : 'other'),
@@ -179,7 +186,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
         currency: exp.currency,
         twdAmount: showTwd ? convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache) : null,
         payer: memberName(exp.paidBy),
-        payerColor: memberColors[exp.paidBy] || '#6B5B4E',
+        payerColor: (memberColors[exp.paidBy] || DEFAULT_MEMBER_COLOR).text,
         splitNames,
         splitEntries,
       };
@@ -187,7 +194,9 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
 
   const settlements = transactions.map((t) => ({
     from: memberName(t.from),
+    fromColor: memberColors[t.from] || DEFAULT_MEMBER_COLOR,
     to: memberName(t.to),
+    toColor: memberColors[t.to] || DEFAULT_MEMBER_COLOR,
     amount: t.amount,
     currency: trip.baseCurrency,
     twdAmount: needsTwd ? baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache) : null,
@@ -203,6 +212,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
         const balance = memberStats.balances[m.id] || 0;
         return {
           name: m.name,
+          color: memberColors[m.id] || DEFAULT_MEMBER_COLOR,
           currency: trip.baseCurrency,
           spent: spentAmt,
           spentTwd: needsTwd ? baseAmountToTWD(spentAmt, trip.baseCurrency, ratesCache) : null,
