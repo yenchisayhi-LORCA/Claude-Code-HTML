@@ -132,8 +132,11 @@ export function renderExpenseReport(data) {
 // 「建議轉帳」的頭像都用同一套顏色，一眼就能對起來是同一個人——顏色就從網站背景色塊的
 // 四色系抽（原色見 css/style.css :root 的 --primary/--teal/--danger/--warn），text 用對應的
 // -dark 版本疊在白色卡片上維持可讀性，bg 用對應的 -tint 版本給頭像圓底用。
-// 每次匯出重新洗牌一次（要求是「隨機使用」），同一次匯出裡同一個成員全程同一個顏色；
-// 成員數超過 4 人時顏色會循環重複。
+// 一開始是每次匯出都重新洗牌一次，結果同一個人在「這次匯出」跟「下次匯出」（甚至只是
+// 分兩次點「總覽」「明細」各自匯出）會拿到不同顏色，使用者對照兩張圖卡或前後兩次匯出時
+// 會被搞混。改成用成員 id 算雜湊決定顏色——id 建立後不會變，所以同一個人不管匯出幾次、
+// 什麼時候匯出、甚至過幾天再匯出，顏色都固定一樣；同一趟旅程裡兩個人剛好雜湊到同一種
+// 顏色時，往後找下一個還沒用過的顏色，讓同一次匯出裡的人盡量兩兩不同、更好分辨。
 const MEMBER_COLOR_PALETTE = [
   { text: '#2A3789', bg: '#EDEFFB' },
   { text: '#2E8C84', bg: '#EDF9F4' },
@@ -141,10 +144,24 @@ const MEMBER_COLOR_PALETTE = [
   { text: '#D9971A', bg: '#FEF6E4' },
 ];
 const DEFAULT_MEMBER_COLOR = { text: '#6B5B4E', bg: '#F6EDE2' };
+function hashMemberId(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
 function assignMemberColors(members) {
-  const shuffled = [...MEMBER_COLOR_PALETTE].sort(() => Math.random() - 0.5);
   const map = {};
-  members.forEach((m, i) => { map[m.id] = shuffled[i % shuffled.length]; });
+  const used = new Set();
+  members.forEach((m) => {
+    let idx = hashMemberId(m.id) % MEMBER_COLOR_PALETTE.length;
+    let tries = 0;
+    while (used.has(idx) && tries < MEMBER_COLOR_PALETTE.length) {
+      idx = (idx + 1) % MEMBER_COLOR_PALETTE.length;
+      tries += 1;
+    }
+    used.add(idx);
+    map[m.id] = MEMBER_COLOR_PALETTE[idx];
+  });
   return map;
 }
 
