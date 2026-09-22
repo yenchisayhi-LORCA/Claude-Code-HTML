@@ -219,7 +219,7 @@ function drawSettleChip(ctx, x, cy, name, bg, fg) {
   ctx.fillStyle = fg; ctx.font = `900 15px ${FONT}`; ctx.textAlign = 'center';
   ctx.fillText(String(name || '').slice(-1), x + r, cy + 5);
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
+  ctx.fillStyle = fg; ctx.font = `900 16px ${FONT}`;
   ctx.fillText(name || '', x + r * 2 + 10, cy + 5);
   return x + r * 2 + 10 + ctx.measureText(name || '').width;
 }
@@ -360,7 +360,7 @@ function drawMemberCard(ctx, m, x, y, w, h, hasTwd) {
 
   const padX = 20;
   let ty = y + 16;
-  ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
+  ctx.fillStyle = (m.color && m.color.text) || '#3B3330'; ctx.font = `900 16px ${FONT}`;
   ctx.fillText(truncate(ctx, m.name || '', w - padX * 2), x + padX, ty + 12);
   ty += 26;
 
@@ -566,7 +566,8 @@ function drawSettleList(ctx, data, y) {
 
     const rowCenterY = s.twdAmount != null ? y + settleRowH / 2 - 9 : y + settleRowH / 2;
     let cx = SIDE_PAD + 24;
-    cx = drawSettleChip(ctx, cx, rowCenterY, s.from, '#FBE3CF', '#C4703A');
+    const fromColor = s.fromColor || { bg: '#FBE3CF', text: '#C4703A' };
+    cx = drawSettleChip(ctx, cx, rowCenterY, s.from, fromColor.bg, fromColor.text);
 
     ctx.strokeStyle = '#5FBFA8'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(cx + 6, rowCenterY); ctx.lineTo(cx + 40, rowCenterY); ctx.stroke();
@@ -574,7 +575,8 @@ function drawSettleList(ctx, data, y) {
     ctx.beginPath(); ctx.moveTo(cx + 40, rowCenterY - 6); ctx.lineTo(cx + 40, rowCenterY + 6); ctx.lineTo(cx + 49, rowCenterY); ctx.closePath(); ctx.fill();
     cx += 55;
 
-    cx = drawSettleChip(ctx, cx, rowCenterY, s.to, '#DCEFE6', '#3F8B76');
+    const toColor = s.toColor || { bg: '#DCEFE6', text: '#3F8B76' };
+    cx = drawSettleChip(ctx, cx, rowCenterY, s.to, toColor.bg, toColor.text);
 
     const amt = `${Number(s.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${s.currency || cur}`;
     ctx.font = `900 17px ${FONT}`;
