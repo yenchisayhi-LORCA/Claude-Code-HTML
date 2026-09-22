@@ -121,6 +121,7 @@
   .row-date{flex:0 0 auto;font-size:16px;font-weight:700;padding:2px 10px;border-radius:9px;background:rgba(255,255,255,.65);white-space:nowrap;}
   .row-text{flex:1 1 120px;font-size:20px;font-weight:700;word-break:break-word;color:var(--text);}
   .task-row.done .row-text{text-decoration:line-through;color:var(--text-soft);}
+  .row-note{flex:1 0 100%;font-size:14px;font-weight:400;color:var(--text-soft);word-break:break-word;}
   .row-actions{display:flex;gap:4px;flex:0 0 auto;}
   .icon-btn{
     border:none;background:rgba(255,255,255,.65);width:34px;height:34px;border-radius:9px;
@@ -240,6 +241,9 @@
             <div class="row">
               <input type="text" id="routineText" placeholder="輸入例行事項..." maxlength="80" required />
             </div>
+            <div class="row">
+              <input type="text" id="routineNote" placeholder="備註（選填）..." maxlength="80" />
+            </div>
             <button type="submit" class="btn-add">➕ 新增例行事項</button>
           </form>
         </section>
@@ -316,6 +320,7 @@
         </select>
       </div>
       <div class="row"><input type="text" id="routineEditText" maxlength="80" /></div>
+      <div class="row"><input type="text" id="routineEditNote" placeholder="備註（選填）..." maxlength="80" /></div>
       <div class="modal-btns">
         <button class="btn-cancel" id="routineEditCancelBtn" type="button">取消</button>
         <button class="btn-save" id="routineEditSaveBtn" type="button">儲存</button>
@@ -441,6 +446,7 @@
     routineWeekday: document.getElementById("routineWeekday"),
     routineDayOfMonth: document.getElementById("routineDayOfMonth"),
     routineText: document.getElementById("routineText"),
+    routineNote: document.getElementById("routineNote"),
     hideDoneRoutineBtn: document.getElementById("hideDoneRoutineBtn"),
     routineListWrap: document.getElementById("routineListWrap"),
     routineEmptyState: document.getElementById("routineEmptyState"),
@@ -450,6 +456,7 @@
     routineEditWeekday: document.getElementById("routineEditWeekday"),
     routineEditDayOfMonth: document.getElementById("routineEditDayOfMonth"),
     routineEditText: document.getElementById("routineEditText"),
+    routineEditNote: document.getElementById("routineEditNote"),
     routineEditSaveBtn: document.getElementById("routineEditSaveBtn"),
     routineEditCancelBtn: document.getElementById("routineEditCancelBtn")
   };
@@ -751,6 +758,7 @@
     var routine = {
       id: uid(),
       text: text,
+      note: els.routineNote.value.trim(),
       repeatType: repeatType,
       weekday: Number(els.routineWeekday.value),
       dayOfMonth: Number(els.routineDayOfMonth.value),
@@ -761,6 +769,7 @@
     routines.push(routine);
     saveRoutines(routines);
     els.routineText.value = "";
+    els.routineNote.value = "";
     els.routineText.focus();
     renderRoutines();
   }
@@ -806,6 +815,7 @@
     els.routineEditDayOfMonth.value = String(routine.dayOfMonth);
     syncRepeatFields(els.routineEditRepeatType, els.routineEditWeekday, els.routineEditDayOfMonth);
     els.routineEditText.value = routine.text;
+    els.routineEditNote.value = routine.note || "";
     els.routineEditModal.hidden = false;
   }
   function closeRoutineEdit(){ els.routineEditModal.hidden = true; editingRoutineId = null; }
@@ -815,6 +825,7 @@
     var text = els.routineEditText.value.trim();
     if(!text){ return; }
     routine.text = text;
+    routine.note = els.routineEditNote.value.trim();
     routine.repeatType = els.routineEditRepeatType.value;
     routine.weekday = Number(els.routineEditWeekday.value);
     routine.dayOfMonth = Number(els.routineEditDayOfMonth.value);
@@ -871,6 +882,12 @@
     textEl.className = "row-text";
     textEl.textContent = r.text;
     content.appendChild(textEl);
+    if(r.note){
+      var noteEl = document.createElement("span");
+      noteEl.className = "row-note";
+      noteEl.textContent = r.note;
+      content.appendChild(noteEl);
+    }
     item.appendChild(content);
 
     var actions = document.createElement("div");
