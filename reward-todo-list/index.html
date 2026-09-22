@@ -196,6 +196,9 @@
               <input type="date" id="taskDate" />
               <input type="text" id="taskText" placeholder="輸入要做的事情..." maxlength="80" required />
             </div>
+            <div class="row">
+              <input type="time" id="taskTime" />
+            </div>
             <button type="submit" class="btn-add">➕ 新增事項</button>
           </form>
         </section>
@@ -284,6 +287,7 @@
     <div class="modal-sheet">
       <h2>✏️ 編輯事項</h2>
       <div class="row"><input type="date" id="editDate" /></div>
+      <div class="row"><input type="time" id="editTime" /></div>
       <div class="row"><input type="text" id="editText" maxlength="80" /></div>
       <div class="modal-btns">
         <button class="btn-cancel" id="editCancelBtn" type="button">取消</button>
@@ -376,6 +380,10 @@
   function pad(n){ return n<10 ? "0"+n : ""+n; }
   function toDateStr(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
   function todayStr(){ return toDateStr(new Date()); }
+  function nowTimeStr(){
+    var d = new Date();
+    return pad(d.getHours())+":"+pad(d.getMinutes());
+  }
   function parseDateStr(s){
     var parts = s.split("-").map(Number);
     return new Date(parts[0], parts[1]-1, parts[2]);
@@ -432,6 +440,7 @@
   var els = {
     addForm: document.getElementById("addForm"),
     taskDate: document.getElementById("taskDate"),
+    taskTime: document.getElementById("taskTime"),
     taskText: document.getElementById("taskText"),
     hideDoneBtn: document.getElementById("hideDoneBtn"),
     taskListWrap: document.getElementById("taskListWrap"),
@@ -440,6 +449,7 @@
     toast: document.getElementById("toast"),
     editModal: document.getElementById("editModal"),
     editDate: document.getElementById("editDate"),
+    editTime: document.getElementById("editTime"),
     editText: document.getElementById("editText"),
     editSaveBtn: document.getElementById("editSaveBtn"),
     editCancelBtn: document.getElementById("editCancelBtn"),
@@ -605,6 +615,7 @@
     var task = {
       id: uid(),
       date: els.taskDate.value || todayStr(),
+      time: els.taskTime.value,
       text: text,
       done: false,
       colorIndex: tasks.length % PALETTE.length,
@@ -613,6 +624,7 @@
     tasks.push(task);
     saveTasks(tasks);
     els.taskText.value = "";
+    els.taskTime.value = "";
     els.taskText.focus();
     render();
   }
@@ -653,6 +665,7 @@
     if(!task) return;
     editingId = id;
     els.editDate.value = task.date;
+    els.editTime.value = task.time || "";
     els.editText.value = task.text;
     els.editModal.hidden = false;
   }
@@ -663,6 +676,7 @@
     var text = els.editText.value.trim();
     if(!text){ return; }
     task.date = els.editDate.value || task.date;
+    task.time = els.editTime.value;
     task.text = text;
     saveTasks(tasks);
     closeEdit();
@@ -695,7 +709,11 @@
     return (d.getMonth()+1)+"/"+d.getDate()+" "+WEEKDAYS[d.getDay()];
   }
   function isTaskOverdue(task){
-    return !task.done && task.date < todayStr();
+    if(task.done) return false;
+    var today = todayStr();
+    if(task.date < today) return true;
+    if(task.date === today && task.time) return task.time < nowTimeStr();
+    return false;
   }
 
   function render(){
@@ -743,6 +761,12 @@
     textEl.className = "row-text";
     textEl.textContent = t.text;
     content.appendChild(textEl);
+    if(t.time){
+      var timeEl = document.createElement("span");
+      timeEl.className = "row-note";
+      timeEl.textContent = "🕐 "+t.time;
+      content.appendChild(timeEl);
+    }
     item.appendChild(content);
 
     if(isTaskOverdue(t)){
