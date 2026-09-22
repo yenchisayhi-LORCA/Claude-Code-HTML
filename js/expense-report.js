@@ -179,6 +179,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
         currency: exp.currency,
         twdAmount: showTwd ? convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache) : null,
         payer: memberName(exp.paidBy),
+        payerColor: memberColors[exp.paidBy] || '#6B5B4E',
         splitNames,
         splitEntries,
       };
