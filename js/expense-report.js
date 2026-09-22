@@ -134,9 +134,13 @@ export function renderExpenseReport(data) {
 // -dark 版本疊在白色卡片上維持可讀性，bg 用對應的 -tint 版本給頭像圓底用。
 // 一開始是每次匯出都重新洗牌一次，結果同一個人在「這次匯出」跟「下次匯出」（甚至只是
 // 分兩次點「總覽」「明細」各自匯出）會拿到不同顏色，使用者對照兩張圖卡或前後兩次匯出時
-// 會被搞混。改成用成員 id 算雜湊決定顏色——id 建立後不會變，所以同一個人不管匯出幾次、
-// 什麼時候匯出、甚至過幾天再匯出，顏色都固定一樣；同一趟旅程裡兩個人剛好雜湊到同一種
-// 顏色時，往後找下一個還沒用過的顏色，讓同一次匯出裡的人盡量兩兩不同、更好分辨。
+// 會被搞混。改成算雜湊決定顏色，且刻意用姓名（不是 member.id）當雜湊的 key——每趟旅程
+// 加入成員時都是各自複製一份、各自產生新的 id（見 storage.js createTrip()/addTripMember()
+// 的說明），同一個人（同名）在不同趟旅程裡的 member.id 其實完全不一樣，用 id 算雜湊會導致
+// 「同一個人在不同旅程」拿到不同顏色，這不是使用者要的（使用者期待的是同一個人不管在
+// 哪一趟旅程、匯出幾次，顏色都一樣）；姓名不會有這個問題，且跟 storage.js setPersonAvatar()
+// 用姓名判斷「跨旅程同一個人」是同一套邏輯。同一趟旅程裡兩個人剛好雜湊到同一種顏色時
+// （含兩人剛好同名的情況），往後找下一個還沒用過的顏色，讓同一次匯出裡的人盡量兩兩不同。
 const MEMBER_COLOR_PALETTE = [
   { text: '#2A3789', bg: '#EDEFFB' },
   { text: '#2E8C84', bg: '#EDF9F4' },
@@ -144,16 +148,16 @@ const MEMBER_COLOR_PALETTE = [
   { text: '#D9971A', bg: '#FEF6E4' },
 ];
 const DEFAULT_MEMBER_COLOR = { text: '#6B5B4E', bg: '#F6EDE2' };
-function hashMemberId(id) {
+function hashMemberName(name) {
   let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
   return Math.abs(hash);
 }
 function assignMemberColors(members) {
   const map = {};
   const used = new Set();
   members.forEach((m) => {
-    let idx = hashMemberId(m.id) % MEMBER_COLOR_PALETTE.length;
+    let idx = hashMemberName(m.name || '') % MEMBER_COLOR_PALETTE.length;
     let tries = 0;
     while (used.has(idx) && tries < MEMBER_COLOR_PALETTE.length) {
       idx = (idx + 1) % MEMBER_COLOR_PALETTE.length;
