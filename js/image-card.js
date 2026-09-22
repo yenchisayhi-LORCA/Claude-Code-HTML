@@ -495,7 +495,9 @@ function drawExpenseList(ctx, data, y) {
     mx += chipW + 8;
     ctx.fillStyle = '#D6C6B6'; ctx.beginPath(); ctx.arc(mx, my - 4, 1.5, 0, Math.PI * 2); ctx.fill(); mx += 9;
     ctx.font = `700 12.5px ${FONT}`;
-    ctx.fillStyle = '#9A8A7D'; ctx.fillText(`${exp.payer || ''} 付款`, mx, my);
+    ctx.fillStyle = exp.payerColor || '#9A8A7D'; ctx.fillText(exp.payer || '', mx, my);
+    mx += ctx.measureText(exp.payer || '').width;
+    ctx.fillStyle = '#9A8A7D'; ctx.fillText(' 付款', mx, my);
 
     if (exp.splitEntries && exp.splitEntries.length) {
       ctx.fillStyle = '#A08C7D'; ctx.font = `700 11px ${FONT}`;
