@@ -246,8 +246,6 @@
             </div>
             <div class="row">
               <input type="text" id="routineText" placeholder="輸入例行事項..." maxlength="80" required />
-            </div>
-            <div class="row">
               <input type="text" id="routineNote" placeholder="備註（選填）..." maxlength="80" />
             </div>
             <button type="submit" class="btn-add">➕ 新增例行事項</button>
@@ -325,8 +323,10 @@
           <option value="31">31號</option>
         </select>
       </div>
-      <div class="row"><input type="text" id="routineEditText" maxlength="80" /></div>
-      <div class="row"><input type="text" id="routineEditNote" placeholder="備註（選填）..." maxlength="80" /></div>
+      <div class="row">
+        <input type="text" id="routineEditText" maxlength="80" />
+        <input type="text" id="routineEditNote" placeholder="備註（選填）..." maxlength="80" />
+      </div>
       <div class="modal-btns">
         <button class="btn-cancel" id="routineEditCancelBtn" type="button">取消</button>
         <button class="btn-save" id="routineEditSaveBtn" type="button">儲存</button>
