@@ -122,6 +122,12 @@
   .row-text{flex:1 1 120px;font-size:20px;font-weight:700;word-break:break-word;color:var(--text);}
   .task-row.done .row-text{text-decoration:line-through;color:var(--text-soft);}
   .row-note{flex:1 0 100%;font-size:14px;font-weight:400;color:var(--text-soft);word-break:break-word;}
+
+  /* overdue-reminder badge: fixed-size window that clips a scaled-down copy
+     of the original 208x208 design so its proportions stay exactly as given */
+  .reminder-badge{flex:0 0 auto;align-self:center;width:30px;height:30px;overflow:hidden;border-radius:24%;}
+  .reminder-badge-inner{position:relative;width:208px;height:208px;background:#FBF5E7;border-radius:24%;box-shadow:0 10px 26px rgba(30,75,156,.16);transform:scale(0.14423);transform-origin:top left;}
+  @keyframes boltFlash{0%,72%,100%{opacity:1} 78%,88%{opacity:.35}}
   .row-actions{display:flex;gap:4px;flex:0 0 auto;}
   .icon-btn{
     border:none;background:rgba(255,255,255,.65);width:34px;height:34px;border-radius:9px;
@@ -343,6 +349,19 @@
   // outline-style icons (thin stroke, rounded caps) to match the line-icon look
   var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
   var ICON_DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
+  // overdue-reminder badge (design supplied by the user), scaled down to
+  // row-icon size via a fixed-size wrapper + transform:scale on the original
+  var REMINDER_BADGE =
+    '<div class="reminder-badge" title="已過期尚未完成" aria-label="已過期尚未完成">' +
+      '<div class="reminder-badge-inner">' +
+        '<div style="position:absolute;left:30px;top:30px;width:148px;height:148px;border-radius:50%;background:#FBC81E;"></div>' +
+        '<div style="position:absolute;left:76px;top:46px;width:60px;height:116px;background:#E4182B;clip-path:polygon(58% 0,8% 58%,44% 58%,30% 100%,92% 38%,52% 38%);animation:boltFlash 2.4s ease-in-out infinite;"></div>' +
+        '<div style="position:absolute;right:26px;top:26px;width:14px;height:14px;border-radius:50%;background:#1E4B9C;"></div>' +
+        '<div style="position:absolute;left:24px;top:34px;width:10px;height:10px;border-radius:50%;background:#1E4B9C;"></div>' +
+        '<div style="position:absolute;left:26px;bottom:26px;width:26px;height:8px;border-radius:4px;background:#2F9E6E;transform:rotate(-12deg);"></div>' +
+      '</div>' +
+    '</div>';
 
   // bright pastel row colors, each paired with a saturated accent for the
   // checkbox / date chip so every row reads as a distinct colour block
@@ -838,6 +857,10 @@
   function isRoutineDone(routine){
     return routine.lastDoneAt === computeOccurrence(routine, todayStr());
   }
+  function isRoutineOverdue(routine){
+    if(isRoutineDone(routine)) return false;
+    return computeOccurrence(routine, todayStr()) < todayStr();
+  }
 
   function renderRoutines(){
     var visible = hideDoneRoutine ? routines.filter(function(r){ return !isRoutineDone(r); }) : routines.slice();
@@ -889,6 +912,12 @@
       content.appendChild(noteEl);
     }
     item.appendChild(content);
+
+    if(isRoutineOverdue(r)){
+      var badgeWrap = document.createElement("div");
+      badgeWrap.innerHTML = REMINDER_BADGE;
+      item.appendChild(badgeWrap.firstElementChild);
+    }
 
     var actions = document.createElement("div");
     actions.className = "row-actions";
