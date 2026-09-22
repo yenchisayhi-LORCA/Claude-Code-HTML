@@ -42,6 +42,50 @@ function truncate(ctx, text, maxWidth) {
   return t + '…';
 }
 
+// 分攤成員名單要各自用自己的顏色畫（見 expense-report.js 的 splitEntries），逐段畫出來、
+// 超出欄寬時從尾端截斷加「…」，跟 truncate() 對單一字串的行為一致，只是要保留每段各自的顏色。
+// ctx.font 要先由呼叫端設定好（量測跟畫都用同一個字型設定）。
+function drawSplitEntries(ctx, entries, x, y, maxWidth) {
+  const sepColor = '#B0A093';
+  const segments = [];
+  entries.forEach((entry, i) => {
+    if (i > 0) segments.push({ text: '、', color: sepColor });
+    segments.push({ text: entry.name || '', color: entry.color || '#6B5B4E' });
+  });
+
+  const widths = segments.map((seg) => ctx.measureText(seg.text).width);
+  if (widths.reduce((a, b) => a + b, 0) <= maxWidth) {
+    let cx = x;
+    segments.forEach((seg, i) => {
+      ctx.fillStyle = seg.color;
+      ctx.fillText(seg.text, cx, y);
+      cx += widths[i];
+    });
+    return;
+  }
+
+  const ellipsisW = ctx.measureText('…').width;
+  const avail = maxWidth - ellipsisW;
+  let cx = x;
+  for (let i = 0; i < segments.length; i++) {
+    if (cx - x + widths[i] > avail) {
+      let t = segments[i].text;
+      while (t.length > 0 && cx - x + ctx.measureText(t).width > avail) t = t.slice(0, -1);
+      if (t) {
+        ctx.fillStyle = segments[i].color;
+        ctx.fillText(t, cx, y);
+        cx += ctx.measureText(t).width;
+      }
+      ctx.fillStyle = sepColor;
+      ctx.fillText('…', cx, y);
+      return;
+    }
+    ctx.fillStyle = segments[i].color;
+    ctx.fillText(segments[i].text, cx, y);
+    cx += widths[i];
+  }
+}
+
 function fmtMD(d) {
   if (!d) return '';
   const parts = d.split('-');
@@ -453,11 +497,11 @@ function drawExpenseList(ctx, data, y) {
     ctx.font = `700 12.5px ${FONT}`;
     ctx.fillStyle = '#9A8A7D'; ctx.fillText(`${exp.payer || ''} 付款`, mx, my);
 
-    if (exp.splitNames) {
+    if (exp.splitEntries && exp.splitEntries.length) {
       ctx.fillStyle = '#A08C7D'; ctx.font = `700 11px ${FONT}`;
       ctx.fillText('分攤', splitColLeftX, y + rowH / 2 - 6);
-      ctx.fillStyle = '#6B5B4E'; ctx.font = `700 13px ${FONT}`;
-      ctx.fillText(truncate(ctx, exp.splitNames, SPLIT_COL_W), splitColLeftX, y + rowH / 2 + 12);
+      ctx.font = `700 13px ${FONT}`;
+      drawSplitEntries(ctx, exp.splitEntries, splitColLeftX, y + rowH / 2 + 12, SPLIT_COL_W);
     }
 
     const amountCenterY = exp.twdAmount != null ? y + rowH / 2 - 8 : y + rowH / 2 + 6;

@@ -128,6 +128,19 @@ export function renderExpenseReport(data) {
   '</div>';
 }
 
+// 匯出圖卡「花費明細」每位成員的分攤標籤要各自上色，方便一眼看出同一筆花費是哪些人分攤——
+// 顏色就從網站背景色塊的四色系抽（原色見 css/style.css :root 的 --primary/--teal/--danger/--warn），
+// 這裡用對應的 -dark 版本，是因為要疊在明細卡片的白色底色上，原本偏亮的顏色可讀性不夠。
+// 每次匯出重新洗牌一次（要求是「隨機使用」），同一次匯出裡同一個成員全程同一個顏色；
+// 成員數超過 4 人時顏色會循環重複。
+const MEMBER_COLOR_PALETTE = ['#2A3789', '#2E8C84', '#B93E34', '#D9971A'];
+function assignMemberColors(members) {
+  const shuffled = [...MEMBER_COLOR_PALETTE].sort(() => Math.random() - 0.5);
+  const map = {};
+  members.forEach((m, i) => { map[m.id] = shuffled[i % shuffled.length]; });
+  return map;
+}
+
 // 把系統內的 trip/expense/分帳結果轉成 renderExpenseReport 要的 ReportData 格式。
 // memberStats 是 split.js computeBalances() 的完整回傳值（{ balances, paid, spent }），
 // 選填——只有匯出圖卡需要顯示每人統計，列印/PDF 報表目前沒有用到就不用特別傳。
@@ -135,6 +148,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
   const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
   const categoryOf = (id) => trip.categories.find((c) => c.id === id);
   const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
+  const memberColors = assignMemberColors(trip.members);
 
   const total = trip.expenses.reduce(
     (sum, e) => sum + (convertToBase(e.amount, e.currency, trip.baseCurrency, ratesCache) || 0),
@@ -150,10 +164,12 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
     .map((exp) => {
       const cat = categoryOf(exp.categoryId);
       const showTwd = needsTwd && exp.currency.toUpperCase() !== 'TWD';
-      const splitNames =
+      const splitIds =
         exp.splitType === 'custom' && exp.splitCustom
-          ? Object.keys(exp.splitCustom).map(memberName).join('、')
-          : (exp.splitMembers || []).map(memberName).join('、');
+          ? Object.keys(exp.splitCustom)
+          : (exp.splitMembers || []);
+      const splitNames = splitIds.map(memberName).join('、');
+      const splitEntries = splitIds.map((id) => ({ name: memberName(id), color: memberColors[id] || '#6B5B4E' }));
       return {
         date: exp.date || '',
         type: iconKeyFor(cat ? cat.id : 'other'),
@@ -164,6 +180,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
         twdAmount: showTwd ? convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache) : null,
         payer: memberName(exp.paidBy),
         splitNames,
+        splitEntries,
       };
     });
 
