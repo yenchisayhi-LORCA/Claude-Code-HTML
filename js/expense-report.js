@@ -141,11 +141,22 @@ export function renderExpenseReport(data) {
 // 哪一趟旅程、匯出幾次，顏色都一樣）；姓名不會有這個問題，且跟 storage.js setPersonAvatar()
 // 用姓名判斷「跨旅程同一個人」是同一套邏輯。同一趟旅程裡兩個人剛好雜湊到同一種顏色時
 // （含兩人剛好同名的情況），往後找下一個還沒用過的顏色，讓同一次匯出裡的人盡量兩兩不同。
+// 前 4 色是網站背景色塊的四色系；後 6 色是使用者指定要加入的色票（黃、綠、粉紅、淺紫、
+// 淺藍、深紫）。這 6 色原始色調偏亮/偏粉彩，直接當文字色疊在白色卡片上可讀性不夠，這裡
+// text 是同色相手動調暗、調到跟白色背景、跟自己的 bg 圓底對比度都至少有 4.5:1（一般文字
+// 可讀性判斷基準）算出來的深色版本；bg 大多直接沿用使用者指定的原色當頭像圓底色，只有
+// 「深紫」原色本身已經夠深，反過來讓 text 直接用原色、bg 另外算一個淺色調。
 const MEMBER_COLOR_PALETTE = [
   { text: '#2A3789', bg: '#EDEFFB' },
   { text: '#2E8C84', bg: '#EDF9F4' },
   { text: '#B93E34', bg: '#FDECEA' },
   { text: '#D9971A', bg: '#FEF6E4' },
+  { text: '#747406', bg: '#FFFF00' }, // 黃
+  { text: '#345313', bg: '#92D050' }, // 綠
+  { text: '#880788', bg: '#FF99FF' }, // 粉紅
+  { text: '#5C09AE', bg: '#CC99FF' }, // 淺紫
+  { text: '#08529B', bg: '#99CCFF' }, // 淺藍
+  { text: '#7030A0', bg: '#E7D9F2' }, // 深紫
 ];
 const DEFAULT_MEMBER_COLOR = { text: '#6B5B4E', bg: '#F6EDE2' };
 function hashMemberName(name) {
