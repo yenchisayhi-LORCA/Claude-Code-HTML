@@ -2347,12 +2347,23 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     return id;
   }
 
+  function isQuotaError(e){
+    return !!(e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22 || e.code === 1014));
+  }
+
   function importRecordsFile(file){
     var reader = new FileReader();
     reader.onload = function(){
+      var data;
       try {
-        var data = JSON.parse(reader.result);
-        var importedCount = 0;
+        data = JSON.parse(reader.result);
+      } catch (e){
+        console.error(e);
+        alert("備份檔案格式錯誤，無法匯入。");
+        return;
+      }
+      var importedCount = 0;
+      try {
         if (looksLikeDatabaseExport(data)){
           data.records.forEach(function(rec){ importOneRecordAsNew(rec); importedCount++; });
         } else if (data && data.fields){
@@ -2366,7 +2377,15 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
         toast("已匯入 " + importedCount + " 份紀錄");
       } catch (e){
         console.error(e);
-        alert("備份檔案格式錯誤，無法匯入。");
+        renderRecordList();
+        if (isQuotaError(e)){
+          alert((importedCount > 0
+            ? "瀏覽器儲存空間已滿，僅成功匯入 " + importedCount + " 份紀錄，其餘未匯入。"
+            : "瀏覽器儲存空間已滿，無法匯入。"
+          ) + "建議先刪除部分照片、附件或不需要的舊紀錄，或改用「匯出 PDF」保存後再試一次。");
+        } else {
+          alert("備份檔案格式錯誤，無法匯入。");
+        }
       }
     };
     reader.readAsText(file);
