@@ -123,8 +123,8 @@
 
   /* overdue-reminder badge: fixed-size window that clips a scaled-down copy
      of the original 208x208 design so its proportions stay exactly as given */
-  .reminder-badge{flex:0 0 auto;align-self:center;width:30px;height:30px;overflow:hidden;border-radius:24%;}
-  .reminder-badge-inner{position:relative;width:208px;height:208px;background:#FBF5E7;border-radius:24%;box-shadow:0 10px 26px rgba(30,75,156,.16);transform:scale(0.14423);transform-origin:top left;}
+  .reminder-badge{flex:0 0 auto;align-self:center;width:33px;height:33px;overflow:hidden;border-radius:24%;}
+  .reminder-badge-inner{position:relative;width:208px;height:208px;background:#FBF5E7;border-radius:24%;box-shadow:0 10px 26px rgba(30,75,156,.16);transform:scale(0.15865);transform-origin:top left;}
   @keyframes boltFlash{0%,72%,100%{opacity:1} 78%,88%{opacity:.35}}
   .row-actions{display:flex;gap:4px;flex:0 0 auto;}
   .icon-btn{
@@ -360,7 +360,7 @@
     '<div class="reminder-badge" title="已過期尚未完成" aria-label="已過期尚未完成">' +
       '<div class="reminder-badge-inner">' +
         '<div style="position:absolute;left:30px;top:30px;width:148px;height:148px;border-radius:50%;background:#FBC81E;"></div>' +
-        '<div style="position:absolute;left:76px;top:46px;width:60px;height:116px;background:#E4182B;clip-path:polygon(58% 0,8% 58%,44% 58%,30% 100%,92% 38%,52% 38%);animation:boltFlash 2.4s ease-in-out infinite;"></div>' +
+        '<div style="position:absolute;left:76px;top:46px;width:60px;height:116px;background:#E4182B;clip-path:polygon(58% 0,8% 58%,44% 58%,30% 100%,92% 38%,52% 38%);transform:scale(1.2);transform-origin:center;animation:boltFlash 2.4s ease-in-out infinite;"></div>' +
         '<div style="position:absolute;right:26px;top:26px;width:14px;height:14px;border-radius:50%;background:#1E4B9C;"></div>' +
         '<div style="position:absolute;left:24px;top:34px;width:10px;height:10px;border-radius:50%;background:#1E4B9C;"></div>' +
         '<div style="position:absolute;left:26px;bottom:26px;width:26px;height:8px;border-radius:4px;background:#2F9E6E;transform:rotate(-12deg);"></div>' +
