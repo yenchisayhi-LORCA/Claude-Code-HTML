@@ -131,6 +131,19 @@
   .empty-state{text-align:center;padding:36px 10px;color:#EAF0FF;font-size:19px;}
   .empty-state .emoji{font-size:56px;display:block;margin-bottom:8px;}
 
+  /* swipeable pager (待辦事項 / 例行事項) */
+  .page-dots{display:flex;justify-content:center;gap:8px;margin:2px 0 12px;}
+  .page-dots button{width:9px;height:9px;padding:0;border:none;border-radius:5px;background:rgba(255,255,255,.4);cursor:pointer;transition:width .2s,background .2s;}
+  .page-dots button.active{width:22px;background:#fff;}
+  .pager{
+    display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;-ms-overflow-style:none;
+  }
+  .pager::-webkit-scrollbar{display:none;}
+  .pager-page{flex:0 0 100%;min-width:100%;scroll-snap-align:start;}
+  select[data-repeat-for]{display:none;}
+  select[data-repeat-for].active{display:block;}
+
   /* modal */
   .modal-backdrop{position:fixed;inset:0;background:rgba(30,58,138,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center;}
   .modal-backdrop[hidden]{display:none;}
@@ -163,26 +176,86 @@
       <button class="icon-btn" id="renameTitleBtn" type="button" aria-label="修改標題"></button>
     </header>
 
-    <section class="card add-card">
-      <form id="addForm">
-        <div class="row add-row1">
-          <input type="date" id="taskDate" />
-          <input type="text" id="taskText" placeholder="輸入要做的事情..." maxlength="80" required />
-        </div>
-        <button type="submit" class="btn-add">➕ 新增事項</button>
-      </form>
-    </section>
-
-    <div class="list-title">
-      <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> 事項列表</h2>
-      <button id="hideDoneBtn">隱藏已完成</button>
+    <div class="page-dots" id="pageDots">
+      <button type="button" class="active" data-page="0" aria-label="待辦事項"></button>
+      <button type="button" data-page="1" aria-label="例行事項"></button>
     </div>
 
-    <section id="taskListWrap"></section>
+    <div class="pager" id="pager">
+      <div class="pager-page" id="pageTodo">
+        <section class="card add-card">
+          <form id="addForm">
+            <div class="row add-row1">
+              <input type="date" id="taskDate" />
+              <input type="text" id="taskText" placeholder="輸入要做的事情..." maxlength="80" required />
+            </div>
+            <button type="submit" class="btn-add">➕ 新增事項</button>
+          </form>
+        </section>
 
-    <div id="emptyState" class="empty-state" hidden>
-      <span class="emoji">📝</span>
-      <div id="emptyText">還沒有任何事項，新增一個開始吧！</div>
+        <div class="list-title">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> 事項列表</h2>
+          <button id="hideDoneBtn">隱藏已完成</button>
+        </div>
+
+        <section id="taskListWrap"></section>
+
+        <div id="emptyState" class="empty-state" hidden>
+          <span class="emoji">📝</span>
+          <div id="emptyText">還沒有任何事項，新增一個開始吧！</div>
+        </div>
+      </div>
+
+      <div class="pager-page" id="pageRoutine">
+        <section class="card add-card">
+          <form id="routineForm">
+            <div class="row">
+              <select id="routineRepeatType">
+                <option value="weekly">每週</option>
+                <option value="monthly">每月</option>
+              </select>
+              <select id="routineWeekday" data-repeat-for="weekly" class="active">
+                <option value="0">週日</option>
+                <option value="1">週一</option>
+                <option value="2">週二</option>
+                <option value="3">週三</option>
+                <option value="4">週四</option>
+                <option value="5">週五</option>
+                <option value="6">週六</option>
+              </select>
+              <select id="routineDayOfMonth" data-repeat-for="monthly">
+                <option value="1">1號</option><option value="2">2號</option><option value="3">3號</option>
+                <option value="4">4號</option><option value="5">5號</option><option value="6">6號</option>
+                <option value="7">7號</option><option value="8">8號</option><option value="9">9號</option>
+                <option value="10">10號</option><option value="11">11號</option><option value="12">12號</option>
+                <option value="13">13號</option><option value="14">14號</option><option value="15">15號</option>
+                <option value="16">16號</option><option value="17">17號</option><option value="18">18號</option>
+                <option value="19">19號</option><option value="20">20號</option><option value="21">21號</option>
+                <option value="22">22號</option><option value="23">23號</option><option value="24">24號</option>
+                <option value="25">25號</option><option value="26">26號</option><option value="27">27號</option>
+                <option value="28">28號</option><option value="29">29號</option><option value="30">30號</option>
+                <option value="31">31號</option>
+              </select>
+            </div>
+            <div class="row">
+              <input type="text" id="routineText" placeholder="輸入例行事項..." maxlength="80" required />
+            </div>
+            <button type="submit" class="btn-add">➕ 新增例行事項</button>
+          </form>
+        </section>
+
+        <div class="list-title">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 12v5h5"/><path d="M12 7v5l3 3"/></svg> 例行事項</h2>
+          <button id="hideDoneRoutineBtn">隱藏已完成</button>
+        </div>
+
+        <section id="routineListWrap"></section>
+
+        <div id="routineEmptyState" class="empty-state" hidden>
+          <span class="emoji">🔁</span>
+          <div id="routineEmptyText">還沒有任何例行事項，新增一個開始吧！</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -211,6 +284,45 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="routineEditModal" hidden>
+    <div class="modal-sheet">
+      <h2>✏️ 編輯例行事項</h2>
+      <div class="row">
+        <select id="routineEditRepeatType">
+          <option value="weekly">每週</option>
+          <option value="monthly">每月</option>
+        </select>
+        <select id="routineEditWeekday" data-repeat-for="weekly">
+          <option value="0">週日</option>
+          <option value="1">週一</option>
+          <option value="2">週二</option>
+          <option value="3">週三</option>
+          <option value="4">週四</option>
+          <option value="5">週五</option>
+          <option value="6">週六</option>
+        </select>
+        <select id="routineEditDayOfMonth" data-repeat-for="monthly">
+          <option value="1">1號</option><option value="2">2號</option><option value="3">3號</option>
+          <option value="4">4號</option><option value="5">5號</option><option value="6">6號</option>
+          <option value="7">7號</option><option value="8">8號</option><option value="9">9號</option>
+          <option value="10">10號</option><option value="11">11號</option><option value="12">12號</option>
+          <option value="13">13號</option><option value="14">14號</option><option value="15">15號</option>
+          <option value="16">16號</option><option value="17">17號</option><option value="18">18號</option>
+          <option value="19">19號</option><option value="20">20號</option><option value="21">21號</option>
+          <option value="22">22號</option><option value="23">23號</option><option value="24">24號</option>
+          <option value="25">25號</option><option value="26">26號</option><option value="27">27號</option>
+          <option value="28">28號</option><option value="29">29號</option><option value="30">30號</option>
+          <option value="31">31號</option>
+        </select>
+      </div>
+      <div class="row"><input type="text" id="routineEditText" maxlength="80" /></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="routineEditCancelBtn" type="button">取消</button>
+        <button class="btn-save" id="routineEditSaveBtn" type="button">儲存</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 (function(){
   "use strict";
@@ -218,6 +330,8 @@
   var HIDE_DONE_KEY = "todoList.hideDone.v2";
   var TITLE_KEY = "todoList.title.v1";
   var DEFAULT_TITLE = "大小事在這";
+  var ROUTINES_KEY = "todoList.routines.v1";
+  var HIDE_DONE_ROUTINE_KEY = "todoList.hideDoneRoutine.v1";
 
   var WEEKDAYS = ["週日","週一","週二","週三","週四","週五","週六"];
 
@@ -257,11 +371,48 @@
   function saveHideDone(v){ localStorage.setItem(HIDE_DONE_KEY, v ? "1" : "0"); }
   function loadTitle(){ return localStorage.getItem(TITLE_KEY) || DEFAULT_TITLE; }
   function saveTitle(v){ localStorage.setItem(TITLE_KEY, v); }
+  function loadRoutines(){
+    try{ return JSON.parse(localStorage.getItem(ROUTINES_KEY)) || []; }catch(e){ return []; }
+  }
+  function saveRoutines(r){ localStorage.setItem(ROUTINES_KEY, JSON.stringify(r)); }
+  function loadHideDoneRoutine(){ return localStorage.getItem(HIDE_DONE_ROUTINE_KEY) === "1"; }
+  function saveHideDoneRoutine(v){ localStorage.setItem(HIDE_DONE_ROUTINE_KEY, v ? "1" : "0"); }
+
+  // the date this routine's current cycle last landed on — weekly picks the
+  // most recent matching weekday, monthly picks this (or last) month's day,
+  // clamped to that month's last day so e.g. "31號" still works in April
+  function computeOccurrence(routine, today){
+    var d = parseDateStr(today);
+    if(routine.repeatType === "weekly"){
+      var diff = (d.getDay() - routine.weekday + 7) % 7;
+      return addDays(today, -diff);
+    }
+    var y = d.getFullYear(), m = d.getMonth();
+    function clampedDate(year, month){
+      var lastDay = new Date(year, month+1, 0).getDate();
+      return toDateStr(new Date(year, month, Math.min(routine.dayOfMonth, lastDay)));
+    }
+    var candidate = clampedDate(y, m);
+    if(candidate > today){
+      m -= 1;
+      if(m < 0){ m = 11; y -= 1; }
+      candidate = clampedDate(y, m);
+    }
+    return candidate;
+  }
+  function formatRepeatBadge(routine){
+    if(routine.repeatType === "weekly") return "每"+WEEKDAYS[routine.weekday];
+    return "每月"+routine.dayOfMonth+"號";
+  }
 
   var tasks = loadTasks();
   var hideDone = loadHideDone();
   var pendingDelete = null;
   var editingId = null;
+  var routines = loadRoutines();
+  var hideDoneRoutine = loadHideDoneRoutine();
+  var pendingRoutineDelete = null;
+  var editingRoutineId = null;
 
   var els = {
     addForm: document.getElementById("addForm"),
@@ -282,7 +433,25 @@
     titleModal: document.getElementById("titleModal"),
     titleInput: document.getElementById("titleInput"),
     titleSaveBtn: document.getElementById("titleSaveBtn"),
-    titleCancelBtn: document.getElementById("titleCancelBtn")
+    titleCancelBtn: document.getElementById("titleCancelBtn"),
+    pager: document.getElementById("pager"),
+    pageDots: document.getElementById("pageDots"),
+    routineForm: document.getElementById("routineForm"),
+    routineRepeatType: document.getElementById("routineRepeatType"),
+    routineWeekday: document.getElementById("routineWeekday"),
+    routineDayOfMonth: document.getElementById("routineDayOfMonth"),
+    routineText: document.getElementById("routineText"),
+    hideDoneRoutineBtn: document.getElementById("hideDoneRoutineBtn"),
+    routineListWrap: document.getElementById("routineListWrap"),
+    routineEmptyState: document.getElementById("routineEmptyState"),
+    routineEmptyText: document.getElementById("routineEmptyText"),
+    routineEditModal: document.getElementById("routineEditModal"),
+    routineEditRepeatType: document.getElementById("routineEditRepeatType"),
+    routineEditWeekday: document.getElementById("routineEditWeekday"),
+    routineEditDayOfMonth: document.getElementById("routineEditDayOfMonth"),
+    routineEditText: document.getElementById("routineEditText"),
+    routineEditSaveBtn: document.getElementById("routineEditSaveBtn"),
+    routineEditCancelBtn: document.getElementById("routineEditCancelBtn")
   };
 
   els.taskDate.value = todayStr();
@@ -291,7 +460,9 @@
   function init(){
     applyTitle(loadTitle());
     updateHideDoneBtn();
+    updateHideDoneRoutineBtn();
     render();
+    renderRoutines();
     bindEvents();
   }
 
@@ -319,6 +490,20 @@
 
   function updateHideDoneBtn(){
     els.hideDoneBtn.textContent = hideDone ? "顯示已完成" : "隱藏已完成";
+  }
+  function updateHideDoneRoutineBtn(){
+    els.hideDoneRoutineBtn.textContent = hideDoneRoutine ? "顯示已完成" : "隱藏已完成";
+  }
+
+  // shows only the select matching the chosen repeat type (weekly/monthly)
+  function syncRepeatFields(typeSelect, weekdaySelect, dayOfMonthSelect){
+    var isWeekly = typeSelect.value === "weekly";
+    weekdaySelect.classList.toggle("active", isWeekly);
+    dayOfMonthSelect.classList.toggle("active", !isWeekly);
+  }
+
+  function goToPage(index){
+    els.pager.scrollTo({ left: index * els.pager.clientWidth, behavior: "smooth" });
   }
 
   function bindEvents(){
@@ -352,6 +537,49 @@
     els.titleInput.addEventListener("keydown", function(e){
       if(e.key === "Enter"){ e.preventDefault(); saveTitleEdit(); }
     });
+
+    // page dots + swipe pager
+    els.pageDots.addEventListener("click", function(e){
+      var btn = e.target.closest("button[data-page]");
+      if(btn){ goToPage(Number(btn.getAttribute("data-page"))); }
+    });
+    els.pager.addEventListener("scroll", function(){
+      var index = Math.round(els.pager.scrollLeft / els.pager.clientWidth);
+      Array.prototype.forEach.call(els.pageDots.querySelectorAll("button"), function(btn, i){
+        btn.classList.toggle("active", i === index);
+      });
+    });
+
+    // 例行事項 (routines)
+    els.routineForm.addEventListener("submit", function(e){
+      e.preventDefault();
+      addRoutine();
+    });
+    els.routineRepeatType.addEventListener("change", function(){
+      syncRepeatFields(els.routineRepeatType, els.routineWeekday, els.routineDayOfMonth);
+    });
+    els.routineEditRepeatType.addEventListener("change", function(){
+      syncRepeatFields(els.routineEditRepeatType, els.routineEditWeekday, els.routineEditDayOfMonth);
+    });
+
+    els.hideDoneRoutineBtn.addEventListener("click", function(){
+      hideDoneRoutine = !hideDoneRoutine;
+      saveHideDoneRoutine(hideDoneRoutine);
+      updateHideDoneRoutineBtn();
+      renderRoutines();
+    });
+
+    els.routineListWrap.addEventListener("click", function(e){
+      var checkbox = e.target.closest(".checkbox");
+      if(checkbox){ toggleRoutineDone(checkbox.getAttribute("data-id")); return; }
+      var editBtn = e.target.closest("[data-action='edit']");
+      if(editBtn){ openRoutineEdit(editBtn.getAttribute("data-id")); return; }
+      var delBtn = e.target.closest("[data-action='delete']");
+      if(delBtn){ deleteRoutine(delBtn.getAttribute("data-id")); return; }
+    });
+
+    els.routineEditCancelBtn.addEventListener("click", closeRoutineEdit);
+    els.routineEditSaveBtn.addEventListener("click", saveRoutineEdit);
   }
 
   function addTask(){
@@ -508,6 +736,154 @@
     delBtn.className = "icon-btn";
     delBtn.setAttribute("data-action", "delete");
     delBtn.setAttribute("data-id", t.id);
+    delBtn.innerHTML = ICON_DELETE;
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+    item.appendChild(actions);
+
+    return item;
+  }
+
+  function addRoutine(){
+    var text = els.routineText.value.trim();
+    if(!text) return;
+    var repeatType = els.routineRepeatType.value;
+    var routine = {
+      id: uid(),
+      text: text,
+      repeatType: repeatType,
+      weekday: Number(els.routineWeekday.value),
+      dayOfMonth: Number(els.routineDayOfMonth.value),
+      lastDoneAt: null,
+      colorIndex: routines.length % PALETTE.length,
+      createdAt: Date.now()
+    };
+    routines.push(routine);
+    saveRoutines(routines);
+    els.routineText.value = "";
+    els.routineText.focus();
+    renderRoutines();
+  }
+
+  function toggleRoutineDone(id){
+    var routine = routines.find(function(r){ return r.id === id; });
+    if(!routine) return;
+    var occurrence = computeOccurrence(routine, todayStr());
+    routine.lastDoneAt = (routine.lastDoneAt === occurrence) ? null : occurrence;
+    saveRoutines(routines);
+    renderRoutines();
+  }
+
+  function deleteRoutine(id){
+    var idx = routines.findIndex(function(r){ return r.id === id; });
+    if(idx === -1) return;
+    var removed = routines.splice(idx, 1)[0];
+    saveRoutines(routines);
+    renderRoutines();
+
+    if(pendingRoutineDelete){ clearTimeout(pendingRoutineDelete.timeoutId); }
+    var timeoutId = setTimeout(function(){
+      pendingRoutineDelete = null;
+      els.toast.hidden = true;
+    }, 5000);
+    pendingRoutineDelete = { routine: removed, idx: idx, timeoutId: timeoutId };
+    showToast("已刪除例行事項", function(){
+      routines.splice(Math.min(pendingRoutineDelete.idx, routines.length), 0, pendingRoutineDelete.routine);
+      saveRoutines(routines);
+      clearTimeout(pendingRoutineDelete.timeoutId);
+      pendingRoutineDelete = null;
+      els.toast.hidden = true;
+      renderRoutines();
+    });
+  }
+
+  function openRoutineEdit(id){
+    var routine = routines.find(function(r){ return r.id === id; });
+    if(!routine) return;
+    editingRoutineId = id;
+    els.routineEditRepeatType.value = routine.repeatType;
+    els.routineEditWeekday.value = String(routine.weekday);
+    els.routineEditDayOfMonth.value = String(routine.dayOfMonth);
+    syncRepeatFields(els.routineEditRepeatType, els.routineEditWeekday, els.routineEditDayOfMonth);
+    els.routineEditText.value = routine.text;
+    els.routineEditModal.hidden = false;
+  }
+  function closeRoutineEdit(){ els.routineEditModal.hidden = true; editingRoutineId = null; }
+  function saveRoutineEdit(){
+    var routine = routines.find(function(r){ return r.id === editingRoutineId; });
+    if(!routine) return;
+    var text = els.routineEditText.value.trim();
+    if(!text){ return; }
+    routine.text = text;
+    routine.repeatType = els.routineEditRepeatType.value;
+    routine.weekday = Number(els.routineEditWeekday.value);
+    routine.dayOfMonth = Number(els.routineEditDayOfMonth.value);
+    routine.lastDoneAt = null;
+    saveRoutines(routines);
+    closeRoutineEdit();
+    renderRoutines();
+  }
+
+  function isRoutineDone(routine){
+    return routine.lastDoneAt === computeOccurrence(routine, todayStr());
+  }
+
+  function renderRoutines(){
+    var visible = hideDoneRoutine ? routines.filter(function(r){ return !isRoutineDone(r); }) : routines.slice();
+    visible.sort(function(a,b){ return a.createdAt - b.createdAt; });
+
+    els.routineListWrap.innerHTML = "";
+    if(visible.length === 0){
+      els.routineEmptyState.hidden = false;
+      els.routineEmptyText.textContent = (hideDoneRoutine && routines.length > 0)
+        ? "已完成的例行事項都藏起來了，按上面按鈕可以再顯示"
+        : "還沒有任何例行事項，新增一個開始吧！";
+    } else {
+      els.routineEmptyState.hidden = true;
+      visible.forEach(function(r){ els.routineListWrap.appendChild(renderRoutineItem(r)); });
+    }
+  }
+
+  function renderRoutineItem(r){
+    var color = PALETTE[r.colorIndex % PALETTE.length];
+    var done = isRoutineDone(r);
+
+    var item = document.createElement("div");
+    item.className = "task-row" + (done ? " done" : "");
+    item.style.background = color.bg;
+
+    var checkbox = document.createElement("div");
+    checkbox.className = "checkbox" + (done ? " checked" : "");
+    checkbox.setAttribute("data-id", r.id);
+    checkbox.style.borderColor = color.accent;
+    if(done){ checkbox.style.background = color.accent; }
+    checkbox.textContent = done ? "✔" : "";
+    item.appendChild(checkbox);
+
+    var content = document.createElement("div");
+    content.className = "row-content";
+    var repeatChip = document.createElement("span");
+    repeatChip.className = "row-date";
+    repeatChip.style.color = color.accent;
+    repeatChip.textContent = formatRepeatBadge(r);
+    content.appendChild(repeatChip);
+    var textEl = document.createElement("span");
+    textEl.className = "row-text";
+    textEl.textContent = r.text;
+    content.appendChild(textEl);
+    item.appendChild(content);
+
+    var actions = document.createElement("div");
+    actions.className = "row-actions";
+    var editBtn = document.createElement("button");
+    editBtn.className = "icon-btn";
+    editBtn.setAttribute("data-action", "edit");
+    editBtn.setAttribute("data-id", r.id);
+    editBtn.innerHTML = ICON_EDIT;
+    var delBtn = document.createElement("button");
+    delBtn.className = "icon-btn";
+    delBtn.setAttribute("data-action", "delete");
+    delBtn.setAttribute("data-id", r.id);
     delBtn.innerHTML = ICON_DELETE;
     actions.appendChild(editBtn);
     actions.appendChild(delBtn);
