@@ -178,6 +178,14 @@
   .sig-card input{ width:100%; font-size:13px; }
   .sig-card .remove-btn{ position:absolute; top:6px; right:6px; }
   .hint{ font-size:12px; color:#777; margin-top:6px; }
+  .storage-usage-line{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .storage-usage-line .link-btn{
+    background:none; border:none; padding:0; margin:0; font-size:12px; color:var(--accent);
+    text-decoration:underline; cursor:pointer;
+  }
+  .storage-usage-line .link-btn:hover{ color:#0d1f4a; }
+  .storage-usage-line.storage-warn{ color:#b45309; font-weight:600; }
+  .storage-usage-line.storage-warn .link-btn{ color:#b45309; }
   .attachment-block{
     border:1px solid #c7cbd4; border-radius:6px; padding:12px; margin-bottom:12px; position:relative;
   }
@@ -294,6 +302,10 @@
   <div class="picker-wrap">
     <h2>選擇要開啟的會議紀錄</h2>
     <p class="hint">所有紀錄都儲存在這台電腦、這個瀏覽器裡；建議定期用下方「匯出全部紀錄備份」另外保存一份，以防換電腦、換瀏覽器或清除瀏覽器資料時遺失。</p>
+    <p class="hint storage-usage-line" id="storageUsageLine">
+      🗄 儲存空間：已使用 <span id="storageUsedText">計算中…</span>
+      <button type="button" class="link-btn" id="btnCheckStorageQuota">檢查剩餘空間</button>
+    </p>
     <div class="picker-toolbar">
       <button type="button" class="primary" id="btnNewRecord">＋ 新增一份會議紀錄</button>
       <button type="button" class="ghost-light" id="btnImportRecord">匯入備份檔（.json）</button>
@@ -2230,7 +2242,66 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     return folderKey === "未分類" ? "未分類" : (folderKey + "年級");
   }
 
+  // ---------- Storage usage ----------
+  function formatBytes(n){
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1024 / 1024).toFixed(2) + " MB";
+  }
+
+  function computeStorageUsageBytes(){
+    var total = 0;
+    try {
+      for (var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        var v = localStorage.getItem(k) || "";
+        total += (k.length + v.length) * 2;
+      }
+    } catch (e){ console.error(e); }
+    return total;
+  }
+
+  // Fills scratch keys until the browser refuses, to find how much headroom
+  // is actually left in this specific browser — the real quota isn't a fixed
+  // number, it varies by browser, so measuring beats guessing. Always cleans
+  // up its own scratch keys afterward, even if the loop throws partway.
+  function probeStorageQuotaBytes(){
+    var usedBytes = computeStorageUsageBytes();
+    var PROBE_PREFIX = "__quota_probe__";
+    var chunkChars = 512 * 1024;
+    var chunk = "a".repeat(chunkChars);
+    var count = 0;
+    try {
+      for (; count < 200; count++){
+        localStorage.setItem(PROBE_PREFIX + count, chunk);
+      }
+    } catch (e){ /* hit the real limit */ }
+    finally {
+      for (var i = 0; i < count; i++){
+        try { localStorage.removeItem(PROBE_PREFIX + i); } catch (e){ /* ignore */ }
+      }
+    }
+    var extraBytes = count * chunkChars * 2;
+    return { usedBytes: usedBytes, totalBytes: usedBytes + extraBytes };
+  }
+
+  function updateStorageUsageDisplay(quotaInfo){
+    var el = document.getElementById("storageUsedText");
+    var line = document.getElementById("storageUsageLine");
+    if (!el) return;
+    var used = computeStorageUsageBytes();
+    if (quotaInfo && quotaInfo.totalBytes){
+      var remain = Math.max(0, quotaInfo.totalBytes - used);
+      el.textContent = formatBytes(used) + "／約 " + formatBytes(quotaInfo.totalBytes) + "（剩 " + formatBytes(remain) + "，僅供估計）";
+      if (line) line.classList.toggle("storage-warn", remain < quotaInfo.totalBytes * 0.15);
+    } else {
+      el.textContent = formatBytes(used);
+      if (line) line.classList.remove("storage-warn");
+    }
+  }
+
   function renderRecordList(){
+    updateStorageUsageDisplay();
     var listEl = document.getElementById("recordList");
     var emptyHint = document.getElementById("recordListEmptyHint");
     var index = loadIndexList();
@@ -2427,6 +2498,18 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     openRecord(createNewRecord());
   });
   document.getElementById("btnExportAllRecords").addEventListener("click", downloadAllRecordsBackup);
+  document.getElementById("btnCheckStorageQuota").addEventListener("click", function(){
+    var el = document.getElementById("storageUsedText");
+    var btn = document.getElementById("btnCheckStorageQuota");
+    if (el) el.textContent = "檢查中…";
+    btn.disabled = true;
+    setTimeout(function(){
+      var quotaInfo = probeStorageQuotaBytes();
+      updateStorageUsageDisplay(quotaInfo);
+      btn.disabled = false;
+      btn.textContent = "重新檢查";
+    }, 30);
+  });
   document.getElementById("btnImportRecord").addEventListener("click", function(){
     pendingImportTarget = "picker";
     document.getElementById("backupFileInput").click();
