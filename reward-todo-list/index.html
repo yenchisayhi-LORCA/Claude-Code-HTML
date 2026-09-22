@@ -86,8 +86,6 @@
     padding:11px 12px;outline:none;width:100%;
   }
   input:focus,select:focus{border-color:var(--teal);}
-  .add-row1 input[type="date"]{flex:0 0 168px;}
-  .add-row1 input[type="text"]{flex:1;}
   .btn-add{
     font-family:inherit;font-weight:700;font-size:20px;color:#fff;
     background:var(--blue);border:none;border-radius:12px;padding:12px 16px;cursor:pointer;
@@ -194,10 +192,10 @@
           <form id="addForm">
             <div class="row add-row1">
               <input type="date" id="taskDate" />
-              <input type="text" id="taskText" placeholder="輸入要做的事情..." maxlength="80" required />
+              <input type="time" id="taskTime" />
             </div>
             <div class="row">
-              <input type="time" id="taskTime" />
+              <input type="text" id="taskText" placeholder="輸入要做的事情..." maxlength="80" required />
             </div>
             <button type="submit" class="btn-add">➕ 新增事項</button>
           </form>
@@ -286,8 +284,10 @@
   <div class="modal-backdrop" id="editModal" hidden>
     <div class="modal-sheet">
       <h2>✏️ 編輯事項</h2>
-      <div class="row"><input type="date" id="editDate" /></div>
-      <div class="row"><input type="time" id="editTime" /></div>
+      <div class="row">
+        <input type="date" id="editDate" />
+        <input type="time" id="editTime" />
+      </div>
       <div class="row"><input type="text" id="editText" maxlength="80" /></div>
       <div class="modal-btns">
         <button class="btn-cancel" id="editCancelBtn" type="button">取消</button>
@@ -720,6 +720,8 @@
     var visible = hideDone ? tasks.filter(function(t){ return !t.done; }) : tasks.slice();
     visible.sort(function(a,b){
       if(a.date !== b.date) return a.date < b.date ? -1 : 1;
+      var at = a.time || "", bt = b.time || "";
+      if(at !== bt) return at < bt ? -1 : 1;
       return a.createdAt - b.createdAt;
     });
 
