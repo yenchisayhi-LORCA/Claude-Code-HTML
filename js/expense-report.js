@@ -128,6 +128,77 @@ export function renderExpenseReport(data) {
   '</div>';
 }
 
+// 匯出圖卡每位成員要各自上色，讓「花費明細」的付款人/分攤名單、「每人結算」卡片、
+// 「建議轉帳」的頭像都用同一套顏色，一眼就能對起來是同一個人——顏色就從網站背景色塊的
+// 四色系抽（原色見 css/style.css :root 的 --primary/--teal/--danger/--warn），text 用對應的
+// -dark 版本疊在白色卡片上維持可讀性，bg 用對應的 -tint 版本給頭像圓底用。
+// 一開始是每次匯出都重新洗牌一次，結果同一個人在「這次匯出」跟「下次匯出」（甚至只是
+// 分兩次點「總覽」「明細」各自匯出）會拿到不同顏色，使用者對照兩張圖卡或前後兩次匯出時
+// 會被搞混。改成算雜湊決定顏色，且刻意用姓名（不是 member.id）當雜湊的 key——每趟旅程
+// 加入成員時都是各自複製一份、各自產生新的 id（見 storage.js createTrip()/addTripMember()
+// 的說明），同一個人（同名）在不同趟旅程裡的 member.id 其實完全不一樣，用 id 算雜湊會導致
+// 「同一個人在不同旅程」拿到不同顏色，這不是使用者要的（使用者期待的是同一個人不管在
+// 哪一趟旅程、匯出幾次，顏色都一樣）；姓名不會有這個問題，且跟 storage.js setPersonAvatar()
+// 用姓名判斷「跨旅程同一個人」是同一套邏輯。同一趟旅程裡兩個人剛好雜湊到同一種顏色時
+// （含兩人剛好同名的情況），往後找下一個還沒用過的顏色，讓同一次匯出裡的人盡量兩兩不同。
+// 前 4 色是網站背景色塊的四色系；後 6 色是使用者指定要加入的色票（黃、綠、粉紅、淺紫、
+// 淺藍、深紫）。這 6 色原始色調偏亮/偏粉彩，直接當文字色疊在白色卡片上可讀性不夠，這裡
+// text 是同色相手動調暗、調到跟白色背景、跟自己的 bg 圓底對比度都至少有 4.5:1（一般文字
+// 可讀性判斷基準）算出來的深色版本；bg 大多直接沿用使用者指定的原色當頭像圓底色，只有
+// 「深紫」原色本身已經夠深，反過來讓 text 直接用原色、bg 另外算一個淺色調。
+const MEMBER_COLOR_PALETTE = [
+  { text: '#2A3789', bg: '#EDEFFB' },
+  { text: '#2E8C84', bg: '#EDF9F4' },
+  { text: '#B93E34', bg: '#FDECEA' },
+  { text: '#D9971A', bg: '#FEF6E4' },
+  { text: '#747406', bg: '#FFFF00' }, // 黃
+  { text: '#345313', bg: '#92D050' }, // 綠
+  { text: '#880788', bg: '#FF99FF' }, // 粉紅
+  { text: '#5C09AE', bg: '#CC99FF' }, // 淺紫
+  { text: '#08529B', bg: '#99CCFF' }, // 淺藍
+  { text: '#7030A0', bg: '#E7D9F2' }, // 深紫
+];
+const DEFAULT_MEMBER_COLOR = { text: '#6B5B4E', bg: '#F6EDE2' };
+function hashMemberName(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(hash);
+}
+// 使用者要求特定姓名固定用哪個顏色，優先於下面的姓名雜湊自動分配。
+const MEMBER_COLOR_OVERRIDES = {
+  林小琪: MEMBER_COLOR_PALETTE[3], // 黃色（--warn 色系）
+  范小芳: MEMBER_COLOR_PALETTE[6], // 粉紅
+  邱小芳: MEMBER_COLOR_PALETTE[8], // 淺藍
+};
+function assignMemberColors(members) {
+  const map = {};
+  const used = new Set();
+
+  // 先處理有指定顏色的人，把顏色卡位卡住
+  members.forEach((m) => {
+    const override = MEMBER_COLOR_OVERRIDES[m.name];
+    if (!override) return;
+    map[m.id] = override;
+    used.add(MEMBER_COLOR_PALETTE.indexOf(override));
+  });
+
+  // 其餘沒有指定顏色的人才用姓名雜湊分配，跳過已經被指定顏色卡位的位置，
+  // 避免自動分配的人跟被指定顏色的人撞色。
+  members.forEach((m) => {
+    if (map[m.id]) return;
+    let idx = hashMemberName(m.name || '') % MEMBER_COLOR_PALETTE.length;
+    let tries = 0;
+    while (used.has(idx) && tries < MEMBER_COLOR_PALETTE.length) {
+      idx = (idx + 1) % MEMBER_COLOR_PALETTE.length;
+      tries += 1;
+    }
+    used.add(idx);
+    map[m.id] = MEMBER_COLOR_PALETTE[idx];
+  });
+
+  return map;
+}
+
 // 把系統內的 trip/expense/分帳結果轉成 renderExpenseReport 要的 ReportData 格式。
 // memberStats 是 split.js computeBalances() 的完整回傳值（{ balances, paid, spent }），
 // 選填——只有匯出圖卡需要顯示每人統計，列印/PDF 報表目前沒有用到就不用特別傳。
@@ -135,6 +206,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
   const memberName = (id) => trip.members.find((m) => m.id === id)?.name || '（已刪除成員）';
   const categoryOf = (id) => trip.categories.find((c) => c.id === id);
   const needsTwd = trip.baseCurrency.toUpperCase() !== 'TWD';
+  const memberColors = assignMemberColors(trip.members);
 
   const total = trip.expenses.reduce(
     (sum, e) => sum + (convertToBase(e.amount, e.currency, trip.baseCurrency, ratesCache) || 0),
@@ -150,10 +222,12 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
     .map((exp) => {
       const cat = categoryOf(exp.categoryId);
       const showTwd = needsTwd && exp.currency.toUpperCase() !== 'TWD';
-      const splitNames =
+      const splitIds =
         exp.splitType === 'custom' && exp.splitCustom
-          ? Object.keys(exp.splitCustom).map(memberName).join('、')
-          : (exp.splitMembers || []).map(memberName).join('、');
+          ? Object.keys(exp.splitCustom)
+          : (exp.splitMembers || []);
+      const splitNames = splitIds.map(memberName).join('、');
+      const splitEntries = splitIds.map((id) => ({ name: memberName(id), color: (memberColors[id] || DEFAULT_MEMBER_COLOR).text }));
       return {
         date: exp.date || '',
         type: iconKeyFor(cat ? cat.id : 'other'),
@@ -163,13 +237,17 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
         currency: exp.currency,
         twdAmount: showTwd ? convertToTWD(exp.amount, exp.currency, trip.baseCurrency, ratesCache) : null,
         payer: memberName(exp.paidBy),
+        payerColor: (memberColors[exp.paidBy] || DEFAULT_MEMBER_COLOR).text,
         splitNames,
+        splitEntries,
       };
     });
 
   const settlements = transactions.map((t) => ({
     from: memberName(t.from),
+    fromColor: memberColors[t.from] || DEFAULT_MEMBER_COLOR,
     to: memberName(t.to),
+    toColor: memberColors[t.to] || DEFAULT_MEMBER_COLOR,
     amount: t.amount,
     currency: trip.baseCurrency,
     twdAmount: needsTwd ? baseAmountToTWD(t.amount, trip.baseCurrency, ratesCache) : null,
@@ -185,6 +263,7 @@ export function buildReportData(trip, ratesCache, transactions, memberStats) {
         const balance = memberStats.balances[m.id] || 0;
         return {
           name: m.name,
+          color: memberColors[m.id] || DEFAULT_MEMBER_COLOR,
           currency: trip.baseCurrency,
           spent: spentAmt,
           spentTwd: needsTwd ? baseAmountToTWD(spentAmt, trip.baseCurrency, ratesCache) : null,

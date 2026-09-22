@@ -42,6 +42,50 @@ function truncate(ctx, text, maxWidth) {
   return t + '…';
 }
 
+// 分攤成員名單要各自用自己的顏色畫（見 expense-report.js 的 splitEntries），逐段畫出來、
+// 超出欄寬時從尾端截斷加「…」，跟 truncate() 對單一字串的行為一致，只是要保留每段各自的顏色。
+// ctx.font 要先由呼叫端設定好（量測跟畫都用同一個字型設定）。
+function drawSplitEntries(ctx, entries, x, y, maxWidth) {
+  const sepColor = '#B0A093';
+  const segments = [];
+  entries.forEach((entry, i) => {
+    if (i > 0) segments.push({ text: '、', color: sepColor });
+    segments.push({ text: entry.name || '', color: entry.color || '#6B5B4E' });
+  });
+
+  const widths = segments.map((seg) => ctx.measureText(seg.text).width);
+  if (widths.reduce((a, b) => a + b, 0) <= maxWidth) {
+    let cx = x;
+    segments.forEach((seg, i) => {
+      ctx.fillStyle = seg.color;
+      ctx.fillText(seg.text, cx, y);
+      cx += widths[i];
+    });
+    return;
+  }
+
+  const ellipsisW = ctx.measureText('…').width;
+  const avail = maxWidth - ellipsisW;
+  let cx = x;
+  for (let i = 0; i < segments.length; i++) {
+    if (cx - x + widths[i] > avail) {
+      let t = segments[i].text;
+      while (t.length > 0 && cx - x + ctx.measureText(t).width > avail) t = t.slice(0, -1);
+      if (t) {
+        ctx.fillStyle = segments[i].color;
+        ctx.fillText(t, cx, y);
+        cx += ctx.measureText(t).width;
+      }
+      ctx.fillStyle = sepColor;
+      ctx.fillText('…', cx, y);
+      return;
+    }
+    ctx.fillStyle = segments[i].color;
+    ctx.fillText(segments[i].text, cx, y);
+    cx += widths[i];
+  }
+}
+
 function fmtMD(d) {
   if (!d) return '';
   const parts = d.split('-');
@@ -175,7 +219,7 @@ function drawSettleChip(ctx, x, cy, name, bg, fg) {
   ctx.fillStyle = fg; ctx.font = `900 15px ${FONT}`; ctx.textAlign = 'center';
   ctx.fillText(String(name || '').slice(-1), x + r, cy + 5);
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
+  ctx.fillStyle = fg; ctx.font = `900 16px ${FONT}`;
   ctx.fillText(name || '', x + r * 2 + 10, cy + 5);
   return x + r * 2 + 10 + ctx.measureText(name || '').width;
 }
@@ -316,7 +360,7 @@ function drawMemberCard(ctx, m, x, y, w, h, hasTwd) {
 
   const padX = 20;
   let ty = y + 16;
-  ctx.fillStyle = '#3B3330'; ctx.font = `900 16px ${FONT}`;
+  ctx.fillStyle = (m.color && m.color.text) || '#3B3330'; ctx.font = `900 16px ${FONT}`;
   ctx.fillText(truncate(ctx, m.name || '', w - padX * 2), x + padX, ty + 12);
   ty += 26;
 
@@ -451,13 +495,15 @@ function drawExpenseList(ctx, data, y) {
     mx += chipW + 8;
     ctx.fillStyle = '#D6C6B6'; ctx.beginPath(); ctx.arc(mx, my - 4, 1.5, 0, Math.PI * 2); ctx.fill(); mx += 9;
     ctx.font = `700 12.5px ${FONT}`;
-    ctx.fillStyle = '#9A8A7D'; ctx.fillText(`${exp.payer || ''} 付款`, mx, my);
+    ctx.fillStyle = exp.payerColor || '#9A8A7D'; ctx.fillText(exp.payer || '', mx, my);
+    mx += ctx.measureText(exp.payer || '').width;
+    ctx.fillStyle = '#9A8A7D'; ctx.fillText(' 付款', mx, my);
 
-    if (exp.splitNames) {
+    if (exp.splitEntries && exp.splitEntries.length) {
       ctx.fillStyle = '#A08C7D'; ctx.font = `700 11px ${FONT}`;
       ctx.fillText('分攤', splitColLeftX, y + rowH / 2 - 6);
-      ctx.fillStyle = '#6B5B4E'; ctx.font = `700 13px ${FONT}`;
-      ctx.fillText(truncate(ctx, exp.splitNames, SPLIT_COL_W), splitColLeftX, y + rowH / 2 + 12);
+      ctx.font = `700 13px ${FONT}`;
+      drawSplitEntries(ctx, exp.splitEntries, splitColLeftX, y + rowH / 2 + 12, SPLIT_COL_W);
     }
 
     const amountCenterY = exp.twdAmount != null ? y + rowH / 2 - 8 : y + rowH / 2 + 6;
@@ -520,7 +566,8 @@ function drawSettleList(ctx, data, y) {
 
     const rowCenterY = s.twdAmount != null ? y + settleRowH / 2 - 9 : y + settleRowH / 2;
     let cx = SIDE_PAD + 24;
-    cx = drawSettleChip(ctx, cx, rowCenterY, s.from, '#FBE3CF', '#C4703A');
+    const fromColor = s.fromColor || { bg: '#FBE3CF', text: '#C4703A' };
+    cx = drawSettleChip(ctx, cx, rowCenterY, s.from, fromColor.bg, fromColor.text);
 
     ctx.strokeStyle = '#5FBFA8'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(cx + 6, rowCenterY); ctx.lineTo(cx + 40, rowCenterY); ctx.stroke();
@@ -528,7 +575,8 @@ function drawSettleList(ctx, data, y) {
     ctx.beginPath(); ctx.moveTo(cx + 40, rowCenterY - 6); ctx.lineTo(cx + 40, rowCenterY + 6); ctx.lineTo(cx + 49, rowCenterY); ctx.closePath(); ctx.fill();
     cx += 55;
 
-    cx = drawSettleChip(ctx, cx, rowCenterY, s.to, '#DCEFE6', '#3F8B76');
+    const toColor = s.toColor || { bg: '#DCEFE6', text: '#3F8B76' };
+    cx = drawSettleChip(ctx, cx, rowCenterY, s.to, toColor.bg, toColor.text);
 
     const amt = `${Number(s.amount || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })} ${s.currency || cur}`;
     ctx.font = `900 17px ${FONT}`;
