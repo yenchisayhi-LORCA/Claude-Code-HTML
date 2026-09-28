@@ -6,7 +6,7 @@ iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https
 
 - 一週從星期日開始，週末用灰字
 - 今天用紅色圓圈標示，左上角是黃底「彥」圖示（紅花、小芽）
-- 數字使用 Google Fonts 的 [Caacupe One](https://fonts.google.com/specimen/Caacupe+One)（該字型沒有中文，中文維持系統圓體）。第一次在 Scriptable App 內執行時會連網下載字型、把數字存成小圖，之後小工具直接讀取；還沒下載成功前會先用系統字型
+- 字型使用 Google Fonts 的 [Zen Maru Gothic](https://fonts.google.com/specimen/Zen+Maru+Gothic)（數字、月份、星期、農曆都套用；字型裡沒有「彥」，圖示的「彥」維持系統圓體）。第一次在 Scriptable App 內執行時會連網下載字型、把用到的字存成小圖，之後小工具直接讀取；還沒下載成功前會先用系統字型
 - 右上角顯示農曆日期
 - 每天午夜自動更新；點小工具會打開內建行事曆
 

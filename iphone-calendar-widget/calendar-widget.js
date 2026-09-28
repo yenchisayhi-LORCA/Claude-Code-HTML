@@ -1,4 +1,4 @@
-// 月曆小工具（Scriptable 大尺寸）— 配色沿用旅遊記帳系統，數字字型 Caacupe One
+// 月曆小工具（Scriptable 大尺寸）— 配色沿用旅遊記帳系統，字型 Zen Maru Gothic
 const C = {
   bg: "#3B4CB8", surface: "#FFFDF7", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84", tealTint: "#EDF9F4",
@@ -37,36 +37,52 @@ function lunarText(d) {
   }
 }
 
-// ---- Caacupe One 數字字型
+// ---- Zen Maru Gothic 字型
 // Scriptable 無法直接安裝網路字型，所以第一次在 App 內執行時，用 WebView 從
-// Google Fonts 載入字型、把 0–9 各色數字畫成小圖存起來；小工具之後直接讀這些圖。
-// 字型沒有中文，中文維持系統圓體。
-const FONT = "Caacupe One";
-const GLYPH_VERSION = 1;
-const GLYPH_COLORS = { text: C.text, muted: C.muted, white: "#FFFFFF", primary: C.primary };
+// Google Fonts 載入字型、把會用到的字依顏色畫成小圖存起來；小工具之後直接讀這些圖。
+// 沒畫到的字（例如圖示裡的「彥」，字型裡沒有）改用系統圓體。
+const FONT = "Zen Maru Gothic";
+const GLYPH_VERSION = 2;
+const DIGITS = "0123456789";
+const LUNAR_CHARS = "正一二三四五六七八九十冬臘閏月初廿";
+// [粗細, 顏色, 要畫的字]
+const GLYPH_SPECS = [
+  [700, C.text, DIGITS],
+  [700, C.muted, DIGITS + "一二三四五"],
+  [900, "#FFFFFF", DIGITS],
+  [900, C.primary, DIGITS + "月"],
+  [700, C.danger, "日"],
+  [700, C.tealDark, "六" + LUNAR_CHARS],
+];
+const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-glyphs");
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 
 async function buildGlyphs() {
+  const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
+  const css = `https://fonts.googleapis.com/css2?family=${FONT.replace(/ /g, "+")}:wght@700;900&text=${encodeURIComponent(allChars)}&display=block`;
   const wv = new WebView();
-  await wv.loadHTML(`<html><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${FONT.replace(/ /g, "+")}&display=block"></head><body></body></html>`);
+  await wv.loadHTML(`<html><head><link rel="stylesheet" href="${css}"></head><body></body></html>`);
   const res = await wv.evaluateJavaScript(`
     (async () => {
       try {
-        const F = '100px "${FONT}"';
-        await document.fonts.load(F, "0123456789");
-        if (!document.fonts.check(F, "0123456789")) return completion(null);
+        const specs = ${JSON.stringify(GLYPH_SPECS)}, widths = {}, images = {};
+        for (const w of [700, 900]) {
+          // 字型沒下載成功時 load 會回傳空陣列，這時不要存檔，免得存到備用字型
+          const faces = await document.fonts.load(w + ' 100px "${FONT}"', ${JSON.stringify(allChars)});
+          if (!faces.length) return completion(null);
+        }
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
-        g.font = F;
-        const widths = {}, images = {}, colors = ${JSON.stringify(GLYPH_COLORS)};
-        for (const ch of "0123456789") widths[ch] = g.measureText(ch).width;
-        for (const name in colors) for (const ch of "0123456789") {
-          cv.width = Math.ceil(widths[ch]) + 20; cv.height = 140;
-          g.font = F; g.fillStyle = colors[name];
+        for (const [w, hex, chars] of specs) for (const ch of chars) {
+          const key = w + "_" + hex.slice(1) + "_" + ch.codePointAt(0);
+          g.font = w + ' 100px "${FONT}"';
+          widths[key] = g.measureText(ch).width;
+          cv.width = Math.ceil(widths[key]) + 20; cv.height = 140;
+          g.font = w + ' 100px "${FONT}"'; g.fillStyle = hex;
           g.textAlign = "center"; g.textBaseline = "middle";
           g.fillText(ch, cv.width / 2, 70);
-          images[name + ch] = cv.toDataURL("image/png").split(",")[1];
+          images[key] = cv.toDataURL("image/png").split(",")[1];
         }
         completion({ widths, images });
       } catch (e) { completion(null); }
@@ -74,7 +90,7 @@ async function buildGlyphs() {
   if (!res) return false;
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
-  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, colors: GLYPH_COLORS, widths: res.widths }));
+  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, specs: GLYPH_SPECS, widths: res.widths }));
   return true;
 }
 
@@ -83,7 +99,7 @@ async function loadGlyphs() {
   const ok = () => {
     if (!fm.fileExists(metaPath)) return null;
     const meta = JSON.parse(fm.readString(metaPath));
-    if (meta.version !== GLYPH_VERSION || JSON.stringify(meta.colors) !== JSON.stringify(GLYPH_COLORS)) return null;
+    if (meta.version !== GLYPH_VERSION || JSON.stringify(meta.specs) !== JSON.stringify(GLYPH_SPECS)) return null;
     return meta;
   };
   let meta = ok();
@@ -92,9 +108,7 @@ async function loadGlyphs() {
   }
   if (!meta) return null;
   const images = {};
-  for (const name in GLYPH_COLORS) for (const ch of "0123456789") {
-    images[name + ch] = Image.fromFile(fm.joinPath(glyphDir, name + ch + ".png"));
-  }
+  for (const key in meta.widths) images[key] = Image.fromFile(fm.joinPath(glyphDir, key + ".png"));
   return { widths: meta.widths, images };
 }
 const glyphs = await loadGlyphs();
@@ -129,22 +143,23 @@ function text(str, cx, cy, size, hex, font, align = "center", boxW = 80) {
 const heavy = s => Font.heavyRoundedSystemFont(s);
 const bold = s => Font.boldRoundedSystemFont(s);
 
-// 用 Caacupe One 畫數字（colorName 為 GLYPH_COLORS 的鍵）；沒有字型時用系統圓體
-function numWidth(str, size) {
-  if (!glyphs) return str.length * size * 0.6;
-  return [...str].reduce((w, ch) => w + glyphs.widths[ch] * size / 100, 0);
+// 用 Zen Maru Gothic 畫字；有任何字沒畫到小圖時，整串改用系統圓體
+const hasGlyphs = (str, w, hex) => glyphs && [...str].every(ch => glyphKey(w, hex, ch) in glyphs.widths);
+function strWidth(str, size, w, hex) {
+  if (!hasGlyphs(str, w, hex)) return [...str].reduce((t, ch) => t + size * (ch.charCodeAt(0) > 255 ? 1 : 0.6), 0);
+  return [...str].reduce((t, ch) => t + glyphs.widths[glyphKey(w, hex, ch)] * size / 100, 0);
 }
-function num(str, x, cy, size, colorName, align = "center") {
-  if (!glyphs) {
-    const w = numWidth(str, size) + 20;
-    const cx = align === "left" ? x + w / 2 - 10 : x;
-    return text(str, cx, cy, size, GLYPH_COLORS[colorName], heavy, "center", w);
+function str(s, x, cy, size, hex, w = 700, align = "center") {
+  const width = strWidth(s, size, w, hex);
+  if (!hasGlyphs(s, w, hex)) {
+    const cx = align === "left" ? x + width / 2 : x;
+    return text(s, cx, cy, size, hex, w >= 900 ? heavy : bold, "center", width + 20);
   }
   const k = size / 100;
-  let pen = align === "left" ? x : x - numWidth(str, size) / 2;
-  for (const ch of str) {
-    const adv = glyphs.widths[ch] * k, imgW = (Math.ceil(glyphs.widths[ch]) + 20) * k;
-    ctx.drawImageInRect(glyphs.images[colorName + ch], new Rect(pen + adv / 2 - imgW / 2, cy - 70 * k, imgW, 140 * k));
+  let pen = align === "left" ? x : x - width / 2;
+  for (const ch of s) {
+    const key = glyphKey(w, hex, ch), adv = glyphs.widths[key] * k, imgW = (Math.ceil(glyphs.widths[key]) + 20) * k;
+    ctx.drawImageInRect(glyphs.images[key], new Rect(pen + adv / 2 - imgW / 2, cy - 70 * k, imgW, 140 * k));
     pen += adv;
   }
 }
@@ -219,17 +234,15 @@ function drawLogo(x, y, s) {
 const logoS = 40, headY = cardY + pad + logoS / 2;
 drawLogo(inX, headY - logoS / 2, logoS);
 
-const titleX = inX + logoS + 10, monthNum = String(month + 1);
-num(monthNum, titleX, headY, 26, "primary", "left");
-const monthNumW = numWidth(monthNum, 26);
-text("月", titleX + monthNumW + 1, headY, 22, C.primary, heavy, "left", 30);
-num(String(year), titleX + monthNumW + 1 + 22 + 8, headY + 3, 15, "muted", "left");
+const titleX = inX + logoS + 10, title = `${month + 1}月`;
+str(title, titleX, headY, 24, C.primary, 900, "left");
+str(String(year), titleX + strWidth(title, 24, 900, C.primary) + 8, headY + 2, 14, C.muted, 700, "left");
 
 const lunar = lunarText(now);
 if (lunar) {
-  const pillW = lunar.length * 14 + 22, pillH = 26;
+  const pillW = strWidth(lunar, 14, 700, C.tealDark) + 22, pillH = 26;
   roundRect(C.tealTint, 1, inX + inW - pillW, headY - pillH / 2, pillW, pillH, 13);
-  text(lunar, inX + inW - pillW / 2, headY, 14, C.tealDark, bold, "center", pillW);
+  str(lunar, inX + inW - pillW / 2, headY, 14, C.tealDark);
 }
 
 // ---- 星期列（從星期日開始）
@@ -237,7 +250,7 @@ const colW = inW / 7;
 const weekY = headY + 34;
 ["日", "一", "二", "三", "四", "五", "六"].forEach((d, i) => {
   const c = i === 0 ? C.danger : i === 6 ? C.tealDark : C.muted;
-  text(d, inX + colW * i + colW / 2, weekY, 13, c, bold, "center", colW);
+  str(d, inX + colW * i + colW / 2, weekY, 13, c);
 });
 
 // ---- 日期格
@@ -254,10 +267,10 @@ for (let d = 1; d <= days; d++) {
   if (d === today) {
     ellipse(C.dangerDark, 1, cx - dot / 2, cy - dot / 2 + 3, dot, dot);
     ellipse(C.danger, 1, cx - dot / 2, cy - dot / 2, dot, dot);
-    num(String(d), cx, cy, 20, "white");
+    str(String(d), cx, cy, 19, "#FFFFFF", 900);
   } else {
     const weekend = c === 0 || c === 6;
-    num(String(d), cx, cy, 20, weekend ? "muted" : "text");
+    str(String(d), cx, cy, 19, weekend ? C.muted : C.text);
   }
 }
 
