@@ -18,8 +18,8 @@ iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https
 
 ## 大圓臉版（`calendar-widget-bigface.js`）
 
-跟上面那份只差在底圖：改用[照片沖印排版](../photo-print-layout/README.md)內建樣板「大圓臉」的插畫（藍圓、綠圓黃花、獅子與長頸鹿、黃圓、葉子），拿掉中間兩個照片圓，四角的裝飾搬到小工具四角，月曆直接放在米白底上。
+跟上面那份只差在底圖：改用[照片沖印排版](../photo-print-layout/README.md)內建樣板「大圓臉」的插畫（藍圓、綠圓黃花、紅圓、黃圓、葉子），左下再放上「蛋糕慶生」樣板的五隻動物（豬、長頸鹿、熊、猴子、獅子），拿掉中間兩個照片圓，四角的裝飾搬到小工具四角，月曆直接放在米白底上。
 
 ![大圓臉版預覽](preview-bigface.png)
 
-底圖會在第一次於 App 內執行時從 GitHub 下載 `photo-print-layout/builtin-templates/t9.png` 並處理好存起來。兩份腳本的快取資料夾分開，可以同時使用。
+底圖會在第一次於 App 內執行時從 GitHub 下載 `photo-print-layout/builtin-templates/` 裡的 `t9.png`、`t18.png` 並處理好存起來。兩份腳本的快取資料夾分開，可以同時使用。

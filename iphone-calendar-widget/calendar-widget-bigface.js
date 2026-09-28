@@ -36,24 +36,26 @@ const GLYPH_SPECS = [
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-bigface");
+const BG_VERSION = 2; // 底圖內容改過就加 1，讓已存的底圖重畫
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const logoPath = fm.joinPath(glyphDir, "logo.png");
 const bgPath = fm.joinPath(glyphDir, "bg.png");
 
-// 「大圓臉」樣板底圖（照片排版工具內建樣板 t9.png，1200×1802）
-const TEMPLATE_URLS = [
-  "https://raw.githubusercontent.com/yenchisayhi-LORCA/Claude-Code-HTML/main/photo-print-layout/builtin-templates/t9.png",
-  "https://yenchisayhi-lorca.github.io/Claude-Code-HTML/photo-print-layout/builtin-templates/t9.png",
+// 照片排版工具的內建樣板（1200×1802）：t9「大圓臉」當底圖，t18「蛋糕慶生」取五隻動物
+const TEMPLATE_BASES = [
+  "https://raw.githubusercontent.com/yenchisayhi-LORCA/Claude-Code-HTML/main/photo-print-layout/builtin-templates/",
+  "https://yenchisayhi-lorca.github.io/Claude-Code-HTML/photo-print-layout/builtin-templates/",
 ];
-async function fetchTemplate() {
-  for (const url of TEMPLATE_URLS) {
+async function fetchTemplate(file) {
+  for (const base of TEMPLATE_BASES) {
+    const url = base + file;
     try {
       const req = new Request(url);
       const data = await req.load();
       if (req.response.statusCode === 200) return data.toBase64String();
     } catch (e) {}
   }
-  throw new Error("下載不到「大圓臉」底圖");
+  throw new Error(`下載不到樣板圖 ${file}`);
 }
 
 const [W, H] = widgetSize();
@@ -82,7 +84,7 @@ async function fetchFont(family, weights, chars) {
 async function buildGlyphs() {
   const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
   const faces = [...await fetchFont(FONT, [700, 900], allChars), ...await fetchFont("Huninn", null, "彥")];
-  const template = await fetchTemplate();
+  const template = await fetchTemplate("t9.png"), animals = await fetchTemplate("t18.png");
   const wv = new WebView();
   await wv.loadHTML("<html><body></body></html>");
   const res = await wv.evaluateJavaScript(`
@@ -163,11 +165,16 @@ async function buildGlyphs() {
       return cv.toDataURL("image/png").split(",")[1];
     }
 
-    // 小工具底圖：把「大圓臉」樣板四個角的裝飾搬到小工具四角，並拿掉中間兩個照片圓
-    async function drawBackground(W, H, sc) {
+    // 小工具底圖：把「大圓臉」樣板四個角的裝飾搬到小工具四角，並拿掉中間兩個照片圓；
+    // 左下換成「蛋糕慶生」的五隻動物
+    async function loadImg(b64) {
       const img = document.createElement("img");
-      img.src = "data:image/png;base64,${template}";
+      img.src = "data:image/png;base64," + b64;
       await img.decode();
+      return img;
+    }
+    async function drawBackground(W, H, sc) {
+      const img = await loadImg("${template}");
 
       // 1. 清掉照片圓（灰色 #EFEFE2）：依位置換回底下原本的顏色（藍圓、黃圓或米白底），
       //    連同反鋸齒邊緣一起處理
@@ -197,9 +204,28 @@ async function buildGlyphs() {
       const put = ([sx, sy, sw, sh], x, y) => g.drawImage(src, sx, sy, sw, sh, x, y, sw * sc, sh * sc);
       put([0, 0, 362, 362], -14, -14);                               // 左上：藍圓（往外推，避開星期列）
       put([955, 0, 245, 245], W - 245 * sc, 0);                      // 右上：綠圓 + 黃花
-      put([0, 1462, 445, 338], 0, H - 338 * sc);                     // 左下：紅圓 + 獅子 + 長頸鹿
+      g.fillStyle = "rgb(255, 122, 92)";                              // 左下：紅圓
+      g.beginPath(); g.arc(89.6 * sc, H - (1800 - 1738.9) * sc, 209 * sc, 0, Math.PI * 2); g.fill();
       put([890, 1515, 310, 285], W - 310 * sc, H - 285 * sc);        // 右下：黃圓
-      put([40, 645, 130, 145], W * 0.52, H - 145 * sc - 4);          // 下方中間：葉子
+      put([40, 645, 130, 145], W * 0.62, H - 145 * sc - 4);          // 下方：葉子
+
+      // 3. 五隻動物（豬、長頸鹿、熊、猴子、獅子）：從蛋糕慶生樣板切下來，去掉粉色底和照片框的灰色
+      const zoo = await loadImg("${animals}");
+      const [ax, ay, aw, ah] = [208, 744, 784, 176];
+      const a = document.createElement("canvas"), ag = a.getContext("2d");
+      a.width = aw; a.height = ah;
+      ag.drawImage(zoo, ax, ay, aw, ah, 0, 0, aw, ah);
+      const ad = ag.getImageData(0, 0, aw, ah), ap = ad.data;
+      // 顏色落在「粉色底 ↔ 灰色框」之間（含兩者交界的反鋸齒）就變透明
+      const B = [255, 237, 228], Gy = [239, 239, 226], v = [Gy[0] - B[0], Gy[1] - B[1], Gy[2] - B[2]];
+      for (let i = 0; i < ap.length; i += 4) {
+        const q = [ap[i] - B[0], ap[i + 1] - B[1], ap[i + 2] - B[2]];
+        const t = Math.max(0, Math.min(1, (q[0] * v[0] + q[1] * v[1] + q[2] * v[2]) / (v[0] * v[0] + v[1] * v[1] + v[2] * v[2])));
+        if (Math.hypot(q[0] - t * v[0], q[1] - t * v[1], q[2] - t * v[2]) < 9) ap[i + 3] = 0;
+      }
+      ag.putImageData(ad, 0, 0);
+      const zs = sc * 1.1;
+      g.drawImage(a, 6, H - ah * zs - 6, aw * zs, ah * zs);
       return cv.toDataURL("image/png").split(",")[1];
     }
 
@@ -210,7 +236,7 @@ async function buildGlyphs() {
   fm.write(logoPath, Data.fromBase64String(res.logo));
   fm.write(bgPath, Data.fromBase64String(res.bg));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
-  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, specs: GLYPH_SPECS, size: [W, H], widths: res.widths }));
+  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, bgVersion: BG_VERSION, specs: GLYPH_SPECS, size: [W, H], widths: res.widths }));
   return null;
 }
 
@@ -220,7 +246,7 @@ async function loadGlyphs() {
     if (!fm.fileExists(metaPath)) return null;
     const meta = JSON.parse(fm.readString(metaPath));
     if (meta.version !== GLYPH_VERSION || JSON.stringify(meta.specs) !== JSON.stringify(GLYPH_SPECS)) return null;
-    if (JSON.stringify(meta.size) !== JSON.stringify([W, H])) return null;
+    if (meta.bgVersion !== BG_VERSION || JSON.stringify(meta.size) !== JSON.stringify([W, H])) return null;
     return meta;
   };
   let meta = ok();
@@ -293,7 +319,7 @@ function str(s, x, cy, size, hex, w = 700, align = "center") {
   }
 }
 
-// ---- 背景：「大圓臉」底圖；還沒存好時畫簡化版（只有四角色塊）
+// ---- 背景：「大圓臉」底圖 + 五隻動物；還沒存好時畫簡化版（只有四角色塊）
 if (glyphs) {
   ctx.drawImageInRect(glyphs.bg, new Rect(0, 0, W, H));
 } else {
