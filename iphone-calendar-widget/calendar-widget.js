@@ -1,7 +1,7 @@
 // 月曆小工具（Scriptable 大尺寸）— 配色沿用旅遊記帳系統，字型 Zen Maru Gothic
 const C = {
   bg: "#3B4CB8", surface: "#FFFDF7", text: "#2B3159", muted: "#8A93B5",
-  primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84", tealTint: "#EDF9F4",
+  primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
   danger: "#E8574B", dangerDark: "#B93E34", warn: "#F5B324", warnDark: "#D9971A",
 };
 const col = (hex, a = 1) => new Color(hex, a);
@@ -17,34 +17,13 @@ function widgetSize() {
   return [292, 311];
 }
 
-// 農曆日期，例如「八月十八」；系統不支援時回傳空字串
-function lunarText(d) {
-  try {
-    const parts = new Intl.DateTimeFormat("zh-TW-u-ca-chinese", { month: "long", day: "numeric" }).formatToParts(d);
-    const month = parts.find(p => p.type === "month").value;
-    const n = parseInt(parts.find(p => p.type === "day").value, 10);
-    const num = "一二三四五六七八九十";
-    let day;
-    if (n === 10) day = "初十";
-    else if (n === 20) day = "二十";
-    else if (n === 30) day = "三十";
-    else if (n < 10) day = "初" + num[n - 1];
-    else if (n < 20) day = "十" + num[n - 11];
-    else day = "廿" + num[n - 21];
-    return month + day;
-  } catch (e) {
-    return "";
-  }
-}
-
 // ---- Zen Maru Gothic 字型
 // Scriptable 無法直接安裝網路字型，所以第一次在 App 內執行時，用 WebView 從
-// Google Fonts 載入字型、把會用到的字依顏色畫成小圖存起來；小工具之後直接讀這些圖。
-// 沒畫到的字（例如圖示裡的「彥」，字型裡沒有）改用系統圓體。
+// Google Fonts 載入字型、把會用到的字依顏色畫成小圖存起來，「彥」圖示也一起畫好存成
+// 一張圖；小工具之後直接讀這些圖。還沒存好時改用系統圓體和簡化版圖示。
 const FONT = "Zen Maru Gothic";
-const GLYPH_VERSION = 2;
+const GLYPH_VERSION = 3;
 const DIGITS = "0123456789";
-const LUNAR_CHARS = "正一二三四五六七八九十冬臘閏月初廿";
 // [粗細, 顏色, 要畫的字]
 const GLYPH_SPECS = [
   [700, C.text, DIGITS],
@@ -52,18 +31,20 @@ const GLYPH_SPECS = [
   [900, "#FFFFFF", DIGITS],
   [900, C.primary, DIGITS + "月"],
   [700, C.danger, "日"],
-  [700, C.tealDark, "六" + LUNAR_CHARS],
+  [700, C.tealDark, "六"],
 ];
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-glyphs");
 const metaPath = fm.joinPath(glyphDir, "meta.json");
+const logoPath = fm.joinPath(glyphDir, "logo.png");
 
 async function buildGlyphs() {
   const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
   const css = `https://fonts.googleapis.com/css2?family=${FONT.replace(/ /g, "+")}:wght@700;900&text=${encodeURIComponent(allChars)}&display=block`;
   const wv = new WebView();
-  await wv.loadHTML(`<html><head><link rel="stylesheet" href="${css}"></head><body></body></html>`);
+  const logoCss = `https://fonts.googleapis.com/css2?family=Huninn&text=${encodeURIComponent("彥")}&display=block`;
+  await wv.loadHTML(`<html><head><link rel="stylesheet" href="${css}"><link rel="stylesheet" href="${logoCss}"></head><body></body></html>`);
   const res = await wv.evaluateJavaScript(`
     (async () => {
       try {
@@ -73,6 +54,8 @@ async function buildGlyphs() {
           const faces = await document.fonts.load(w + ' 100px "${FONT}"', ${JSON.stringify(allChars)});
           if (!faces.length) return completion(null);
         }
+        if (!(await document.fonts.load('96px "Huninn"', "彥")).length) return completion(null);
+        const logo = drawLogo();
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
         for (const [w, hex, chars] of specs) for (const ch of chars) {
           const key = w + "_" + hex.slice(1) + "_" + ch.codePointAt(0);
@@ -84,11 +67,63 @@ async function buildGlyphs() {
           g.fillText(ch, cv.width / 2, 70);
           images[key] = cv.toDataURL("image/png").split(",")[1];
         }
-        completion({ widths, images });
+        completion({ widths, images, logo });
       } catch (e) { completion(null); }
-    })();`, true);
+    })();
+
+    // 「彥」圖示（Claude Design 黃底版，256×256 設計稿，以 3 倍解析度輸出）
+    function drawLogo() {
+      const S = 3, cv = document.createElement("canvas"), g = cv.getContext("2d");
+      cv.width = cv.height = 256 * S;
+      g.scale(S, S);
+      g.beginPath(); g.roundRect(0, 0, 256, 256, 56); g.clip();
+      g.fillStyle = "#FFD429"; g.fillRect(0, 0, 256, 256);
+
+      // 紅花（奶油花心）
+      g.save(); g.translate(46, 44); g.rotate(-12 * Math.PI / 180);
+      g.fillStyle = "#E63329";
+      for (let i = 0; i < 8; i++) {
+        g.save(); g.rotate(i * Math.PI / 4);
+        g.beginPath(); g.ellipse(0, -23, 8, 20, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+      }
+      g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 12, 0, Math.PI * 2); g.fill();
+      g.restore();
+
+      // 葉枝：[顏色, 線寬, 位移, 旋轉角度, 路徑]
+      const twig = (color, width, tx, ty, deg, paths) => {
+        g.save(); g.translate(tx, ty); g.rotate(deg * Math.PI / 180);
+        g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
+        for (const d of paths) g.stroke(new Path2D(d));
+        g.restore();
+      };
+      twig("#2A2A6B", 5.5, 200, 182, 18, [
+        "M0 52 C 4 30, 10 12, 20 -6", "M3 38 C -6 32, -12 23, -14 14", "M8 26 C 0 19, -4 10, -5 1",
+        "M6 34 C 15 27, 20 19, 23 10", "M11 21 C 20 15, 25 7, 27 -2"]);
+      twig("#4A6FC4", 5, 46, 200, -8, [
+        "M0 42 C 1 26, 3 12, 6 0", "M2 30 C -6 26, -10 19, -11 12", "M4 17 C 12 13, 16 6, 16 -1"]);
+
+      // 奶油色不規則圓：172×166，border-radius 44% 56% 62% 38% / 46% 54% 46% 54%
+      const bw = 172, bh = 166, bx = (256 - bw) / 2, by = (256 - bh) / 2;
+      const tl = [0.44 * bw, 0.46 * bh], tr = [0.56 * bw, 0.54 * bh], br = [0.62 * bw, 0.46 * bh], bl = [0.38 * bw, 0.54 * bh];
+      g.fillStyle = "#FFFCEA"; g.beginPath();
+      g.ellipse(bx + bw - tr[0], by + tr[1], tr[0], tr[1], 0, -Math.PI / 2, 0);
+      g.ellipse(bx + bw - br[0], by + bh - br[1], br[0], br[1], 0, 0, Math.PI / 2);
+      g.ellipse(bx + bl[0], by + bh - bl[1], bl[0], bl[1], 0, Math.PI / 2, Math.PI);
+      g.ellipse(bx + tl[0], by + tl[1], tl[0], tl[1], 0, Math.PI, Math.PI * 1.5);
+      g.fill();
+
+      // 彥：Huninn 96px，同色 4px 描邊加粗；以字的實際外框置中，對齊設計稿位置（中心 y ≈ 126.5）
+      g.font = '96px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
+      const m = g.measureText("彥");
+      const baseline = 126.5 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+      g.strokeStyle = g.fillStyle = "#2A2A6B"; g.lineWidth = 4; g.lineJoin = "round";
+      g.strokeText("彥", 128, baseline); g.fillText("彥", 128, baseline);
+      return cv.toDataURL("image/png").split(",")[1];
+    }`, true);
   if (!res) return false;
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
+  fm.write(logoPath, Data.fromBase64String(res.logo));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
   fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, specs: GLYPH_SPECS, widths: res.widths }));
   return true;
@@ -109,7 +144,7 @@ async function loadGlyphs() {
   if (!meta) return null;
   const images = {};
   for (const key in meta.widths) images[key] = Image.fromFile(fm.joinPath(glyphDir, key + ".png"));
-  return { widths: meta.widths, images };
+  return { widths: meta.widths, images, logo: Image.fromFile(logoPath) };
 }
 const glyphs = await loadGlyphs();
 
@@ -181,54 +216,13 @@ const now = new Date();
 const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
 const pad = 14, inX = cardX + pad, inW = cardW - pad * 2;
 
-// ---- 標題列：「彥」圖示 + 月份 + 年份 + 農曆
-// 圖示：黃底圓角方塊、紅花、米白圓塊裡的「彥」、兩株小芽
+// ---- 標題列：「彥」圖示 + 月份 + 年份
+// 圖示沒存好時，先畫簡化版（黃底 + 奶油色圓 + 彥）
 function drawLogo(x, y, s) {
-  const P = (px, py) => new Point(x + px * s, y + py * s);
-  roundRect("#F7D35A", 1, x, y, s, s, s * 0.24);
-
-  // 紅花：8 片花瓣 + 白色花心
-  const fx = 0.19, fy = 0.17;
-  const petals = new Path();
-  for (let i = 0; i < 8; i++) {
-    const a = i * Math.PI / 4 + 0.2, at = (r, da) => P(fx + r * Math.cos(a + da), fy + r * Math.sin(a + da));
-    petals.move(at(0.03, -0.9));
-    petals.addQuadCurve(at(0.2, 0), at(0.19, -0.5));
-    petals.addQuadCurve(at(0.03, 0.9), at(0.19, 0.5));
-    petals.closeSubpath();
-  }
-  ctx.addPath(petals);
-  ctx.setFillColor(col("#E0452E"));
-  ctx.fillPath();
-  ellipse("#E0452E", 1, x + (fx - 0.07) * s, y + (fy - 0.07) * s, 0.14 * s, 0.14 * s);
-  ellipse("#FFFDF7", 1, x + (fx - 0.045) * s, y + (fy - 0.045) * s, 0.09 * s, 0.09 * s);
-
-  // 米白圓塊（略不規則）
-  const bx = 0.53, by = 0.5, r = [0.37, 0.35, 0.36, 0.33], kk = 0.5523;
-  const blob = new Path();
-  blob.move(P(bx + r[0], by));
-  blob.addCurve(P(bx, by + r[1]), P(bx + r[0], by + r[1] * kk), P(bx + r[2] * kk, by + r[1]));
-  blob.addCurve(P(bx - r[2], by), P(bx - r[2] * kk, by + r[1]), P(bx - r[2], by + r[1] * kk));
-  blob.addCurve(P(bx, by - r[3]), P(bx - r[2], by - r[3] * kk), P(bx - r[2] * kk, by - r[3]));
-  blob.addCurve(P(bx + r[0], by), P(bx + r[0] * kk, by - r[3]), P(bx + r[0], by - r[3] * kk));
-  blob.closeSubpath();
-  ctx.addPath(blob);
-  ctx.setFillColor(col("#FDFBEF"));
-  ctx.fillPath();
-
-  text("彥", x + bx * s, y + by * s, s * 0.46, "#2A2F7C", heavy, "center", s);
-
-  // 小芽
-  const sprout = (hex, lines) => {
-    const p = new Path();
-    lines.forEach(([a, b, c, d]) => { p.move(P(a, b)); p.addLine(P(c, d)); });
-    ctx.addPath(p);
-    ctx.setStrokeColor(col(hex));
-    ctx.setLineWidth(s * 0.05);
-    ctx.strokePath();
-  };
-  sprout("#5B78D0", [[0.2, 0.96, 0.21, 0.73], [0.205, 0.85, 0.15, 0.77], [0.21, 0.81, 0.27, 0.75]]);
-  sprout("#2A2F7C", [[0.74, 0.88, 0.9, 0.68], [0.8, 0.81, 0.77, 0.64], [0.8, 0.81, 0.94, 0.8]]);
+  if (glyphs) return ctx.drawImageInRect(glyphs.logo, new Rect(x, y, s, s));
+  roundRect("#FFD429", 1, x, y, s, s, s * 0.22);
+  ellipse("#FFFCEA", 1, x + s * 0.16, y + s * 0.18, s * 0.68, s * 0.65);
+  text("彥", x + s / 2, y + s / 2, s * 0.4, "#2A2A6B", heavy, "center", s);
 }
 
 const logoS = 40, headY = cardY + pad + logoS / 2;
@@ -237,13 +231,6 @@ drawLogo(inX, headY - logoS / 2, logoS);
 const titleX = inX + logoS + 10, title = `${month + 1}月`;
 str(title, titleX, headY, 24, C.primary, 900, "left");
 str(String(year), titleX + strWidth(title, 24, 900, C.primary) + 8, headY + 2, 14, C.muted, 700, "left");
-
-const lunar = lunarText(now);
-if (lunar) {
-  const pillW = strWidth(lunar, 14, 700, C.tealDark) + 22, pillH = 26;
-  roundRect(C.tealTint, 1, inX + inW - pillW, headY - pillH / 2, pillW, pillH, 13);
-  str(lunar, inX + inW - pillW / 2, headY, 14, C.tealDark);
-}
 
 // ---- 星期列（從星期日開始）
 const colW = inW / 7;
