@@ -1,0 +1,25 @@
+# 📅 iPhone 大尺寸月曆小工具（Scriptable）
+
+iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https://scriptable.app/) 腳本可以做出**大尺寸**的月曆小工具，配色沿用旅遊記帳系統（藍底、彩色色塊、米白卡片）。
+
+![預覽](preview.png)
+
+- 右上角顯示年月（例如 2026.09）
+- 一週從星期日開始，週末用灰字
+- 今天用紅色圓圈標示，左上角是 Claude Design 設計的黃底「彥」圖示（Huninn 字型、紅花、葉枝），第一次執行時照設計稿畫成圖存起來
+- 字型使用 Google Fonts 的 [Zen Maru Gothic](https://fonts.google.com/specimen/Zen+Maru+Gothic)（數字、月份、星期都套用）。第一次在 Scriptable App 內執行時會連網下載字型、把用到的字存成小圖，之後小工具直接讀取；下載失敗時會跳出提示並說明原因，先用系統字型顯示
+- 每天午夜自動更新；點小工具會打開內建行事曆
+
+## 安裝
+
+1. 在 Scriptable 按右上角 ＋ 新增腳本，把 `calendar-widget.js` 的內容整段貼上，命名為「月曆」，**在 App 內按 ▶︎ 執行一次**（下載字型）。
+2. 回到主畫面長按空白處 →「編輯」→「加入小工具」→ Scriptable → 選**大**尺寸 → 加入。
+3. 長按該小工具 →「編輯小工具」→ Script 選「月曆」。
+
+## 大圓臉版（`calendar-widget-bigface.js`）
+
+跟上面那份只差在底圖：改用[照片沖印排版](../photo-print-layout/README.md)內建樣板「大圓臉」的插畫（藍圓、綠圓黃花、紅圓、黃圓、葉子），左下再放上「蛋糕慶生」樣板的五隻動物（豬、長頸鹿、熊、猴子、獅子），拿掉中間兩個照片圓，四角的裝飾搬到小工具四角，月曆直接放在米白底上。
+
+![大圓臉版預覽](preview-bigface.png)
+
+底圖會在第一次於 App 內執行時從 GitHub 下載 `photo-print-layout/builtin-templates/` 裡的 `t9.png`、`t18.png` 並處理好存起來。兩份腳本的快取資料夾分開，可以同時使用。
