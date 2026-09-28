@@ -22,14 +22,14 @@ function widgetSize() {
 // Google Fonts 載入字型、把會用到的字依顏色畫成小圖存起來，「彥」圖示也一起畫好存成
 // 一張圖；小工具之後直接讀這些圖。還沒存好時改用系統圓體和簡化版圖示。
 const FONT = "Zen Maru Gothic";
-const GLYPH_VERSION = 3;
+const GLYPH_VERSION = 4;
 const DIGITS = "0123456789";
 // [粗細, 顏色, 要畫的字]
 const GLYPH_SPECS = [
   [700, C.text, DIGITS],
   [700, C.muted, DIGITS + "一二三四五"],
   [900, "#FFFFFF", DIGITS],
-  [900, C.primary, DIGITS + "月"],
+  [900, C.primary, DIGITS + "."],
   [700, C.danger, "日"],
   [700, C.tealDark, "六"],
 ];
@@ -39,22 +39,40 @@ const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-glyphs");
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const logoPath = fm.joinPath(glyphDir, "logo.png");
 
+// 用 Scriptable 的 Request 下載 Google Fonts 字型檔（只抓要用到的字），回傳 base64
+async function fetchFont(family, weights, chars) {
+  const w = weights ? ":wght@" + weights.join(";") : "";
+  const req = new Request(`https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}${w}&text=${encodeURIComponent(chars)}`);
+  req.headers = { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" };
+  const css = await req.loadString();
+  const faces = [];
+  for (const block of css.match(/@font-face\s*{[^}]*}/g) || []) {
+    const weight = (block.match(/font-weight:\s*(\d+)/) || [])[1] || "400";
+    const src = (block.match(/url\(([^)]+)\)/) || [])[1];
+    if (!src) continue;
+    const data = await new Request(src).load();
+    faces.push({ family, weight, b64: data.toBase64String() });
+  }
+  if (!faces.length) throw new Error(`下載不到字型「${family}」`);
+  return faces;
+}
+
+// 成功回傳 null；失敗回傳原因
 async function buildGlyphs() {
   const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
-  const css = `https://fonts.googleapis.com/css2?family=${FONT.replace(/ /g, "+")}:wght@700;900&text=${encodeURIComponent(allChars)}&display=block`;
+  const faces = [...await fetchFont(FONT, [700, 900], allChars), ...await fetchFont("Huninn", null, "彥")];
   const wv = new WebView();
-  const logoCss = `https://fonts.googleapis.com/css2?family=Huninn&text=${encodeURIComponent("彥")}&display=block`;
-  await wv.loadHTML(`<html><head><link rel="stylesheet" href="${css}"><link rel="stylesheet" href="${logoCss}"></head><body></body></html>`);
+  await wv.loadHTML("<html><body></body></html>");
   const res = await wv.evaluateJavaScript(`
     (async () => {
       try {
         const specs = ${JSON.stringify(GLYPH_SPECS)}, widths = {}, images = {};
-        for (const w of [700, 900]) {
-          // 字型沒下載成功時 load 會回傳空陣列，這時不要存檔，免得存到備用字型
-          const faces = await document.fonts.load(w + ' 100px "${FONT}"', ${JSON.stringify(allChars)});
-          if (!faces.length) return completion(null);
+        for (const f of ${JSON.stringify(faces)}) {
+          const bytes = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
+          const face = new FontFace(f.family, bytes, { weight: f.weight });
+          await face.load();
+          document.fonts.add(face);
         }
-        if (!(await document.fonts.load('96px "Huninn"', "彥")).length) return completion(null);
         const logo = drawLogo();
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
         for (const [w, hex, chars] of specs) for (const ch of chars) {
@@ -68,7 +86,7 @@ async function buildGlyphs() {
           images[key] = cv.toDataURL("image/png").split(",")[1];
         }
         completion({ widths, images, logo });
-      } catch (e) { completion(null); }
+      } catch (e) { completion({ error: String(e) }); }
     })();
 
     // 「彥」圖示（Claude Design 黃底版，256×256 設計稿，以 3 倍解析度輸出）
@@ -121,12 +139,12 @@ async function buildGlyphs() {
       g.strokeText("彥", 128, baseline); g.fillText("彥", 128, baseline);
       return cv.toDataURL("image/png").split(",")[1];
     }`, true);
-  if (!res) return false;
+  if (!res || res.error) return res ? res.error : "WebView 沒有回應";
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
   fm.write(logoPath, Data.fromBase64String(res.logo));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
   fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, specs: GLYPH_SPECS, widths: res.widths }));
-  return true;
+  return null;
 }
 
 // 讀取字型小圖；沒有的話（且不是在小工具裡）先建一次。失敗就回傳 null，改用系統字型
@@ -139,7 +157,16 @@ async function loadGlyphs() {
   };
   let meta = ok();
   if (!meta && !config.runsInWidget) {
-    try { if (await buildGlyphs()) meta = ok(); } catch (e) {}
+    let err;
+    try { err = await buildGlyphs(); } catch (e) { err = String(e); }
+    meta = ok();
+    if (!meta) {
+      const alert = new Alert();
+      alert.title = "字型下載失敗";
+      alert.message = `先用系統字型顯示。確認網路後再執行一次。\n\n原因：${err}`;
+      alert.addAction("好");
+      await alert.present();
+    }
   }
   if (!meta) return null;
   const images = {};
@@ -187,11 +214,11 @@ function strWidth(str, size, w, hex) {
 function str(s, x, cy, size, hex, w = 700, align = "center") {
   const width = strWidth(s, size, w, hex);
   if (!hasGlyphs(s, w, hex)) {
-    const cx = align === "left" ? x + width / 2 : x;
+    const cx = align === "left" ? x + width / 2 : align === "right" ? x - width / 2 : x;
     return text(s, cx, cy, size, hex, w >= 900 ? heavy : bold, "center", width + 20);
   }
   const k = size / 100;
-  let pen = align === "left" ? x : x - width / 2;
+  let pen = align === "left" ? x : align === "right" ? x - width : x - width / 2;
   for (const ch of s) {
     const key = glyphKey(w, hex, ch), adv = glyphs.widths[key] * k, imgW = (Math.ceil(glyphs.widths[key]) + 20) * k;
     ctx.drawImageInRect(glyphs.images[key], new Rect(pen + adv / 2 - imgW / 2, cy - 70 * k, imgW, 140 * k));
@@ -216,7 +243,7 @@ const now = new Date();
 const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
 const pad = 14, inX = cardX + pad, inW = cardW - pad * 2;
 
-// ---- 標題列：「彥」圖示 + 月份 + 年份
+// ---- 標題列：左邊「彥」圖示，右邊年月
 // 圖示沒存好時，先畫簡化版（黃底 + 奶油色圓 + 彥）
 function drawLogo(x, y, s) {
   if (glyphs) return ctx.drawImageInRect(glyphs.logo, new Rect(x, y, s, s));
@@ -228,9 +255,8 @@ function drawLogo(x, y, s) {
 const logoS = 40, headY = cardY + pad + logoS / 2;
 drawLogo(inX, headY - logoS / 2, logoS);
 
-const titleX = inX + logoS + 10, title = `${month + 1}月`;
-str(title, titleX, headY, 24, C.primary, 900, "left");
-str(String(year), titleX + strWidth(title, 24, 900, C.primary) + 8, headY + 2, 14, C.muted, 700, "left");
+// 右上角：年.月，例如 2026.09
+str(`${year}.${String(month + 1).padStart(2, "0")}`, inX + inW, headY, 24, C.primary, 900, "right");
 
 // ---- 星期列（從星期日開始）
 const colW = inW / 7;

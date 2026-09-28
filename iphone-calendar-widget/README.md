@@ -4,9 +4,10 @@ iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https
 
 ![預覽](preview.png)
 
+- 右上角顯示年月（例如 2026.09）
 - 一週從星期日開始，週末用灰字
 - 今天用紅色圓圈標示，左上角是 Claude Design 設計的黃底「彥」圖示（Huninn 字型、紅花、葉枝），第一次執行時照設計稿畫成圖存起來
-- 字型使用 Google Fonts 的 [Zen Maru Gothic](https://fonts.google.com/specimen/Zen+Maru+Gothic)（數字、月份、星期都套用）。第一次在 Scriptable App 內執行時會連網下載字型、把用到的字存成小圖，之後小工具直接讀取；還沒下載成功前會先用系統字型
+- 字型使用 Google Fonts 的 [Zen Maru Gothic](https://fonts.google.com/specimen/Zen+Maru+Gothic)（數字、月份、星期都套用）。第一次在 Scriptable App 內執行時會連網下載字型、把用到的字存成小圖，之後小工具直接讀取；下載失敗時會跳出提示並說明原因，先用系統字型顯示
 - 每天午夜自動更新；點小工具會打開內建行事曆
 
 ## 安裝
