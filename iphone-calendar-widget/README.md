@@ -5,12 +5,13 @@ iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https
 ![預覽](preview.png)
 
 - 一週從星期日開始，週末用灰字
-- 今天用紅色圓圈標示，左上角的黃色行李箱圖示顯示今天日期
+- 今天用紅色圓圈標示，左上角是黃底「彥」圖示（紅花、小芽）
+- 數字使用 Google Fonts 的 [Caacupe One](https://fonts.google.com/specimen/Caacupe+One)（該字型沒有中文，中文維持系統圓體）。第一次在 Scriptable App 內執行時會連網下載字型、把數字存成小圖，之後小工具直接讀取；還沒下載成功前會先用系統字型
 - 右上角顯示農曆日期
 - 每天午夜自動更新；點小工具會打開內建行事曆
 
 ## 安裝
 
-1. 在 Scriptable 按右上角 ＋ 新增腳本，把 `calendar-widget.js` 的內容整段貼上，命名為「月曆」。
+1. 在 Scriptable 按右上角 ＋ 新增腳本，把 `calendar-widget.js` 的內容整段貼上，命名為「月曆」，**在 App 內按 ▶︎ 執行一次**（下載字型）。
 2. 回到主畫面長按空白處 →「編輯」→「加入小工具」→ Scriptable → 選**大**尺寸 → 加入。
 3. 長按該小工具 →「編輯小工具」→ Script 選「月曆」。
