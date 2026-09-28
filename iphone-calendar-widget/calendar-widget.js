@@ -138,7 +138,10 @@ async function buildGlyphs() {
       g.strokeStyle = g.fillStyle = "#2A2A6B"; g.lineWidth = 4; g.lineJoin = "round";
       g.strokeText("彥", 128, baseline); g.fillText("彥", 128, baseline);
       return cv.toDataURL("image/png").split(",")[1];
-    }`, true);
+    }
+
+    // 最後一行要是一般的值：iPhone 的 WebView 不接受 Promise 當回傳值，會直接報錯
+    0;`, true);
   if (!res || res.error) return res ? res.error : "WebView 沒有回應";
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
   fm.write(logoPath, Data.fromBase64String(res.logo));
