@@ -23,3 +23,17 @@ iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https
 ![大圓臉版預覽](preview-bigface.png)
 
 底圖會在第一次於 App 內執行時從 GitHub 下載 `photo-print-layout/builtin-templates/` 裡的 `t9.png`、`t18.png` 並處理好存起來。兩份腳本的快取資料夾分開，可以同時使用。
+
+### 壽星照片（大圓臉版）
+
+在 Scriptable App 內執行大圓臉版時會出現選單：
+
+- **預覽小工具**
+- **新增壽星**：輸入名字和生日（月、日），再從相簿選一張照片，會自動裁成圓形
+- **管理壽星**：修改名字或生日、換照片、刪除
+
+當月有壽星時，照片會依生日先後排在年月左邊，外框依序是紫、綠、橘（第 4 位起重複），生日那天的日期旁會出現紅氣球。2/29 生日在平年會顯示在 2/28。
+
+壽星資料和照片存在 iCloud Drive 的 `Scriptable/calendar-widget-birthdays/`（沒開 iCloud 時存在本機）。
+
+![壽星照片預覽](preview-birthday.png)
