@@ -1,5 +1,5 @@
 // 月曆小工具・大圓臉版（Scriptable 大尺寸）— 底圖取自照片排版「大圓臉」樣板，字型 Zen Maru Gothic
-// 可在 App 內設定壽星：當月壽星的照片會放在設定的位置（上方、左下或右下），生日那天的日期旁有氣球或拉炮
+// 可在 App 內設定壽星：當月壽星的照片放在最下面（左下或右下），生日那天的日期旁有氣球或拉炮
 const C = {
   bg: "#FFFBEF", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
@@ -312,19 +312,20 @@ const bdayPath = store.joinPath(bdayDir, "birthdays.json");
 const avatarPath = id => store.joinPath(bdayDir, id + ".png");
 const settingsPath = store.joinPath(bdayDir, "settings.json");
 
-// 壽星照片位置
+// 壽星照片位置：都在最下面一排
 const PHOTO_POS = {
-  auto: "自動（1–2 位放上方，3 位以上放左下）",
-  top: "上方（年月前面）",
-  bottomLeft: "左下",
-  bottomRight: "右下",
-  split: "上方＋右下（前 2 位放上方，其餘放右下）",
+  bottomLeft: "左下（從左邊往右排）",
+  bottomRight: "右下（從右邊往左排）",
 };
 async function loadSettings() {
-  const def = { photoPos: "auto" };
+  const def = { photoPos: "bottomLeft" };
   if (!store.fileExists(settingsPath)) return def;
   await ensureLocal(settingsPath);
-  try { return { ...def, ...JSON.parse(store.readString(settingsPath)) }; } catch (e) { return def; }
+  try {
+    const st = { ...def, ...JSON.parse(store.readString(settingsPath)) };
+    if (!(st.photoPos in PHOTO_POS)) st.photoPos = def.photoPos; // 舊版的「上方」等設定改用左下
+    return st;
+  } catch (e) { return def; }
 }
 function saveSettings(st) {
   if (!store.fileExists(bdayDir)) store.createDirectory(bdayDir, true);
@@ -565,33 +566,22 @@ drawLogo(inX, headY - logoS / 2, logoS);
 const title = `${year}.${String(month + 1).padStart(2, "0")}`, titleRight = W - 245 * SC - 6;
 str(title, titleRight, headY, 24, C.primary, 900, "right");
 
-// ---- 本月壽星：照片依設定放在上方、左下或右下，依生日先後用紫、綠、橘外框（第 4 位起重複）
+// ---- 本月壽星：照片放在最下面（左下或右下），依生日先後用紫、綠、橘外框（第 4 位起重複）
 const days = new Date(year, month + 1, 0).getDate();
 const birthdays = (await loadBirthdays())
   .filter(p => p.month === month + 1)
   .map(p => ({ ...p, day: Math.min(p.day, days) })) // 2/29 在平年顯示在 2/28
   .sort((a, b) => a.day - b.day);
 const RINGS = [["#9A8ADA", "#7564BC"], ["#98CF40", "#72A52A"], ["#EF8E34", "#C96F1E"]];
-const PHOTO = 48, GAP = 7;
+const PHOTO = 53, GAP = 7;
 
-// 算出每張照片的位置：上方排在年月左邊，下方排在左下或右下（都不會擋到日期）
+// 算出每張照片的位置：排在最下面一排，靠左或靠右；太多張就縮小（不會擋到日期）
 function layoutPhotos(n, pos) {
-  if (pos === "auto") pos = n <= 2 ? "top" : "bottomLeft";
-  const topN = pos === "top" ? n : pos === "split" ? Math.min(2, n) : 0;
-  const out = [];
-  // 一排照片：從 left～right 之間靠左或靠右排，太擠就縮小
-  const row = (count, left, right, cy, alignRight) => {
-    const D = Math.min(PHOTO, (right - left - GAP * (count - 1)) / count);
-    for (let i = 0; i < count; i++) {
-      const cx = alignRight ? right - D / 2 - (count - 1 - i) * (D + GAP) : left + D / 2 + i * (D + GAP);
-      out.push({ cx, cy, D });
-    }
-  };
-  if (topN) row(topN, inX + logoS + 8, titleRight - strWidth(title, 24, 900, C.primary) - 8, headY, true);
-  const rest = n - topN, bottomY = H - 12 - PHOTO / 2;
-  if (rest) {
-    if (pos === "bottomLeft") row(rest, 12, W - 12, bottomY, false);
-    else row(rest, 12, W - 12, bottomY, true);
+  const left = 12, right = W - 12, cy = H - 12 - PHOTO / 2;
+  const D = Math.min(PHOTO, (right - left - GAP * (n - 1)) / n), out = [];
+  for (let i = 0; i < n; i++) {
+    const cx = pos === "bottomRight" ? right - D / 2 - (n - 1 - i) * (D + GAP) : left + D / 2 + i * (D + GAP);
+    out.push({ cx, cy, D });
   }
   return out;
 }
@@ -614,7 +604,7 @@ for (let i = 0; i < spots.length; i++) {
 // 葉子：放在下方沒有照片的地方；放不下就不放
 if (glyphs) {
   const lw = 130 * SC, lh = 145 * SC, ly = H - lh - 4;
-  const bottom = spots.filter(p => p.cy > H / 2);
+  const bottom = spots;
   const minX = bottom.length ? Math.min(...bottom.map(p => p.cx - p.D / 2)) : W;
   const maxX = bottom.length ? Math.max(...bottom.map(p => p.cx + p.D / 2)) : 0;
   const yellowLeft = W - 310 * SC, coralRight = 300 * SC;
