@@ -1,5 +1,5 @@
 // 月曆小工具・大圓臉版（Scriptable 大尺寸）— 底圖取自照片排版「大圓臉」樣板，字型 Zen Maru Gothic
-// 可在 App 內設定壽星：當月壽星的照片會出現在年月左邊，生日那天的日期旁有氣球
+// 可在 App 內設定壽星：當月壽星的照片會出現在年月左邊，生日那天的日期旁有氣球或拉炮
 const C = {
   bg: "#FFFBEF", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
@@ -37,11 +37,13 @@ const GLYPH_SPECS = [
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-bigface");
-const BG_VERSION = 3; // 底圖或小圖示改過就加 1，讓已存的圖重畫
+const BG_VERSION = 4; // 底圖或小圖示改過就加 1，讓已存的圖重畫
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const logoPath = fm.joinPath(glyphDir, "logo.png");
 const bgPath = fm.joinPath(glyphDir, "bg.png");
-const balloonPath = fm.joinPath(glyphDir, "balloon.png");
+// 生日小圖示：依壽星順序輪流用紅氣球、拉炮、藍氣球
+const ICON_NAMES = ["balloon-red", "popper", "balloon-blue"];
+const iconPath = name => fm.joinPath(glyphDir, name + ".png");
 
 // 照片排版工具的內建樣板（1200×1802）：t9「大圓臉」當底圖，t18「蛋糕慶生」取五隻動物
 const TEMPLATE_BASES = [
@@ -101,7 +103,7 @@ async function buildGlyphs() {
         }
         const logo = drawLogo();
         const bg = await drawBackground(${W}, ${H}, ${SC});
-        const balloon = drawBalloon();
+        const icons = [drawBalloon("#E8574B"), drawPopper(), drawBalloon("#5AA9E6")];
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
         for (const [w, hex, chars] of specs) for (const ch of chars) {
           const key = w + "_" + hex.slice(1) + "_" + ch.codePointAt(0);
@@ -113,7 +115,7 @@ async function buildGlyphs() {
           g.fillText(ch, cv.width / 2, 70);
           images[key] = cv.toDataURL("image/png").split(",")[1];
         }
-        completion({ widths, images, logo, bg, balloon });
+        completion({ widths, images, logo, bg, icons });
       } catch (e) { completion({ error: String(e) }); }
     })();
 
@@ -168,18 +170,40 @@ async function buildGlyphs() {
       return cv.toDataURL("image/png").split(",")[1];
     }
 
-    // 生日小圖示：紅氣球（96×96）
-    function drawBalloon() {
+    // 生日小圖示（96×96）：氣球
+    function drawBalloon(color) {
       const cv = document.createElement("canvas"), g = cv.getContext("2d");
       cv.width = cv.height = 96;
       g.scale(96, 96);
       g.strokeStyle = "#8A93B5"; g.lineWidth = 0.035;
       g.beginPath(); g.moveTo(0.5, 0.7); g.bezierCurveTo(0.4, 0.8, 0.6, 0.88, 0.48, 0.98); g.stroke();
-      g.fillStyle = "#E8574B";
+      g.fillStyle = color;
       g.beginPath(); g.ellipse(0.5, 0.38, 0.28, 0.33, 0, 0, Math.PI * 2); g.fill();
       g.beginPath(); g.moveTo(0.44, 0.74); g.lineTo(0.56, 0.74); g.lineTo(0.5, 0.68); g.fill();
       g.fillStyle = "rgba(255, 255, 255, 0.7)";
       g.beginPath(); g.ellipse(0.4, 0.26, 0.06, 0.1, 0.5, 0, Math.PI * 2); g.fill();
+      return cv.toDataURL("image/png").split(",")[1];
+    }
+
+    // 生日小圖示（96×96）：拉炮（黃紅條紋圓錐 + 紙屑 + 彩帶）
+    function drawPopper() {
+      const cv = document.createElement("canvas"), g = cv.getContext("2d");
+      cv.width = cv.height = 96;
+      g.scale(96, 96);
+      g.save();
+      g.beginPath(); g.moveTo(0.1, 0.92); g.lineTo(0.3, 0.4); g.lineTo(0.62, 0.72); g.closePath(); g.clip();
+      g.fillStyle = "#FFC93C"; g.fillRect(0, 0, 1, 1);
+      g.strokeStyle = "#E8574B"; g.lineWidth = 0.08;
+      for (const t of [0.25, 0.45, 0.65]) { g.beginPath(); g.moveTo(t - 0.3, t + 0.3); g.lineTo(t + 0.3, t + 0.32); g.stroke(); }
+      g.restore();
+      const confetti = [["#E8574B", 0.62, 0.18, 1], ["#4FC4A8", 0.84, 0.34, 0], ["#5AA9E6", 0.5, 0.1, 0], ["#F0588A", 0.9, 0.58, 1], ["#3B4CB8", 0.74, 0.06, 1]];
+      for (const [c, x, y, round] of confetti) {
+        g.fillStyle = c; g.beginPath();
+        if (round) g.arc(x, y, 0.06, 0, Math.PI * 2); else g.roundRect(x - 0.05, y - 0.03, 0.1, 0.06, 0.02);
+        g.fill();
+      }
+      g.strokeStyle = "#F0588A"; g.lineWidth = 0.055; g.lineCap = "round";
+      g.beginPath(); g.moveTo(0.48, 0.44); g.bezierCurveTo(0.56, 0.3, 0.66, 0.42, 0.72, 0.28); g.stroke();
       return cv.toDataURL("image/png").split(",")[1];
     }
 
@@ -253,7 +277,7 @@ async function buildGlyphs() {
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
   fm.write(logoPath, Data.fromBase64String(res.logo));
   fm.write(bgPath, Data.fromBase64String(res.bg));
-  fm.write(balloonPath, Data.fromBase64String(res.balloon));
+  res.icons.forEach((b64, i) => fm.write(iconPath(ICON_NAMES[i]), Data.fromBase64String(b64)));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
   fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, bgVersion: BG_VERSION, specs: GLYPH_SPECS, size: [W, H], widths: res.widths }));
   return null;
@@ -286,7 +310,7 @@ async function loadGlyphs() {
   for (const key in meta.widths) images[key] = Image.fromFile(fm.joinPath(glyphDir, key + ".png"));
   return {
     widths: meta.widths, images,
-    logo: Image.fromFile(logoPath), bg: Image.fromFile(bgPath), balloon: Image.fromFile(balloonPath),
+    logo: Image.fromFile(logoPath), bg: Image.fromFile(bgPath), icons: ICON_NAMES.map(n => Image.fromFile(iconPath(n))),
   };
 }
 const glyphs = await loadGlyphs();
@@ -572,11 +596,12 @@ for (let d = 1; d <= days; d++) {
     const weekend = c === 0 || c === 6;
     str(String(d), cx, cy, 19, weekend ? C.muted : C.text);
   }
-  // 生日：數字右上角放一顆氣球
-  if (birthdays.some(p => p.day === d)) {
-    const x = cx + strWidth(String(d), 19, 700, C.text) / 2 - 3, y = cy - 24;
-    if (glyphs) ctx.drawImageInRect(glyphs.balloon, new Rect(x, y, 18, 18));
-    else ellipse("#E8574B", 1, x + 4, y + 1, 10, 12);
+  // 生日：數字右上角放小圖示，依壽星順序輪流用紅氣球、拉炮、藍氣球
+  const b = birthdays.findIndex(p => p.day === d);
+  if (b >= 0) {
+    const x = cx + strWidth(String(d), 19, 700, C.text) / 2 - 3, y = cy - 24, k = b % ICON_NAMES.length;
+    if (glyphs) ctx.drawImageInRect(glyphs.icons[k], new Rect(x, y, 18, 18));
+    else ellipse(["#E8574B", "#FFC93C", "#5AA9E6"][k], 1, x + 4, y + 1, 10, 12);
   }
 }
 
