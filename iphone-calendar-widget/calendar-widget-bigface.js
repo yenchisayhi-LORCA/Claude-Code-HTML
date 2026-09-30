@@ -37,15 +37,16 @@ const GLYPH_SPECS = [
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-bigface");
-const BG_VERSION = 4; // 底圖或小圖示改過就加 1，讓已存的圖重畫
+const BG_VERSION = 5; // 底圖或小圖示改過就加 1，讓已存的圖重畫
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const logoPath = fm.joinPath(glyphDir, "logo.png");
 const bgPath = fm.joinPath(glyphDir, "bg.png");
+const leafPath = fm.joinPath(glyphDir, "leaf.png");
 // 生日小圖示：依壽星順序輪流用紅氣球、拉炮、藍氣球
 const ICON_NAMES = ["balloon-red", "popper", "balloon-blue"];
 const iconPath = name => fm.joinPath(glyphDir, name + ".png");
 
-// 照片排版工具的內建樣板（1200×1802）：t9「大圓臉」當底圖，t18「蛋糕慶生」取五隻動物
+// 照片排版工具的內建樣板（1200×1802）：t9「大圓臉」當底圖
 const TEMPLATE_BASES = [
   "https://raw.githubusercontent.com/yenchisayhi-LORCA/Claude-Code-HTML/main/photo-print-layout/builtin-templates/",
   "https://yenchisayhi-lorca.github.io/Claude-Code-HTML/photo-print-layout/builtin-templates/",
@@ -88,7 +89,7 @@ async function fetchFont(family, weights, chars) {
 async function buildGlyphs() {
   const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
   const faces = [...await fetchFont(FONT, [700, 900], allChars), ...await fetchFont("Huninn", null, "彥")];
-  const template = await fetchTemplate("t9.png"), animals = await fetchTemplate("t18.png");
+  const template = await fetchTemplate("t9.png");
   const wv = new WebView();
   await wv.loadHTML("<html><body></body></html>");
   const res = await wv.evaluateJavaScript(`
@@ -102,7 +103,7 @@ async function buildGlyphs() {
           document.fonts.add(face);
         }
         const logo = drawLogo();
-        const bg = await drawBackground(${W}, ${H}, ${SC});
+        const [bg, leaf] = await drawBackground(${W}, ${H}, ${SC});
         const icons = [drawBalloon("#E8574B"), drawPopper(), drawBalloon("#5AA9E6")];
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
         for (const [w, hex, chars] of specs) for (const ch of chars) {
@@ -115,7 +116,7 @@ async function buildGlyphs() {
           g.fillText(ch, cv.width / 2, 70);
           images[key] = cv.toDataURL("image/png").split(",")[1];
         }
-        completion({ widths, images, logo, bg, icons });
+        completion({ widths, images, logo, bg, leaf, icons });
       } catch (e) { completion({ error: String(e) }); }
     })();
 
@@ -208,7 +209,7 @@ async function buildGlyphs() {
     }
 
     // 小工具底圖：把「大圓臉」樣板四個角的裝飾搬到小工具四角，並拿掉中間兩個照片圓；
-    // 左下換成「蛋糕慶生」的五隻動物
+    // 葉子另外存成一張圖，小工具再依壽星照片的位置決定放哪
     async function loadImg(b64) {
       const img = document.createElement("img");
       img.src = "data:image/png;base64," + b64;
@@ -249,26 +250,12 @@ async function buildGlyphs() {
       g.fillStyle = "rgb(255, 122, 92)";                              // 左下：紅圓
       g.beginPath(); g.arc(89.6 * sc, H - (1800 - 1738.9) * sc, 209 * sc, 0, Math.PI * 2); g.fill();
       put([890, 1515, 310, 285], W - 310 * sc, H - 285 * sc);        // 右下：黃圓
-      put([40, 645, 130, 145], W * 0.62, H - 145 * sc - 4);          // 下方：葉子
 
-      // 3. 五隻動物（豬、長頸鹿、熊、猴子、獅子）：從蛋糕慶生樣板切下來，去掉粉色底和照片框的灰色
-      const zoo = await loadImg("${animals}");
-      const [ax, ay, aw, ah] = [208, 744, 784, 176];
-      const a = document.createElement("canvas"), ag = a.getContext("2d");
-      a.width = aw; a.height = ah;
-      ag.drawImage(zoo, ax, ay, aw, ah, 0, 0, aw, ah);
-      const ad = ag.getImageData(0, 0, aw, ah), ap = ad.data;
-      // 顏色落在「粉色底 ↔ 灰色框」之間（含兩者交界的反鋸齒）就變透明
-      const B = [255, 237, 228], Gy = [239, 239, 226], v = [Gy[0] - B[0], Gy[1] - B[1], Gy[2] - B[2]];
-      for (let i = 0; i < ap.length; i += 4) {
-        const q = [ap[i] - B[0], ap[i + 1] - B[1], ap[i + 2] - B[2]];
-        const t = Math.max(0, Math.min(1, (q[0] * v[0] + q[1] * v[1] + q[2] * v[2]) / (v[0] * v[0] + v[1] * v[1] + v[2] * v[2])));
-        if (Math.hypot(q[0] - t * v[0], q[1] - t * v[1], q[2] - t * v[2]) < 9) ap[i + 3] = 0;
-      }
-      ag.putImageData(ad, 0, 0);
-      const zs = sc * 1.1;
-      g.drawImage(a, 6, H - ah * zs - 6, aw * zs, ah * zs);
-      return cv.toDataURL("image/png").split(",")[1];
+      // 3. 葉子（130×145，3 倍解析度）
+      const lf = document.createElement("canvas"), lg = lf.getContext("2d");
+      lf.width = Math.round(130 * sc * S); lf.height = Math.round(145 * sc * S);
+      lg.drawImage(src, 40, 645, 130, 145, 0, 0, lf.width, lf.height);
+      return [cv.toDataURL("image/png").split(",")[1], lf.toDataURL("image/png").split(",")[1]];
     }
 
     // 最後一行要是一般的值：iPhone 的 WebView 不接受 Promise 當回傳值，會直接報錯
@@ -277,6 +264,7 @@ async function buildGlyphs() {
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
   fm.write(logoPath, Data.fromBase64String(res.logo));
   fm.write(bgPath, Data.fromBase64String(res.bg));
+  fm.write(leafPath, Data.fromBase64String(res.leaf));
   res.icons.forEach((b64, i) => fm.write(iconPath(ICON_NAMES[i]), Data.fromBase64String(b64)));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
   fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, bgVersion: BG_VERSION, specs: GLYPH_SPECS, size: [W, H], widths: res.widths }));
@@ -310,7 +298,7 @@ async function loadGlyphs() {
   for (const key in meta.widths) images[key] = Image.fromFile(fm.joinPath(glyphDir, key + ".png"));
   return {
     widths: meta.widths, images,
-    logo: Image.fromFile(logoPath), bg: Image.fromFile(bgPath), icons: ICON_NAMES.map(n => Image.fromFile(iconPath(n))),
+    logo: Image.fromFile(logoPath), bg: Image.fromFile(bgPath), leaf: Image.fromFile(leafPath), icons: ICON_NAMES.map(n => Image.fromFile(iconPath(n))),
   };
 }
 const glyphs = await loadGlyphs();
@@ -322,6 +310,36 @@ const store = (() => {
 const bdayDir = store.joinPath(store.documentsDirectory(), "calendar-widget-birthdays");
 const bdayPath = store.joinPath(bdayDir, "birthdays.json");
 const avatarPath = id => store.joinPath(bdayDir, id + ".png");
+const settingsPath = store.joinPath(bdayDir, "settings.json");
+
+// 壽星照片位置
+const PHOTO_POS = {
+  auto: "自動（1–2 位放上方，3 位以上放左下）",
+  top: "上方（年月前面）",
+  bottomLeft: "左下",
+  bottomRight: "右下",
+  split: "上方＋右下（前 2 位放上方，其餘放右下）",
+};
+async function loadSettings() {
+  const def = { photoPos: "auto" };
+  if (!store.fileExists(settingsPath)) return def;
+  await ensureLocal(settingsPath);
+  try { return { ...def, ...JSON.parse(store.readString(settingsPath)) }; } catch (e) { return def; }
+}
+function saveSettings(st) {
+  if (!store.fileExists(bdayDir)) store.createDirectory(bdayDir, true);
+  store.writeString(settingsPath, JSON.stringify(st));
+}
+async function choosePhotoPos() {
+  const st = await loadSettings(), keys = Object.keys(PHOTO_POS);
+  const a = new Alert();
+  a.title = "壽星照片位置";
+  a.message = `目前：${PHOTO_POS[st.photoPos]}`;
+  keys.forEach(k => a.addAction(PHOTO_POS[k]));
+  a.addCancelAction("返回");
+  const i = await a.presentSheet();
+  if (i >= 0) { st.photoPos = keys[i]; saveSettings(st); }
+}
 
 async function ensureLocal(path) {
   if (store.isFileStoredIniCloud(path) && !store.isFileDownloaded(path)) await store.downloadFileFromiCloud(path);
@@ -450,15 +468,14 @@ async function mainMenu() {
     const a = new Alert();
     a.title = "月曆小工具";
     a.message = list.length ? `已設定 ${list.length} 位壽星` : "還沒有設定壽星";
-    a.addAction("預覽小工具");
-    a.addAction("新增壽星");
-    if (list.length) a.addAction("管理壽星");
+    const acts = [["預覽小工具", null], ["新增壽星", addBirthday], ["照片位置", choosePhotoPos]];
+    if (list.length) acts.push(["管理壽星", manageBirthdays]);
+    acts.forEach(([t]) => a.addAction(t));
     a.addCancelAction("結束");
     const i = await a.presentSheet();
+    if (i < 0) return false;
     if (i === 0) return true;
-    if (i === 1) await addBirthday();
-    else if (i === 2) await manageBirthdays();
-    else return false;
+    await acts[i][1]();
   }
 }
 const showPreview = config.runsInWidget ? false : await mainMenu();
@@ -513,7 +530,7 @@ function str(s, x, cy, size, hex, w = 700, align = "center") {
   }
 }
 
-// ---- 背景：「大圓臉」底圖 + 五隻動物；還沒存好時畫簡化版（只有四角色塊）
+// ---- 背景：「大圓臉」底圖；還沒存好時畫簡化版（只有四角色塊）
 if (glyphs) {
   ctx.drawImageInRect(glyphs.bg, new Rect(0, 0, W, H));
 } else {
@@ -528,7 +545,7 @@ if (glyphs) {
 
 const now = new Date();
 const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
-// 內容直接放在米白底上：上方避開右上角裝飾，下方留給動物
+// 內容直接放在米白底上：上方避開右上角裝飾，下方留給左下、右下的色塊和壽星照片
 const pad = 16, inX = pad, inW = W - pad * 2;
 const footerH = 305 * SC;
 
@@ -548,26 +565,64 @@ drawLogo(inX, headY - logoS / 2, logoS);
 const title = `${year}.${String(month + 1).padStart(2, "0")}`, titleRight = W - 245 * SC - 6;
 str(title, titleRight, headY, 24, C.primary, 900, "right");
 
-// ---- 本月壽星：照片排在年月左邊，依生日先後用紫、綠、橘外框（第 4 位起重複）
+// ---- 本月壽星：照片依設定放在上方、左下或右下，依生日先後用紫、綠、橘外框（第 4 位起重複）
 const days = new Date(year, month + 1, 0).getDate();
 const birthdays = (await loadBirthdays())
   .filter(p => p.month === month + 1)
   .map(p => ({ ...p, day: Math.min(p.day, days) })) // 2/29 在平年顯示在 2/28
   .sort((a, b) => a.day - b.day);
 const RINGS = [["#9A8ADA", "#7564BC"], ["#98CF40", "#72A52A"], ["#EF8E34", "#C96F1E"]];
-if (birthdays.length) {
-  const gap = 6, right = titleRight - strWidth(title, 24, 900, C.primary) - 10, left = inX + logoS + 10;
-  const n = birthdays.length, D = Math.min(40, (right - left - gap * (n - 1)) / n);
-  for (let i = 0; i < n; i++) {
-    const cx = right - D / 2 - (n - 1 - i) * (D + gap), [ring, dark] = RINGS[i % RINGS.length];
-    ellipse(dark, 1, cx - D / 2, headY - D / 2 + 2, D, D);
-    ellipse(ring, 1, cx - D / 2, headY - D / 2, D, D);
-    const path = avatarPath(birthdays[i].id), r = D / 2 - 3;
-    if (store.fileExists(path)) {
-      await ensureLocal(path);
-      ctx.drawImageInRect(Image.fromFile(path), new Rect(cx - r, headY - r, r * 2, r * 2));
+const PHOTO = 48, GAP = 7;
+
+// 算出每張照片的位置：上方排在年月左邊，下方排在左下或右下（都不會擋到日期）
+function layoutPhotos(n, pos) {
+  if (pos === "auto") pos = n <= 2 ? "top" : "bottomLeft";
+  const topN = pos === "top" ? n : pos === "split" ? Math.min(2, n) : 0;
+  const out = [];
+  // 一排照片：從 left～right 之間靠左或靠右排，太擠就縮小
+  const row = (count, left, right, cy, alignRight) => {
+    const D = Math.min(PHOTO, (right - left - GAP * (count - 1)) / count);
+    for (let i = 0; i < count; i++) {
+      const cx = alignRight ? right - D / 2 - (count - 1 - i) * (D + GAP) : left + D / 2 + i * (D + GAP);
+      out.push({ cx, cy, D });
     }
+  };
+  if (topN) row(topN, inX + logoS + 8, titleRight - strWidth(title, 24, 900, C.primary) - 8, headY, true);
+  const rest = n - topN, bottomY = H - 12 - PHOTO / 2;
+  if (rest) {
+    if (pos === "bottomLeft") row(rest, 12, W - 12, bottomY, false);
+    else row(rest, 12, W - 12, bottomY, true);
   }
+  return out;
+}
+const st = await loadSettings();
+const spots = layoutPhotos(birthdays.length, st.photoPos);
+spots.forEach(({ cx, cy, D }, i) => {
+  const [ring, dark] = RINGS[i % RINGS.length], r = D / 2 - 3;
+  ellipse(dark, 1, cx - D / 2, cy - D / 2 + 2, D, D);
+  ellipse(ring, 1, cx - D / 2, cy - D / 2, D, D);
+  spots[i].r = r;
+});
+for (let i = 0; i < spots.length; i++) {
+  const path = avatarPath(birthdays[i].id), { cx, cy, r } = spots[i];
+  if (store.fileExists(path)) {
+    await ensureLocal(path);
+    ctx.drawImageInRect(Image.fromFile(path), new Rect(cx - r, cy - r, r * 2, r * 2));
+  }
+}
+
+// 葉子：放在下方沒有照片的地方；放不下就不放
+if (glyphs) {
+  const lw = 130 * SC, lh = 145 * SC, ly = H - lh - 4;
+  const bottom = spots.filter(p => p.cy > H / 2);
+  const minX = bottom.length ? Math.min(...bottom.map(p => p.cx - p.D / 2)) : W;
+  const maxX = bottom.length ? Math.max(...bottom.map(p => p.cx + p.D / 2)) : 0;
+  const yellowLeft = W - 310 * SC, coralRight = 300 * SC;
+  let lx = null;
+  if (!bottom.length) lx = W * 0.5;
+  else if (maxX + 10 + lw < yellowLeft) lx = Math.max(maxX + 10, W * 0.5);
+  else if (minX - 10 - lw > coralRight) lx = Math.min(minX - 10 - lw, W * 0.5);
+  if (lx !== null) ctx.drawImageInRect(glyphs.leaf, new Rect(lx, ly, lw, lh));
 }
 
 // ---- 星期列（從星期日開始）
