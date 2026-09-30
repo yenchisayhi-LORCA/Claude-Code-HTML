@@ -1,5 +1,5 @@
 // 月曆小工具・大圓臉版（Scriptable 大尺寸）— 底圖取自照片排版「大圓臉」樣板，字型 Zen Maru Gothic
-// 可在 App 內設定壽星：當月壽星的照片會出現在年月左邊，生日那天的日期旁有氣球或拉炮
+// 可在 App 內設定壽星：當月壽星的照片會放在設定的位置（上方、左下或右下），生日那天的日期旁有氣球或拉炮
 const C = {
   bg: "#FFFBEF", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
