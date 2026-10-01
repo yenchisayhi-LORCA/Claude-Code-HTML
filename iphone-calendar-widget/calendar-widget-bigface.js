@@ -795,21 +795,7 @@ for (let i = 0; i < spots.length; i++) {
   }
 }
 
-// 葉子：放在下方沒有照片的地方；放不下就不放
-if (glyphs) {
-  const lw = 130 * SC, lh = 145 * SC, ly = H - lh - 4;
-  const bottom = spots;
-  const minX = bottom.length ? Math.min(...bottom.map(p => p.cx - p.D / 2)) : W;
-  const maxX = bottom.length ? Math.max(...bottom.map(p => p.cx + p.D / 2)) : 0;
-  const yellowLeft = W - 310 * SC, coralRight = 300 * SC;
-  let lx = null;
-  if (!bottom.length) lx = W * 0.5;
-  else if (maxX + 10 + lw < yellowLeft) lx = Math.max(maxX + 10, W * 0.5);
-  else if (minX - 10 - lw > coralRight) lx = Math.min(minX - 10 - lw, W * 0.5);
-  if (lx !== null) ctx.drawImageInRect(glyphs.leaf, new Rect(lx, ly, lw, lh));
-}
-
-// ---- 本月旅程：年月左邊顯示一趟（進行中或接下來的優先），色帶和交通工具每趟都標
+// ---- 本月旅程：年月左邊顯示一趟（進行中或接下來的優先），其他的放下方；色帶和交通工具每趟都標
 const monthStart = new Date(year, month, 1), monthEnd = new Date(year, month, days);
 const todayD = new Date(year, month, today);
 const trips = (await loadTrips()).filter(t => toDate(t.start) <= monthEnd && toDate(t.end) >= monthStart);
@@ -828,6 +814,52 @@ if (shownTrip) {
     text(label, right - w / 2, headY, 12, TRIP_FG, bold, "center", w);
   }
 }
+
+// 畫一個旅程標籤：x 是靠照片那一側的邊，alignRight 表示往左長；寬度超過 maxW 就縮小
+async function drawTripLabel(t, x, cy, maxW, alignRight) {
+  const path = tripLabelPath(t.id);
+  if (t.labelW && store.fileExists(path)) {
+    await ensureLocal(path);
+    const k = Math.min(1, maxW / t.labelW), w = t.labelW * k, h = 26 * k;
+    ctx.drawImageInRect(Image.fromFile(path), new Rect(alignRight ? x - w : x, cy - h / 2, w, h));
+  } else {
+    const label = tripText(t), w = Math.min(maxW, label.length * 11 + 16), lx = alignRight ? x - w : x;
+    roundRect(TRIP_BG, 1, lx, cy - 13, w, 26, 13);
+    text(label, lx + w / 2, cy, 12, TRIP_FG, bold, "center", w);
+  }
+}
+
+// 其他旅程：放在最下面一排、壽星照片旁邊的空位（最多 2 個，上下疊）；空位太窄就不放
+const otherTrips = trips.filter(t => t !== shownTrip).slice(0, 2);
+let bottomLabels = 0;
+if (otherTrips.length) {
+  const photosRight = st.photoPos === "bottomRight";
+  const edgeL = spots.length && !photosRight ? Math.max(...spots.map(p => p.cx + p.D / 2)) + 8 : 12;
+  const edgeR = spots.length && photosRight ? Math.min(...spots.map(p => p.cx - p.D / 2)) - 8 : W - 12;
+  const maxW = edgeR - edgeL, mid = H - 12 - PHOTO / 2;
+  if (maxW >= 70) {
+    const ys = otherTrips.length === 1 ? [mid] : [mid - 15, mid + 15];
+    for (let i = 0; i < otherTrips.length; i++) {
+      await drawTripLabel(otherTrips[i], photosRight ? edgeR : edgeL, ys[i], maxW, photosRight);
+    }
+    bottomLabels = otherTrips.length;
+  }
+}
+
+// 葉子：放在下方沒有照片的地方；放不下就不放
+if (glyphs && !bottomLabels) {
+  const lw = 130 * SC, lh = 145 * SC, ly = H - lh - 4;
+  const bottom = spots;
+  const minX = bottom.length ? Math.min(...bottom.map(p => p.cx - p.D / 2)) : W;
+  const maxX = bottom.length ? Math.max(...bottom.map(p => p.cx + p.D / 2)) : 0;
+  const yellowLeft = W - 310 * SC, coralRight = 300 * SC;
+  let lx = null;
+  if (!bottom.length) lx = W * 0.5;
+  else if (maxX + 10 + lw < yellowLeft) lx = Math.max(maxX + 10, W * 0.5);
+  else if (minX - 10 - lw > coralRight) lx = Math.min(minX - 10 - lw, W * 0.5);
+  if (lx !== null) ctx.drawImageInRect(glyphs.leaf, new Rect(lx, ly, lw, lh));
+}
+
 
 // ---- 星期列（從星期日開始）
 const colW = inW / 7;
