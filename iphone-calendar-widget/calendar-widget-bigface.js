@@ -1,5 +1,6 @@
 // 月曆小工具・大圓臉版（Scriptable 大尺寸）— 底圖取自照片排版「大圓臉」樣板，字型 Zen Maru Gothic
 // 可在 App 內設定壽星：當月壽星的照片放在最下面（左下或右下），生日那天的日期旁有氣球或拉炮
+// 也可設定旅程：年月左邊顯示「9.21～23 花蓮」，旅程日期加粉藍色帶，出發日旁放交通工具
 const C = {
   bg: "#FFFBEF", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
@@ -37,13 +38,57 @@ const GLYPH_SPECS = [
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-bigface");
-const BG_VERSION = 5; // 底圖或小圖示改過就加 1，讓已存的圖重畫
+const BG_VERSION = 6; // 底圖或小圖示改過就加 1，讓已存的圖重畫
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const logoPath = fm.joinPath(glyphDir, "logo.png");
 const bgPath = fm.joinPath(glyphDir, "bg.png");
 const leafPath = fm.joinPath(glyphDir, "leaf.png");
-// 生日小圖示：依壽星順序輪流用紅氣球、拉炮、藍氣球
-const ICON_NAMES = ["balloon-red", "popper", "balloon-blue"];
+// 小圖示：前 3 個是生日用（依壽星順序輪流），後 3 個是旅程的交通工具
+const ICON_NAMES = ["balloon-red", "popper", "balloon-blue", "plane", "train", "car"];
+const TRANSPORT = { plane: "飛機", train: "火車", car: "汽車" };
+
+// 交通工具圖示（在 WebView 的 canvas 裡畫，g 已縮放成 1×1 的方格）
+const TRANSPORT_JS = `
+  function drawTransport(g, kind) {
+    if (kind === "plane") {
+      g.save(); g.translate(0.5, 0.52); g.rotate(-0.35);
+      g.fillStyle = "#FFC93C"; g.beginPath(); g.moveTo(-0.05, -0.02); g.lineTo(-0.2, -0.36); g.lineTo(-0.06, -0.36); g.lineTo(0.14, -0.02); g.fill();
+      g.fillStyle = "#5AA9E6"; g.beginPath(); g.roundRect(-0.44, -0.13, 0.86, 0.26, 0.13); g.fill();
+      g.beginPath(); g.moveTo(-0.44, -0.1); g.lineTo(-0.47, -0.34); g.lineTo(-0.3, -0.1); g.fill();
+      g.fillStyle = "#E8574B"; g.beginPath(); g.moveTo(-0.45, -0.12); g.lineTo(-0.47, -0.34); g.lineTo(-0.36, -0.12); g.fill();
+      g.fillStyle = "#FFFFFF"; for (const x of [-0.2, -0.07, 0.06]) { g.beginPath(); g.arc(x, -0.02, 0.035, 0, 7); g.fill(); }
+      g.fillStyle = "#FFC93C"; g.beginPath(); g.moveTo(-0.02, 0.06); g.lineTo(-0.14, 0.34); g.lineTo(-0.01, 0.34); g.lineTo(0.13, 0.06); g.fill();
+      g.fillStyle = "#2B3159"; g.beginPath(); g.arc(0.3, -0.02, 0.025, 0, 7); g.fill();
+      g.fillStyle = "rgba(240, 88, 138, 0.55)"; g.beginPath(); g.ellipse(0.33, 0.05, 0.04, 0.025, 0, 0, 7); g.fill();
+      g.restore();
+    } else if (kind === "train") {
+      g.fillStyle = "#8A93B5"; g.fillRect(0.3, 0.86, 0.08, 0.1); g.fillRect(0.62, 0.86, 0.08, 0.1);
+      g.fillStyle = "#E8574B"; g.beginPath(); g.roundRect(0.16, 0.12, 0.68, 0.76, 0.2); g.fill();
+      g.fillStyle = "#BFE3F5"; g.beginPath(); g.roundRect(0.25, 0.22, 0.5, 0.3, 0.1); g.fill();
+      g.fillStyle = "#FFFBEF"; g.fillRect(0.16, 0.58, 0.68, 0.06);
+      g.fillStyle = "#FFC93C"; for (const x of [0.3, 0.7]) { g.beginPath(); g.arc(x, 0.75, 0.06, 0, 7); g.fill(); }
+      g.fillStyle = "#2B3159"; for (const x of [0.41, 0.59]) { g.beginPath(); g.arc(x, 0.36, 0.03, 0, 7); g.fill(); }
+      g.strokeStyle = "#2B3159"; g.lineWidth = 0.03; g.lineCap = "round"; g.beginPath(); g.arc(0.5, 0.4, 0.05, 0.3, Math.PI - 0.3); g.stroke();
+      g.fillStyle = "#5AA9E6"; g.beginPath(); g.roundRect(0.42, 0.04, 0.16, 0.1, 0.04); g.fill();
+    } else {
+      g.fillStyle = "#FFC93C"; g.beginPath(); g.roundRect(0.06, 0.46, 0.88, 0.3, 0.12); g.fill();
+      g.beginPath(); g.roundRect(0.22, 0.24, 0.52, 0.34, 0.16); g.fill();
+      g.fillStyle = "#BFE3F5"; g.beginPath(); g.roundRect(0.28, 0.3, 0.18, 0.18, 0.05); g.fill(); g.beginPath(); g.roundRect(0.5, 0.3, 0.18, 0.18, 0.05); g.fill();
+      g.fillStyle = "#2B3159"; for (const x of [0.28, 0.72]) { g.beginPath(); g.arc(x, 0.78, 0.12, 0, 7); g.fill(); }
+      g.fillStyle = "#D9D9E3"; for (const x of [0.28, 0.72]) { g.beginPath(); g.arc(x, 0.78, 0.05, 0, 7); g.fill(); }
+      g.fillStyle = "#E8574B"; g.beginPath(); g.ellipse(0.92, 0.56, 0.03, 0.05, 0, 0, 7); g.fill();
+      g.fillStyle = "#2B3159"; g.beginPath(); g.arc(0.83, 0.52, 0.025, 0, 7); g.fill();
+      g.fillStyle = "rgba(240, 88, 138, 0.55)"; g.beginPath(); g.ellipse(0.85, 0.6, 0.035, 0.02, 0, 0, 7); g.fill();
+    }
+  }
+  function transportPNG(kind) {
+    const cv = document.createElement("canvas"), g = cv.getContext("2d");
+    cv.width = cv.height = 96;
+    g.scale(96, 96);
+    drawTransport(g, kind);
+    return cv.toDataURL("image/png").split(",")[1];
+  }
+`;
 const iconPath = name => fm.joinPath(glyphDir, name + ".png");
 
 // 照片排版工具的內建樣板（1200×1802）：t9「大圓臉」當底圖
@@ -104,7 +149,7 @@ async function buildGlyphs() {
         }
         const logo = drawLogo();
         const [bg, leaf] = await drawBackground(${W}, ${H}, ${SC});
-        const icons = [drawBalloon("#E8574B"), drawPopper(), drawBalloon("#5AA9E6")];
+        const icons = [drawBalloon("#E8574B"), drawPopper(), drawBalloon("#5AA9E6"), transportPNG("plane"), transportPNG("train"), transportPNG("car")];
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
         for (const [w, hex, chars] of specs) for (const ch of chars) {
           const key = w + "_" + hex.slice(1) + "_" + ch.codePointAt(0);
@@ -170,6 +215,8 @@ async function buildGlyphs() {
       g.strokeText("彥", 128, baseline); g.fillText("彥", 128, baseline);
       return cv.toDataURL("image/png").split(",")[1];
     }
+
+    ${TRANSPORT_JS}
 
     // 生日小圖示（96×96）：氣球
     function drawBalloon(color) {
@@ -462,15 +509,157 @@ async function manageBirthdays() {
   }
 }
 
+// ---- 旅程：地點、出發日、回程日、交通工具；年月左邊的膠囊標籤會先畫成圖存起來
+const tripsPath = store.joinPath(bdayDir, "trips.json");
+const tripLabelPath = id => store.joinPath(bdayDir, "trip-" + id + ".png");
+const TRIP_BG = "#E2F3FA", TRIP_FG = "#3B8DB5", TRIP_BAND = ["#82C8E8", 0.28]; // 粉藍
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const toDate = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+
+async function loadTrips() {
+  if (!store.fileExists(tripsPath)) return [];
+  await ensureLocal(tripsPath);
+  try { return JSON.parse(store.readString(tripsPath)); } catch (e) { return []; }
+}
+function saveTrips(list) {
+  if (!store.fileExists(bdayDir)) store.createDirectory(bdayDir, true);
+  list.sort((a, b) => a.start.localeCompare(b.start));
+  store.writeString(tripsPath, JSON.stringify(list));
+}
+// 膠囊上的文字：同月「9.21～23 花蓮」、跨月「9.30～10.2 花蓮」、當天來回「9.21 花蓮」
+function tripText(t) {
+  const a = toDate(t.start), b = toDate(t.end);
+  const from = `${a.getMonth() + 1}.${a.getDate()}`;
+  const to = ymd(a) === ymd(b) ? "" : a.getMonth() === b.getMonth() ? `～${b.getDate()}` : `～${b.getMonth() + 1}.${b.getDate()}`;
+  return `${from}${to} ${t.place}`;
+}
+const tripName = t => `${t.place}（${tripText(t).split(" ")[0]}，${TRANSPORT[t.mode]}）`;
+
+// 解析「9/21」或「2026/9/21」；沒寫年份時用今年，若已經是兩個月前就當成明年
+function parseDay(str, after) {
+  const m = (str || "").trim().match(/^(?:(\d{4})[\/.\-])?(\d{1,2})[\/.\-](\d{1,2})$/);
+  if (!m) return null;
+  const mo = +m[2], d = +m[3];
+  let y = m[1] ? +m[1] : (after || new Date()).getFullYear();
+  let dt = new Date(y, mo - 1, d);
+  if (dt.getMonth() !== mo - 1) return null;
+  if (!m[1]) {
+    if (after && dt < after) dt = new Date(y + 1, mo - 1, d);
+    if (!after && dt < new Date(Date.now() - 60 * 86400000)) dt = new Date(y + 1, mo - 1, d);
+  }
+  return dt;
+}
+
+async function askTrip(t = {}) {
+  const a = new Alert();
+  a.title = t.id ? "修改旅程" : "新增旅程";
+  a.message = "日期請輸入「月/日」，例如 9/21";
+  const md = s => { if (!s) return ""; const d = toDate(s); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  a.addTextField("地點（例如 花蓮）", t.place || "");
+  a.addTextField("出發日（例如 9/21）", md(t.start));
+  a.addTextField("回程日（例如 9/23）", md(t.end));
+  a.addAction("下一步：選交通工具");
+  a.addCancelAction("取消");
+  if (await a.present() === -1) return null;
+  const place = a.textFieldValue(0).trim();
+  const start = parseDay(a.textFieldValue(1));
+  const end = start && parseDay(a.textFieldValue(2), start);
+  if (!place || !start || !end || end - start > 60 * 86400000) {
+    await notice("資料不正確", "請輸入地點，以及正確的出發日和回程日（例如 9/21、9/23）。");
+    return askTrip({ ...t, place });
+  }
+  const b = new Alert();
+  b.title = "交通工具";
+  const kinds = Object.keys(TRANSPORT);
+  kinds.forEach(k => b.addAction(TRANSPORT[k]));
+  b.addCancelAction("取消");
+  const k = await b.presentSheet();
+  if (k < 0) return null;
+  return { place, start: ymd(start), end: ymd(end), mode: kinds[k] };
+}
+
+// 用 Zen Maru Gothic 把膠囊標籤畫成圖（高 26pt、3 倍解析度）；成功回傳寬度（pt），失敗回傳 0
+async function renderTripLabel(t) {
+  try {
+    const text = tripText(t);
+    const faces = await fetchFont(FONT, [700], text);
+    const wv = new WebView();
+    await wv.loadHTML("<html><body></body></html>");
+    const res = await wv.evaluateJavaScript(`
+      (async () => {
+        try {
+          for (const f of ${JSON.stringify(faces)}) {
+            const face = new FontFace(f.family, Uint8Array.from(atob(f.b64), c => c.charCodeAt(0)), { weight: f.weight });
+            await face.load(); document.fonts.add(face);
+          }
+          const text = ${JSON.stringify(text)}, S = 3, H = 26, F = '700 13px "${FONT}"';
+          const m = document.createElement("canvas").getContext("2d"); m.font = F;
+          const W = Math.ceil(m.measureText(text).width) + 36;
+          const cv = document.createElement("canvas"), g = cv.getContext("2d");
+          cv.width = W * S; cv.height = H * S; g.scale(S, S);
+          g.fillStyle = "${TRIP_BG}"; g.beginPath(); g.roundRect(0, 0, W, H, H / 2); g.fill();
+          g.fillStyle = "#FFFFFF"; g.beginPath(); g.arc(15, H / 2, 10, 0, Math.PI * 2); g.fill();
+          g.save(); g.translate(6, H / 2 - 9); g.scale(18, 18); drawTransport(g, ${JSON.stringify(t.mode)}); g.restore();
+          g.font = F; g.fillStyle = "${TRIP_FG}"; g.textAlign = "left"; g.textBaseline = "middle";
+          g.fillText(text, 29, H / 2 + 1);
+          completion({ w: W, png: cv.toDataURL("image/png").split(",")[1] });
+        } catch (e) { completion(null); }
+      })();
+      ${TRANSPORT_JS}
+      0;`, true);
+    if (!res) return 0;
+    if (!store.fileExists(bdayDir)) store.createDirectory(bdayDir, true);
+    store.write(tripLabelPath(t.id), Data.fromBase64String(res.png));
+    return res.w;
+  } catch (e) { return 0; }
+}
+
+async function addTrip(old) {
+  const info = await askTrip(old);
+  if (!info) return;
+  const list = await loadTrips();
+  const t = old ? Object.assign(list.find(x => x.id === old.id), info) : { id: Date.now().toString(36), ...info };
+  t.labelW = await renderTripLabel(t);
+  if (!old) list.push(t);
+  saveTrips(list);
+  if (!t.labelW) await notice("已儲存", "標籤字型下載失敗，先用系統字型顯示；網路正常時再到「管理旅程」修改一次即可。");
+  else await notice(old ? "已更新" : "已新增", tripName(t));
+}
+
+async function manageTrips() {
+  const list = await loadTrips();
+  const a = new Alert();
+  a.title = "管理旅程";
+  list.forEach(t => a.addAction(tripName(t)));
+  a.addCancelAction("返回");
+  const i = await a.presentSheet();
+  if (i < 0) return;
+  const t = list[i];
+  const b = new Alert();
+  b.title = tripName(t);
+  b.addAction("修改");
+  b.addDestructiveAction("刪除");
+  b.addCancelAction("返回");
+  const j = await b.presentSheet();
+  if (j === 0) await addTrip(t);
+  else if (j === 1) {
+    list.splice(i, 1);
+    saveTrips(list);
+    if (store.fileExists(tripLabelPath(t.id))) store.remove(tripLabelPath(t.id));
+  }
+}
+
 // 在 App 內執行時的選單；選「預覽小工具」回傳 true
 async function mainMenu() {
   while (true) {
-    const list = await loadBirthdays();
+    const list = await loadBirthdays(), trips = await loadTrips();
     const a = new Alert();
     a.title = "月曆小工具";
-    a.message = list.length ? `已設定 ${list.length} 位壽星` : "還沒有設定壽星";
-    const acts = [["預覽小工具", null], ["新增壽星", addBirthday], ["照片位置", choosePhotoPos]];
+    a.message = `壽星 ${list.length} 位・旅程 ${trips.length} 趟`;
+    const acts = [["預覽小工具", null], ["新增壽星", addBirthday]];
     if (list.length) acts.push(["管理壽星", manageBirthdays]);
+    acts.push(["照片位置", choosePhotoPos], ["新增旅程", () => addTrip()]);
+    if (trips.length) acts.push(["管理旅程", manageTrips]);
     acts.forEach(([t]) => a.addAction(t));
     a.addCancelAction("結束");
     const i = await a.presentSheet();
@@ -615,6 +804,26 @@ if (glyphs) {
   if (lx !== null) ctx.drawImageInRect(glyphs.leaf, new Rect(lx, ly, lw, lh));
 }
 
+// ---- 本月旅程：年月左邊顯示一趟（進行中或接下來的優先），色帶和交通工具每趟都標
+const monthStart = new Date(year, month, 1), monthEnd = new Date(year, month, days);
+const todayD = new Date(year, month, today);
+const trips = (await loadTrips()).filter(t => toDate(t.start) <= monthEnd && toDate(t.end) >= monthStart);
+const shownTrip = trips.find(t => toDate(t.end) >= todayD) || trips[trips.length - 1];
+if (shownTrip) {
+  const left = inX + logoS + 8, right = titleRight - strWidth(title, 24, 900, C.primary) - 8;
+  const path = tripLabelPath(shownTrip.id);
+  if (shownTrip.labelW && store.fileExists(path)) {
+    await ensureLocal(path);
+    const k = Math.min(1, (right - left) / shownTrip.labelW), w = shownTrip.labelW * k, h = 26 * k;
+    ctx.drawImageInRect(Image.fromFile(path), new Rect(right - w, headY - h / 2, w, h));
+  } else {
+    // 標籤圖還沒畫好：用系統字型畫簡單的膠囊
+    const label = tripText(shownTrip), w = Math.min(right - left, label.length * 11 + 16);
+    roundRect(TRIP_BG, 1, right - w, headY - 13, w, 26, 13);
+    text(label, right - w / 2, headY, 12, TRIP_FG, bold, "center", w);
+  }
+}
+
 // ---- 星期列（從星期日開始）
 const colW = inW / 7;
 const weekY = headY + 36;
@@ -629,10 +838,34 @@ const rows = Math.ceil((firstDow + days) / 7);
 const gridTop = weekY + 12, gridBottom = H - footerH - 2;
 const rowH = (gridBottom - gridTop) / rows;
 const dot = Math.min(colW, rowH) * 0.84;
+const cellOf = d => {
+  const idx = firstDow + d - 1, c = idx % 7, r = Math.floor(idx / 7);
+  return { c, r, cx: inX + colW * c + colW / 2, cy: gridTop + rowH * r + rowH / 2 };
+};
+
+// 旅程色帶：畫在數字底下，跨週時每一排分開畫
+for (const t of trips) {
+  const from = Math.max(1, toDate(t.start) < monthStart ? 1 : toDate(t.start).getDate());
+  const to = toDate(t.end) > monthEnd ? days : toDate(t.end).getDate();
+  let d = from;
+  while (d <= to) {
+    const a = cellOf(d);
+    let e = d;
+    while (e < to && cellOf(e + 1).r === a.r) e++;
+    const b = cellOf(e), bh = Math.min(30, rowH - 6);
+    roundRect(TRIP_BAND[0], TRIP_BAND[1], a.cx - colW / 2 + 3, a.cy - bh / 2, b.cx - a.cx + colW - 6, bh, bh / 2);
+    d = e + 1;
+  }
+}
+// 出發日的交通工具
+const tripStarts = {};
+for (const t of trips) {
+  const s = toDate(t.start);
+  if (s.getFullYear() === year && s.getMonth() === month) tripStarts[s.getDate()] = t.mode;
+}
 
 for (let d = 1; d <= days; d++) {
-  const idx = firstDow + d - 1, c = idx % 7, r = Math.floor(idx / 7);
-  const cx = inX + colW * c + colW / 2, cy = gridTop + rowH * r + rowH / 2;
+  const { c, cx, cy } = cellOf(d);
   if (d === today) {
     ellipse(C.dangerDark, 1, cx - dot / 2, cy - dot / 2 + 3, dot, dot);
     ellipse(C.danger, 1, cx - dot / 2, cy - dot / 2, dot, dot);
@@ -641,10 +874,17 @@ for (let d = 1; d <= days; d++) {
     const weekend = c === 0 || c === 6;
     str(String(d), cx, cy, 19, weekend ? C.muted : C.text);
   }
-  // 生日：數字右上角放小圖示，依壽星順序輪流用紅氣球、拉炮、藍氣球
+  // 數字右上角的小圖示：出發日放交通工具；生日放氣球或拉炮（同一天時氣球往左挪）
+  const x0 = cx + strWidth(String(d), 19, 700, C.text) / 2 - 3;
+  const mode = tripStarts[d];
+  if (mode) {
+    const k = ICON_NAMES.indexOf(mode);
+    if (glyphs) ctx.drawImageInRect(glyphs.icons[k], new Rect(x0, cy - 25, 20, 20));
+    else ellipse("#5AA9E6", 1, x0 + 3, cy - 20, 13, 10);
+  }
   const b = birthdays.findIndex(p => p.day === d);
   if (b >= 0) {
-    const x = cx + strWidth(String(d), 19, 700, C.text) / 2 - 3, y = cy - 24, k = b % ICON_NAMES.length;
+    const x = mode ? x0 - 17 : x0, y = cy - 24, k = b % 3;
     if (glyphs) ctx.drawImageInRect(glyphs.icons[k], new Rect(x, y, 18, 18));
     else ellipse(["#E8574B", "#FFC93C", "#5AA9E6"][k], 1, x + 4, y + 1, 10, 12);
   }
