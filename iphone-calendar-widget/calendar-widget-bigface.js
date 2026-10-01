@@ -533,40 +533,45 @@ function tripText(t) {
   const to = ymd(a) === ymd(b) ? "" : a.getMonth() === b.getMonth() ? `～${b.getDate()}` : `～${b.getMonth() + 1}.${b.getDate()}`;
   return `${from}${to} ${t.place}`;
 }
-const tripName = t => `${t.place}（${tripText(t).split(" ")[0]}，${TRANSPORT[t.mode]}）`;
+// 管理清單用的名稱；不是今年的旅程會加上年份，例如「阿里山（2027 10.1～3，火車）」
+const tripName = t => {
+  const y = toDate(t.start).getFullYear(), yy = y === new Date().getFullYear() ? "" : `${y} `;
+  return `${t.place}（${yy}${tripText(t).split(" ")[0]}，${TRANSPORT[t.mode]}）`;
+};
 
-// 解析「9/21」或「2026/9/21」；沒寫年份時用今年，若已經是兩個月前就當成明年
-function parseDay(str, after) {
+// 解析「9/21」（用 year 當年份），也接受「2027/9/21」直接寫年份。
+// 有 after（出發日）時，日期早於出發日就算成隔年（例如 12/30～1/2 跨年）
+function parseDay(str, year, after) {
   const m = (str || "").trim().match(/^(?:(\d{4})[\/.\-])?(\d{1,2})[\/.\-](\d{1,2})$/);
   if (!m) return null;
-  const mo = +m[2], d = +m[3];
-  let y = m[1] ? +m[1] : (after || new Date()).getFullYear();
+  const mo = +m[2], d = +m[3], y = m[1] ? +m[1] : year;
   let dt = new Date(y, mo - 1, d);
   if (dt.getMonth() !== mo - 1) return null;
-  if (!m[1]) {
-    if (after && dt < after) dt = new Date(y + 1, mo - 1, d);
-    if (!after && dt < new Date(Date.now() - 60 * 86400000)) dt = new Date(y + 1, mo - 1, d);
-  }
+  if (!m[1] && after && dt < after) dt = new Date(y + 1, mo - 1, d);
   return dt;
 }
 
 async function askTrip(t = {}) {
   const a = new Alert();
   a.title = t.id ? "修改旅程" : "新增旅程";
-  a.message = "日期請輸入「月/日」，例如 9/21";
+  a.message = "年份預設今年，可以改成明年以後；日期請輸入「月/日」，例如 9/21";
   const md = s => { if (!s) return ""; const d = toDate(s); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const y0 = t.year || (t.start ? toDate(t.start).getFullYear() : new Date().getFullYear());
   a.addTextField("地點（例如 花蓮）", t.place || "");
-  a.addTextField("出發日（例如 9/21）", md(t.start));
-  a.addTextField("回程日（例如 9/23）", md(t.end));
+  a.addTextField("年份（例如 2027）", String(y0)).setNumberPadKeyboard();
+  a.addTextField("出發日（例如 9/21）", t.startText ?? md(t.start));
+  a.addTextField("回程日（例如 9/23）", t.endText ?? md(t.end));
   a.addAction("下一步：選交通工具");
   a.addCancelAction("取消");
   if (await a.present() === -1) return null;
-  const place = a.textFieldValue(0).trim();
-  const start = parseDay(a.textFieldValue(1));
-  const end = start && parseDay(a.textFieldValue(2), start);
+  const place = a.textFieldValue(0).trim(), year = parseInt(a.textFieldValue(1), 10);
+  const startText = a.textFieldValue(2), endText = a.textFieldValue(3);
+  const okYear = year >= 2000 && year <= 2100;
+  const start = okYear && parseDay(startText, year);
+  const end = start && parseDay(endText, year, start);
   if (!place || !start || !end || end - start > 60 * 86400000) {
-    await notice("資料不正確", "請輸入地點，以及正確的出發日和回程日（例如 9/21、9/23）。");
-    return askTrip({ ...t, place });
+    await notice("資料不正確", "請輸入地點、年份（例如 2027），以及正確的出發日和回程日（例如 9/21、9/23）。");
+    return askTrip({ ...t, place, year: okYear ? year : undefined, startText, endText });
   }
   const b = new Alert();
   b.title = "交通工具";
