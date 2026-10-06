@@ -753,8 +753,8 @@ else {
 }
 
 // 右上角：年.月，例如 2026.09（避開右上角的黃色色塊）
-const title = `${year}.${String(month + 1).padStart(2, "0")}`, titleRight = W - 245 * SC - 6;
-str(title, titleRight, headY, 26, K.ink, 800, "right");
+const title = `${year}.${String(month + 1).padStart(2, "0")}`, titleRight = W - 245 * SC - 6, titleSize = 26 * 0.8;
+str(title, titleRight, headY, titleSize, K.ink, 800, "right");
 
 // ---- 本月壽星：照片放在最下面（左下或右下），外框依生日先後輪流用粉紅、湖水青、太陽黃、深藍
 const days = new Date(year, month + 1, 0).getDate();
@@ -813,7 +813,7 @@ async function drawTripLabel(t, x, cy, maxW, alignRight) {
 }
 
 if (shownTrip) {
-  const left = inX + logoS + 8, right = titleRight - strWidth(title, 26, 800, K.ink) - 8;
+  const left = inX + logoS + 8, right = titleRight - strWidth(title, titleSize, 800, K.ink) - 8;
   await drawTripLabel(shownTrip, right, headY, right - left, true);
 }
 
