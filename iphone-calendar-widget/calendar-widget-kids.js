@@ -41,7 +41,7 @@ const GLYPH_SPECS = [
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-kids");
-const ART_VERSION = 1; // 底圖或小圖示改過就加 1，讓已存的圖重畫
+const ART_VERSION = 2; // 底圖或小圖示改過就加 1，讓已存的圖重畫
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const artPath = name => fm.joinPath(glyphDir, name + ".png");
 // 生日貼紙（依壽星順序輪流）、交通工具、今天的色塊、空位的三隻小怪獸
@@ -182,19 +182,18 @@ async function buildArt() {
       return [cv, g];
     }
 
-    // 「彥」深色版（256×256 設計稿）：深藍底、紅花、黃色不規則圓、黃枝 + 藍枝
+    // 「彥」深色版（256×256 設計稿）：深藍不規則色塊、紅花、黃色不規則圓、黃枝 + 藍枝
     function drawLogo() {
       const [cv, g] = canvas(256, 256, 3);
-      g.beginPath(); g.roundRect(0, 0, 256, 256, 44); g.clip();
-      g.fillStyle = "#232058"; g.fillRect(0, 0, 256, 256);
+      blob(g, 128, 129, 246, 240, [46, 54, 40, 60, 52, 44, 58, 42], -4, "#232058");
       blob(g, 128, 128, 176, 168, [44, 56, 62, 38, 46, 54, 46, 54], 0, "#F7D44C");
       const twig = (color, width, paths) => {
         g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
         for (const d of paths) g.stroke(new Path2D(d));
       };
-      twig("#4A6FC4", 7, ["M184 236 C 196 218, 208 202, 224 188", "M196 220 C 192 208, 192 198, 196 188", "M208 206 C 216 204, 224 200, 232 194"]);
-      twig("#F2CF4A", 6.5, ["M52 246 C 53 232, 53 218, 52 204", "M53 228 C 46 226, 43 220, 43 212", "M52 216 C 58 214, 61 208, 61 200"]);
-      g.save(); g.translate(46, 44); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
+      twig("#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
+      twig("#F2CF4A", 6.5, ["M60 236 C 61 222, 61 208, 60 194", "M61 218 C 54 216, 51 210, 51 202", "M60 206 C 66 204, 69 198, 69 190"]);
+      g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
       for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * Math.PI / 4); g.beginPath(); g.ellipse(0, -23, 8.5, 20, 0, 0, 7); g.fill(); g.restore(); }
       g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore();
       // 彥：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中
