@@ -1,6 +1,7 @@
 // 月曆小工具・童趣風（Scriptable 大尺寸）— 配色、字型、圖示照設計系統「童趣風」
 // 數字用 Gluten、中文用 Zen Maru Gothic（跟大圓臉版一樣）；米白紙底、角落色塊、今天是黃色不規則色塊
 // 壽星和旅程跟「大圓臉版」共用同一份資料（iCloud 的 calendar-widget-birthdays 資料夾），在哪一版新增都會一起顯示
+// 左上角圖示的字預設是「彥」，第一次執行時可以改成自己的字，之後也能從選單「圖示文字」修改
 const K = {
   cream: "#FFFCEF", ink: "#262261", body: "#5A5788", muted: "#8B88B2",
   yellow: "#FFD426", blue: "#3F6FD1", red: "#EE3E33", redText: "#B8261E", teal: "#4FD2C2", pink: "#FF9EC4",
@@ -23,7 +24,7 @@ const SC = W / 1540;
 
 // ---- 字型與圖片
 // Scriptable 無法直接安裝網路字型，所以第一次在 App 內執行時，用 WebView 從 Google Fonts 載入
-// Gluten、Zen Maru Gothic，把會用到的字依顏色畫成小圖存起來；「彥」圖示、底圖、小圖示也一起畫好。
+// Gluten、Zen Maru Gothic，把會用到的字依顏色畫成小圖存起來；左上角圖示、底圖、小圖示也一起畫好。
 // 小工具之後直接讀這些圖；還沒存好時改用系統圓體和簡化版圖案。
 const NUM_FONT = "Gluten", CJK_FONT = "Zen Maru Gothic";
 const fontOf = ch => ch.codePointAt(0) > 255 ? CJK_FONT : NUM_FONT;
@@ -142,9 +143,9 @@ const LOAD_FONTS_JS = faces => `
   }`;
 
 // 成功回傳 null；失敗回傳原因
-async function buildArt() {
+async function buildArt(logoChar) {
   const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
-  const faces = [...await fetchTextFonts(allChars, [700, 800], [700]), ...await fetchFont("Huninn", null, "彥")];
+  const faces = [...await fetchTextFonts(allChars, [700, 800], [700]), ...await fetchFont("Huninn", null, logoChar)];
   const wv = new WebView();
   await wv.loadHTML("<html><body></body></html>");
   const res = await wv.evaluateJavaScript(`
@@ -165,7 +166,7 @@ async function buildArt() {
           images[key] = cv.toDataURL("image/png").split(",")[1];
         }
         const art = {
-          logo: drawLogo(), bg: drawBackground(${W}, ${H}), today: drawToday(), monsters: drawMonsters(),
+          logo: drawLogo(${JSON.stringify(logoChar)}), bg: drawBackground(${W}, ${H}), today: drawToday(), monsters: drawMonsters(),
           ${STICKERS.map(s => `"sticker-${s}": drawSticker("${s}")`).join(", ")},
           plane: transportPNG("plane"), train: transportPNG("train"), car: transportPNG("car"),
         };
@@ -182,8 +183,8 @@ async function buildArt() {
       return [cv, g];
     }
 
-    // 「彥」深色版（256×256 設計稿）：深藍不規則色塊、紅花、黃色不規則圓、黃枝 + 藍枝
-    function drawLogo() {
+    // 左上角圖示（256×256 設計稿）：深藍不規則色塊、紅花、黃色不規則圓、黃枝 + 藍枝，中間是使用者設定的字
+    function drawLogo(ch) {
       const [cv, g] = canvas(256, 256, 3);
       blob(g, 128, 129, 246, 240, [46, 54, 40, 60, 52, 44, 58, 42], -4, "#232058");
       blob(g, 128, 128, 176, 168, [44, 56, 62, 38, 46, 54, 46, 54], 0, "#F7D44C");
@@ -196,11 +197,14 @@ async function buildArt() {
       g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
       for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * Math.PI / 4); g.beginPath(); g.ellipse(0, -23, 8.5, 20, 0, 0, 7); g.fill(); g.restore(); }
       g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore();
-      // 彥：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中
+      // 字：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中（比較寬的字會縮小放進黃圓）
       g.font = '90px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
-      const m = g.measureText("彥"), base = 128 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+      let m = g.measureText(ch);
+      const fit = Math.min(1, 120 / (m.actualBoundingBoxLeft + m.actualBoundingBoxRight || 90));
+      g.font = (90 * fit) + 'px "Huninn"'; m = g.measureText(ch);
+      const base = 128 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
       g.strokeStyle = g.fillStyle = "${K.ink}"; g.lineWidth = 2; g.lineJoin = "round";
-      g.strokeText("彥", 128, base); g.fillText("彥", 128, base);
+      g.strokeText(ch, 128, base); g.fillText(ch, 128, base);
       return png(cv);
     }
 
@@ -272,12 +276,12 @@ async function buildArt() {
   if (!fm.fileExists(glyphDir)) fm.createDirectory(glyphDir, true);
   for (const name in res.art) fm.write(artPath(name), Data.fromBase64String(res.art[name]));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
-  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, artVersion: ART_VERSION, specs: GLYPH_SPECS, size: [W, H], widths: res.widths }));
+  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, artVersion: ART_VERSION, specs: GLYPH_SPECS, size: [W, H], logoChar, widths: res.widths }));
   return null;
 }
 
 // 讀取字型小圖和圖片；沒有的話（且不是在小工具裡）先建一次。失敗就回傳 null，改用系統字型
-async function loadGlyphs() {
+async function loadGlyphs(logoChar) {
   const ok = () => {
     if (!fm.fileExists(metaPath)) return null;
     const meta = JSON.parse(fm.readString(metaPath));
@@ -286,9 +290,10 @@ async function loadGlyphs() {
     return meta;
   };
   let meta = ok();
-  if (!meta && !config.runsInWidget) {
+  // 在 App 內執行時，圖示的字改過也要重畫（小工具裡先沿用舊圖）
+  if ((!meta || meta.logoChar !== logoChar) && !config.runsInWidget) {
     let err;
-    try { err = await buildArt(); } catch (e) { err = String(e); }
+    try { err = await buildArt(logoChar); } catch (e) { err = String(e); }
     meta = ok();
     if (!meta) {
       const alert = new Alert();
@@ -304,7 +309,6 @@ async function loadGlyphs() {
   for (const name of ART_NAMES) art[name] = Image.fromFile(artPath(name));
   return { widths: meta.widths, images, art };
 }
-const glyphs = await loadGlyphs();
 
 // ---- 壽星資料：名字、生日、圓形大頭照，存在 iCloud Drive 的 Scriptable 資料夾（沒開 iCloud 就存本機）
 const store = (() => {
@@ -343,6 +347,29 @@ async function choosePhotoPos() {
   a.addCancelAction("返回");
   const i = await a.presentSheet();
   if (i >= 0) { st.photoPos = keys[i]; saveSettings(st); }
+}
+
+// 左上角圖示的字（只取第一個字）；沒設定過時用「彥」
+const DEFAULT_LOGO = "彥";
+async function askLogoChar(current) {
+  const a = new Alert();
+  a.title = "圖示文字";
+  a.message = "左上角圖示中間要放哪一個字？（例如名字裡的一個字）";
+  a.addTextField("一個字", current || DEFAULT_LOGO);
+  a.addAction("儲存");
+  a.addCancelAction("取消");
+  if (await a.present() === -1) return null;
+  const ch = [...a.textFieldValue(0).trim()][0];
+  if (!ch) { await notice("請輸入一個字", "例如：彥"); return askLogoChar(current); }
+  return ch;
+}
+async function chooseLogoChar() {
+  const st = await loadSettings(), ch = await askLogoChar(st.logoChar);
+  if (!ch || ch === st.logoChar) return;
+  st.logoChar = ch;
+  saveSettings(st);
+  glyphs = await loadGlyphs(ch);
+  if (glyphs) await notice("已更新", `左上角圖示改成「${ch}」。`);
 }
 
 async function ensureLocal(path) {
@@ -666,6 +693,7 @@ async function mainMenu() {
     if (list.length) acts.push(["管理壽星", manageBirthdays]);
     acts.push(["照片位置", choosePhotoPos], ["新增旅程", () => addTrip()]);
     if (trips.length) acts.push(["管理旅程", manageTrips]);
+    acts.push([`圖示文字（目前：${(await loadSettings()).logoChar || DEFAULT_LOGO}）`, chooseLogoChar]);
     acts.forEach(([t]) => a.addAction(t));
     a.addCancelAction("結束");
     const i = await a.presentSheet();
@@ -674,6 +702,13 @@ async function mainMenu() {
     await acts[i][1]();
   }
 }
+// 第一次在 App 內執行時，先問圖示要放哪個字，再畫字型和圖片
+const st0 = await loadSettings();
+if (!st0.logoChar && !config.runsInWidget) {
+  st0.logoChar = await askLogoChar(DEFAULT_LOGO) || DEFAULT_LOGO;
+  saveSettings(st0);
+}
+let glyphs = await loadGlyphs(st0.logoChar || DEFAULT_LOGO);
 if (!config.runsInWidget) await syncKidsLabels();
 const showPreview = config.runsInWidget ? false : await mainMenu();
 
@@ -745,13 +780,13 @@ const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
 const pad = 16, inX = pad, inW = W - pad * 2;
 const footerH = 305 * SC;
 
-// ---- 標題列：左邊「彥」圖示（深色版），右邊年月
-const logoS = 40 * 1.2, headY = 34; // 彥放大 1.2 倍，中心位置不變
+// ---- 標題列：左邊圖示（深色版），右邊年月
+const logoS = 40 * 1.2, headY = 34; // 圖示放大 1.2 倍，中心位置不變
 if (art("logo")) ctx.drawImageInRect(art("logo"), new Rect(inX, headY - logoS / 2, logoS, logoS));
 else {
   roundRect("#232058", 1, inX, headY - logoS / 2, logoS, logoS, logoS * 0.17);
   ellipse("#F7D44C", 1, inX + logoS * 0.16, headY - logoS * 0.33, logoS * 0.68, logoS * 0.66);
-  text("彥", inX + logoS / 2, headY, logoS * 0.4, K.ink, heavy, "center", logoS);
+  text(st0.logoChar || DEFAULT_LOGO, inX + logoS / 2, headY, logoS * 0.4, K.ink, heavy, "center", logoS);
 }
 
 // 右上角：年.月，例如 2026.09（避開右上角的黃色色塊）
