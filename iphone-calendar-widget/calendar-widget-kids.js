@@ -1,5 +1,5 @@
 // 月曆小工具・童趣風（Scriptable 大尺寸）— 配色、字型、圖示照設計系統「童趣風」
-// 數字用 Gluten、中文用 Noto Sans TC；米白紙底、角落色塊、今天是黃色不規則色塊
+// 數字用 Gluten、中文用 Zen Maru Gothic（跟大圓臉版一樣）；米白紙底、角落色塊、今天是黃色不規則色塊
 // 壽星和旅程跟「大圓臉版」共用同一份資料（iCloud 的 calendar-widget-birthdays 資料夾），在哪一版新增都會一起顯示
 const K = {
   cream: "#FFFCEF", ink: "#262261", body: "#5A5788", muted: "#8B88B2",
@@ -23,13 +23,13 @@ const SC = W / 1540;
 
 // ---- 字型與圖片
 // Scriptable 無法直接安裝網路字型，所以第一次在 App 內執行時，用 WebView 從 Google Fonts 載入
-// Gluten、Noto Sans TC，把會用到的字依顏色畫成小圖存起來；「彥」圖示、底圖、小圖示也一起畫好。
+// Gluten、Zen Maru Gothic，把會用到的字依顏色畫成小圖存起來；「彥」圖示、底圖、小圖示也一起畫好。
 // 小工具之後直接讀這些圖；還沒存好時改用系統圓體和簡化版圖案。
-const NUM_FONT = "Gluten", CJK_FONT = "Noto Sans TC";
+const NUM_FONT = "Gluten", CJK_FONT = "Zen Maru Gothic";
 const fontOf = ch => ch.codePointAt(0) > 255 ? CJK_FONT : NUM_FONT;
-const GLYPH_VERSION = 1;
+const GLYPH_VERSION = 2;
 const DIGITS = "0123456789";
-// [粗細, 顏色, 要畫的字]；英數字用 Gluten、中文用 Noto Sans TC
+// [粗細, 顏色, 要畫的字]；英數字用 Gluten、中文用 Zen Maru Gothic
 const GLYPH_SPECS = [
   [700, K.ink, DIGITS],
   [700, K.body, DIGITS],
@@ -126,7 +126,7 @@ async function fetchFont(family, weights, chars) {
   if (!faces.length) throw new Error(`下載不到字型「${family}」`);
   return faces;
 }
-// 把一段文字要用的 Gluten（英數字）和 Noto Sans TC（中文、符號）都抓下來
+// 把一段文字要用的 Gluten（英數字）和 Zen Maru Gothic（中文、符號）都抓下來
 async function fetchTextFonts(text, numWeights, cjkWeights) {
   const latin = [...new Set(text)].filter(ch => fontOf(ch) === NUM_FONT).join("");
   const cjk = [...new Set(text)].filter(ch => fontOf(ch) === CJK_FONT).join("");
@@ -472,6 +472,8 @@ const tripsPath = store.joinPath(bdayDir, "trips.json");
 const kidsLabelPath = id => store.joinPath(bdayDir, "kids-trip-" + id + ".png");
 const bigfaceLabelPath = id => store.joinPath(bdayDir, "trip-" + id + ".png");
 const TRIP_COLORS = [K.blue100, K.teal100, K.pink100]; // 這個月的第 1、2、3 趟（第 4 趟起重複）
+// 標籤圖的版本：字型改過就換數字，讓已畫好的標籤重畫
+const kidsKey = t => "zen|" + tripText(t);
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const toDate = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 
@@ -542,7 +544,7 @@ async function askTrip(t = {}) {
   return { place, start: ymd(start), end: ymd(end), mode: kinds[k] };
 }
 
-// 童趣風標籤文字（高 26pt、3 倍解析度、透明底）：數字 Gluten、中文 Noto Sans TC；成功回傳寬度（pt），失敗回傳 0
+// 童趣風標籤文字（高 26pt、3 倍解析度、透明底）：數字 Gluten、中文 Zen Maru Gothic；成功回傳寬度（pt），失敗回傳 0
 async function renderKidsLabel(t) {
   try {
     const text = tripText(t);
@@ -609,9 +611,9 @@ async function syncKidsLabels() {
   const list = await loadTrips();
   let changed = false;
   for (const t of list) {
-    if (t.kidsText === tripText(t) && t.kidsW && store.fileExists(kidsLabelPath(t.id))) continue;
+    if (t.kidsText === kidsKey(t) && t.kidsW && store.fileExists(kidsLabelPath(t.id))) continue;
     const w = await renderKidsLabel(t);
-    if (w) { t.kidsW = w; t.kidsText = tripText(t); changed = true; }
+    if (w) { t.kidsW = w; t.kidsText = kidsKey(t); changed = true; }
   }
   if (changed) saveTrips(list);
 }
@@ -622,7 +624,7 @@ async function addTrip(old) {
   const list = await loadTrips();
   const t = old ? Object.assign(list.find(x => x.id === old.id), info) : { id: Date.now().toString(36), ...info };
   t.kidsW = await renderKidsLabel(t);
-  t.kidsText = t.kidsW ? tripText(t) : "";
+  t.kidsText = t.kidsW ? kidsKey(t) : "";
   t.labelW = await renderBigfaceLabel(t);
   if (!old) list.push(t);
   saveTrips(list);
@@ -706,7 +708,7 @@ const heavy = s => Font.heavyRoundedSystemFont(s);
 const bold = s => Font.boldRoundedSystemFont(s);
 const art = name => glyphs && glyphs.art[name];
 
-// 用 Gluten / Noto Sans TC 畫字；有任何字沒畫到小圖時，整串改用系統圓體
+// 用 Gluten / Zen Maru Gothic 畫字；有任何字沒畫到小圖時，整串改用系統圓體
 const hasGlyphs = (str, w, hex) => glyphs && [...str].every(ch => glyphKey(w, hex, ch) in glyphs.widths);
 function strWidth(str, size, w, hex) {
   if (!hasGlyphs(str, w, hex)) return [...str].reduce((t, ch) => t + size * (ch.charCodeAt(0) > 255 ? 1 : 0.6), 0);
@@ -800,7 +802,7 @@ const shownTrip = trips.find(t => toDate(t.end) >= todayD) || trips[trips.length
 // 畫一個旅程標籤：x 是靠照片（或年月）那一側的邊，alignRight 表示往左長；寬度超過 maxW 就縮小
 async function drawTripLabel(t, x, cy, maxW, alignRight) {
   const path = kidsLabelPath(t.id), label = tripText(t);
-  const ready = t.kidsW && t.kidsText === label && store.fileExists(path);
+  const ready = t.kidsW && t.kidsText === kidsKey(t) && store.fileExists(path);
   const w0 = ready ? t.kidsW : label.length * 11 + 16;
   const k = Math.min(1, maxW / w0), w = w0 * k, h = 26 * k, lx = alignRight ? x - w : x;
   roundRect(tripColor(t), 1, lx, cy - h / 2, w, h, h / 2);
