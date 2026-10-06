@@ -746,7 +746,7 @@ const pad = 16, inX = pad, inW = W - pad * 2;
 const footerH = 305 * SC;
 
 // ---- 標題列：左邊「彥」圖示（深色版），右邊年月
-const logoS = 40, headY = 14 + logoS / 2;
+const logoS = 40 * 1.2, headY = 34; // 彥放大 1.2 倍，中心位置不變
 if (art("logo")) ctx.drawImageInRect(art("logo"), new Rect(inX, headY - logoS / 2, logoS, logoS));
 else {
   roundRect("#232058", 1, inX, headY - logoS / 2, logoS, logoS, logoS * 0.17);
@@ -755,7 +755,7 @@ else {
 }
 
 // 右上角：年.月，例如 2026.09（避開右上角的黃色色塊）
-const title = `${year}.${String(month + 1).padStart(2, "0")}`, titleRight = W - 245 * SC - 6, titleSize = 26 * 0.8;
+const title = `${year}.${String(month + 1).padStart(2, "0")}`, titleRight = W - 245 * SC - 6, titleSize = 26 * 0.8 * 0.85;
 str(title, titleRight, headY, titleSize, K.ink, 800, "right");
 
 // ---- 本月壽星：照片放在最下面（左下或右下），外框依生日先後輪流用粉紅、湖水青、太陽黃、深藍
@@ -885,26 +885,27 @@ for (const t of trips) {
 }
 
 const STICKER_FALLBACK = [K.yellow, K.red, "#8CC4EE", "#7DCB6E"];
+const DAY_SIZE = 20 * 0.85; // 日期數字大小
 for (let d = 1; d <= days; d++) {
   const { c, cx, cy } = cellOf(d);
   if (d === today) {
     if (art("today")) ctx.drawImageInRect(art("today"), new Rect(cx - dot * 0.54, cy - dot * 0.52, dot * 1.08, dot * 1.04));
     else ellipse(K.yellow, 1, cx - dot * 0.52, cy - dot / 2, dot * 1.04, dot);
-    str(String(d), cx, cy, 20, K.ink, 800);
+    str(String(d), cx, cy, DAY_SIZE, K.ink, 800);
   } else {
     const weekend = c === 0 || c === 6;
-    str(String(d), cx, cy, 20, weekend ? K.body : K.ink);
+    str(String(d), cx, cy, DAY_SIZE, weekend ? K.body : K.ink);
   }
   // 數字右上角的小圖示：出發日放交通工具；生日放貼紙（同一天時貼紙往左挪）
-  const x0 = cx + strWidth(String(d), 20, 700, K.ink) / 2 - 3;
+  const x0 = cx + strWidth(String(d), DAY_SIZE, 700, K.ink) / 2 - 3;
   const mode = tripStarts[d];
   if (mode) {
-    if (art(mode)) ctx.drawImageInRect(art(mode), new Rect(x0, cy - 25, 20, 20));
-    else ellipse("#5AA9E6", 1, x0 + 3, cy - 20, 13, 10);
+    if (art(mode)) ctx.drawImageInRect(art(mode), new Rect(x0, cy - 23, 20, 20));
+    else ellipse("#5AA9E6", 1, x0 + 3, cy - 18, 13, 10);
   }
   const b = birthdays.findIndex(p => p.day === d);
   if (b >= 0) {
-    const k = b % STICKERS.length, x = (mode ? x0 - 19 : x0) - 4, y = cy - 29;
+    const k = b % STICKERS.length, x = (mode ? x0 - 19 : x0) - 4, y = cy - 27;
     if (art("sticker-" + STICKERS[k])) ctx.drawImageInRect(art("sticker-" + STICKERS[k]), new Rect(x, y, 26, 26));
     else ellipse(STICKER_FALLBACK[k], 1, x + 7, y + 7, 12, 12);
   }
