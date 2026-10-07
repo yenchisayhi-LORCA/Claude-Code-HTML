@@ -1,6 +1,7 @@
 // 月曆小工具・大圓臉版（Scriptable 大尺寸）— 底圖取自照片排版「大圓臉」樣板，字型 Zen Maru Gothic
 // 可在 App 內設定壽星：當月壽星的照片放在最下面（左下或右下），生日那天的日期旁有氣球或拉炮
 // 也可設定旅程：年月左邊顯示「9.21～23 花蓮」，旅程日期加粉藍色帶，出發日旁放交通工具
+// 左上角圖示的字預設是「彥」，第一次執行時可以改成自己的字，之後也能從選單「圖示文字」修改（跟童趣風版共用）
 const C = {
   bg: "#FFFBEF", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
@@ -21,7 +22,7 @@ function widgetSize() {
 
 // ---- Zen Maru Gothic 字型
 // Scriptable 無法直接安裝網路字型，所以第一次在 App 內執行時，用 WebView 從
-// Google Fonts 載入字型、把會用到的字依顏色畫成小圖存起來，「彥」圖示和底圖也一起畫好
+// Google Fonts 載入字型、把會用到的字依顏色畫成小圖存起來，左上角圖示和底圖也一起畫好
 // 存起來；小工具之後直接讀這些圖。還沒存好時改用系統圓體、簡化版圖示和簡化版底圖。
 const FONT = "Zen Maru Gothic";
 const GLYPH_VERSION = 4;
@@ -38,7 +39,7 @@ const GLYPH_SPECS = [
 const glyphKey = (w, hex, ch) => `${w}_${hex.slice(1)}_${ch.codePointAt(0)}`;
 const fm = FileManager.local();
 const glyphDir = fm.joinPath(fm.documentsDirectory(), "calendar-widget-bigface");
-const BG_VERSION = 6; // 底圖或小圖示改過就加 1，讓已存的圖重畫
+const BG_VERSION = 7; // 底圖或小圖示改過就加 1，讓已存的圖重畫
 const metaPath = fm.joinPath(glyphDir, "meta.json");
 const logoPath = fm.joinPath(glyphDir, "logo.png");
 const bgPath = fm.joinPath(glyphDir, "bg.png");
@@ -131,9 +132,9 @@ async function fetchFont(family, weights, chars) {
 }
 
 // 成功回傳 null；失敗回傳原因
-async function buildGlyphs() {
+async function buildGlyphs(logoChar) {
   const allChars = [...new Set(GLYPH_SPECS.map(g => g[2]).join(""))].join("");
-  const faces = [...await fetchFont(FONT, [700, 900], allChars), ...await fetchFont("Huninn", null, "彥")];
+  const faces = [...await fetchFont(FONT, [700, 900], allChars), ...await fetchFont("Huninn", null, logoChar)];
   const template = await fetchTemplate("t9.png");
   const wv = new WebView();
   await wv.loadHTML("<html><body></body></html>");
@@ -147,7 +148,7 @@ async function buildGlyphs() {
           await face.load();
           document.fonts.add(face);
         }
-        const logo = drawLogo();
+        const logo = drawLogo(${JSON.stringify(logoChar)});
         const [bg, leaf] = await drawBackground(${W}, ${H}, ${SC});
         const icons = [drawBalloon("#E8574B"), drawPopper(), drawBalloon("#5AA9E6"), transportPNG("plane"), transportPNG("train"), transportPNG("car")];
         const cv = document.createElement("canvas"), g = cv.getContext("2d");
@@ -165,16 +166,28 @@ async function buildGlyphs() {
       } catch (e) { completion({ error: String(e) }); }
     })();
 
-    // 「彥」圖示（Claude Design 黃底版，256×256 設計稿，以 3 倍解析度輸出）
-    function drawLogo() {
+    // 不規則色塊：(cx, cy) 為中心、寬 w 高 h，r 是 8 個 border-radius 百分比，旋轉 deg 度
+    function blob(g, cx, cy, w, h, r, deg, fill) {
+      g.save(); g.translate(cx, cy); g.rotate(deg * Math.PI / 180); g.translate(-w / 2, -h / 2);
+      const [a, b, c, d, e, f, gg, hh] = r.map(v => v / 100);
+      g.beginPath(); g.moveTo(a * w, 0); g.lineTo(w - b * w, 0);
+      g.ellipse(w - b * w, f * h, b * w, f * h, 0, -Math.PI / 2, 0); g.lineTo(w, h - gg * h);
+      g.ellipse(w - c * w, h - gg * h, c * w, gg * h, 0, 0, Math.PI / 2); g.lineTo(d * w, h);
+      g.ellipse(d * w, h - hh * h, d * w, hh * h, 0, Math.PI / 2, Math.PI); g.lineTo(0, e * h);
+      g.ellipse(a * w, e * h, a * w, e * h, 0, Math.PI, Math.PI * 1.5);
+      g.closePath(); g.fillStyle = fill; g.fill(); g.restore();
+    }
+
+    // 左上角圖示（Claude Design 黃底版，256×256 設計稿，以 3 倍解析度輸出）：外框是黃色不規則色塊，中間是使用者設定的字
+    function drawLogo(ch) {
       const S = 3, cv = document.createElement("canvas"), g = cv.getContext("2d");
       cv.width = cv.height = 256 * S;
       g.scale(S, S);
-      g.beginPath(); g.roundRect(0, 0, 256, 256, 56); g.clip();
-      g.fillStyle = "#FFD429"; g.fillRect(0, 0, 256, 256);
+      // 黃色不規則外框（取代原本的圓角方形）
+      blob(g, 128, 129, 246, 240, [46, 54, 40, 60, 52, 44, 58, 42], -4, "#FFD429");
 
       // 紅花（奶油花心）
-      g.save(); g.translate(46, 44); g.rotate(-12 * Math.PI / 180);
+      g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180);
       g.fillStyle = "#E63329";
       for (let i = 0; i < 8; i++) {
         g.save(); g.rotate(i * Math.PI / 4);
@@ -184,17 +197,17 @@ async function buildGlyphs() {
       g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 12, 0, Math.PI * 2); g.fill();
       g.restore();
 
-      // 葉枝：[顏色, 線寬, 位移, 旋轉角度, 路徑]
+      // 葉枝：[顏色, 線寬, 位移, 旋轉角度, 路徑]（往內收，不超出不規則外框）
       const twig = (color, width, tx, ty, deg, paths) => {
         g.save(); g.translate(tx, ty); g.rotate(deg * Math.PI / 180);
         g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
         for (const d of paths) g.stroke(new Path2D(d));
         g.restore();
       };
-      twig("#2A2A6B", 5.5, 200, 182, 18, [
+      twig("#2A2A6B", 5.5, 186, 170, 18, [
         "M0 52 C 4 30, 10 12, 20 -6", "M3 38 C -6 32, -12 23, -14 14", "M8 26 C 0 19, -4 10, -5 1",
         "M6 34 C 15 27, 20 19, 23 10", "M11 21 C 20 15, 25 7, 27 -2"]);
-      twig("#4A6FC4", 5, 46, 200, -8, [
+      twig("#4A6FC4", 5, 62, 180, -8, [
         "M0 42 C 1 26, 3 12, 6 0", "M2 30 C -6 26, -10 19, -11 12", "M4 17 C 12 13, 16 6, 16 -1"]);
 
       // 奶油色不規則圓：172×166，border-radius 44% 56% 62% 38% / 46% 54% 46% 54%
@@ -207,12 +220,14 @@ async function buildGlyphs() {
       g.ellipse(bx + tl[0], by + tl[1], tl[0], tl[1], 0, Math.PI, Math.PI * 1.5);
       g.fill();
 
-      // 彥：Huninn 96px，同色 4px 描邊加粗；以字的實際外框置中，對齊設計稿位置（中心 y ≈ 126.5）
+      // 字：Huninn 96px，同色 4px 描邊加粗；以字的實際外框置中（中心 y ≈ 126.5），比較寬的字會縮小
       g.font = '96px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
-      const m = g.measureText("彥");
+      let m = g.measureText(ch);
+      const fit = Math.min(1, 124 / (m.actualBoundingBoxLeft + m.actualBoundingBoxRight || 96));
+      g.font = (96 * fit) + 'px "Huninn"'; m = g.measureText(ch);
       const baseline = 126.5 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
       g.strokeStyle = g.fillStyle = "#2A2A6B"; g.lineWidth = 4; g.lineJoin = "round";
-      g.strokeText("彥", 128, baseline); g.fillText("彥", 128, baseline);
+      g.strokeText(ch, 128, baseline); g.fillText(ch, 128, baseline);
       return cv.toDataURL("image/png").split(",")[1];
     }
 
@@ -314,12 +329,12 @@ async function buildGlyphs() {
   fm.write(leafPath, Data.fromBase64String(res.leaf));
   res.icons.forEach((b64, i) => fm.write(iconPath(ICON_NAMES[i]), Data.fromBase64String(b64)));
   for (const key in res.images) fm.write(fm.joinPath(glyphDir, key + ".png"), Data.fromBase64String(res.images[key]));
-  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, bgVersion: BG_VERSION, specs: GLYPH_SPECS, size: [W, H], widths: res.widths }));
+  fm.writeString(metaPath, JSON.stringify({ version: GLYPH_VERSION, bgVersion: BG_VERSION, specs: GLYPH_SPECS, size: [W, H], logoChar, widths: res.widths }));
   return null;
 }
 
 // 讀取字型小圖；沒有的話（且不是在小工具裡）先建一次。失敗就回傳 null，改用系統字型
-async function loadGlyphs() {
+async function loadGlyphs(logoChar) {
   const ok = () => {
     if (!fm.fileExists(metaPath)) return null;
     const meta = JSON.parse(fm.readString(metaPath));
@@ -328,9 +343,10 @@ async function loadGlyphs() {
     return meta;
   };
   let meta = ok();
-  if (!meta && !config.runsInWidget) {
+  // 在 App 內執行時，圖示的字改過也要重畫（小工具裡先沿用舊圖）
+  if ((!meta || meta.logoChar !== logoChar) && !config.runsInWidget) {
     let err;
-    try { err = await buildGlyphs(); } catch (e) { err = String(e); }
+    try { err = await buildGlyphs(logoChar); } catch (e) { err = String(e); }
     meta = ok();
     if (!meta) {
       const alert = new Alert();
@@ -348,7 +364,6 @@ async function loadGlyphs() {
     logo: Image.fromFile(logoPath), bg: Image.fromFile(bgPath), leaf: Image.fromFile(leafPath), icons: ICON_NAMES.map(n => Image.fromFile(iconPath(n))),
   };
 }
-const glyphs = await loadGlyphs();
 
 // ---- 壽星資料：名字、生日、圓形大頭照，存在 iCloud Drive 的 Scriptable 資料夾（沒開 iCloud 就存本機）
 const store = (() => {
@@ -387,6 +402,29 @@ async function choosePhotoPos() {
   a.addCancelAction("返回");
   const i = await a.presentSheet();
   if (i >= 0) { st.photoPos = keys[i]; saveSettings(st); }
+}
+
+// 左上角圖示的字（只取第一個字）；沒設定過時用「彥」。存在 settings.json，跟童趣風版共用
+const DEFAULT_LOGO = "彥";
+async function askLogoChar(current) {
+  const a = new Alert();
+  a.title = "圖示文字";
+  a.message = "左上角圖示中間要放哪一個字？（例如名字裡的一個字）";
+  a.addTextField("一個字", current || DEFAULT_LOGO);
+  a.addAction("儲存");
+  a.addCancelAction("取消");
+  if (await a.present() === -1) return null;
+  const ch = [...a.textFieldValue(0).trim()][0];
+  if (!ch) { await notice("請輸入一個字", "例如：彥"); return askLogoChar(current); }
+  return ch;
+}
+async function chooseLogoChar() {
+  const st = await loadSettings(), ch = await askLogoChar(st.logoChar);
+  if (!ch || ch === st.logoChar) return;
+  st.logoChar = ch;
+  saveSettings(st);
+  glyphs = await loadGlyphs(ch);
+  if (glyphs) await notice("已更新", `左上角圖示改成「${ch}」。`);
 }
 
 async function ensureLocal(path) {
@@ -665,6 +703,7 @@ async function mainMenu() {
     if (list.length) acts.push(["管理壽星", manageBirthdays]);
     acts.push(["照片位置", choosePhotoPos], ["新增旅程", () => addTrip()]);
     if (trips.length) acts.push(["管理旅程", manageTrips]);
+    acts.push([`圖示文字（目前：${(await loadSettings()).logoChar || DEFAULT_LOGO}）`, chooseLogoChar]);
     acts.forEach(([t]) => a.addAction(t));
     a.addCancelAction("結束");
     const i = await a.presentSheet();
@@ -673,6 +712,13 @@ async function mainMenu() {
     await acts[i][1]();
   }
 }
+// 第一次在 App 內執行時，先問圖示要放哪個字，再畫字型和圖片
+const st0 = await loadSettings();
+if (!st0.logoChar && !config.runsInWidget) {
+  st0.logoChar = await askLogoChar(DEFAULT_LOGO) || DEFAULT_LOGO;
+  saveSettings(st0);
+}
+let glyphs = await loadGlyphs(st0.logoChar || DEFAULT_LOGO);
 const showPreview = config.runsInWidget ? false : await mainMenu();
 
 const ctx = new DrawContext();
@@ -744,13 +790,13 @@ const year = now.getFullYear(), month = now.getMonth(), today = now.getDate();
 const pad = 16, inX = pad, inW = W - pad * 2;
 const footerH = 305 * SC;
 
-// ---- 標題列：左邊「彥」圖示，右邊年月
-// 圖示沒存好時，先畫簡化版（黃底 + 奶油色圓 + 彥）
+// ---- 標題列：左邊圖示，右邊年月
+// 圖示沒存好時，先畫簡化版（黃底 + 奶油色圓 + 字）
 function drawLogo(x, y, s) {
   if (glyphs) return ctx.drawImageInRect(glyphs.logo, new Rect(x, y, s, s));
-  roundRect("#FFD429", 1, x, y, s, s, s * 0.22);
+  ellipse("#FFD429", 1, x, y, s, s);
   ellipse("#FFFCEA", 1, x + s * 0.16, y + s * 0.18, s * 0.68, s * 0.65);
-  text("彥", x + s / 2, y + s / 2, s * 0.4, "#2A2A6B", heavy, "center", s);
+  text(st0.logoChar || DEFAULT_LOGO, x + s / 2, y + s / 2, s * 0.4, "#2A2A6B", heavy, "center", s);
 }
 
 const logoS = 40, headY = 14 + logoS / 2;
