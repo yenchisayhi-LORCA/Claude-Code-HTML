@@ -712,6 +712,47 @@ async function mainMenu() {
     await acts[i][1]();
   }
 }
+// 把本機的壽星、照片、旅程搬到 iCloud：iCloud 雲碟沒開時資料會存在本機，開了之後在 App 內執行一次就自動搬過去。
+// 已經在 iCloud 的資料不會被蓋掉（壽星、旅程依 id 合併），本機那份改名留作備份
+async function migrateLocalData() {
+  const local = FileManager.local();
+  const localDir = local.joinPath(local.documentsDirectory(), "calendar-widget-birthdays");
+  if (store.documentsDirectory() === local.documentsDirectory() || !local.fileExists(localDir)) return;
+  const names = local.listContents(localDir);
+  if (!names.length) return;
+  if (!store.fileExists(bdayDir)) store.createDirectory(bdayDir, true);
+  const readJSON = async (fm, path, def) => {
+    if (!fm.fileExists(path)) return def;
+    if (fm === store) await ensureLocal(path);
+    try { return JSON.parse(fm.readString(path)); } catch (e) { return def; }
+  };
+  // 依 id 合併：iCloud 已有的保留，本機多出來的加進去
+  const mergeById = async name => {
+    const mine = await readJSON(local, local.joinPath(localDir, name), []);
+    const cloud = await readJSON(store, store.joinPath(bdayDir, name), []);
+    const ids = new Set(cloud.map(x => x.id));
+    const added = mine.filter(x => !ids.has(x.id));
+    if (added.length) store.writeString(store.joinPath(bdayDir, name), JSON.stringify([...cloud, ...added]));
+    return added.length;
+  };
+  const people = await mergeById("birthdays.json"), trips = await mergeById("trips.json");
+  // 設定：iCloud 沒有的項目才用本機的
+  const st = { ...await readJSON(local, local.joinPath(localDir, "settings.json"), {}), ...await readJSON(store, settingsPath, {}) };
+  if (Object.keys(st).length) store.writeString(settingsPath, JSON.stringify(st));
+  // 照片、旅程標籤等其他檔案：iCloud 沒有的才複製
+  for (const name of names) {
+    if (name.endsWith(".json")) continue;
+    const to = store.joinPath(bdayDir, name);
+    if (!store.fileExists(to)) store.write(to, local.read(local.joinPath(localDir, name)));
+  }
+  // 本機那份改名留作備份，之後不會再搬第二次
+  let backup = localDir + "-已搬到iCloud", n = 2;
+  while (local.fileExists(backup)) backup = localDir + "-已搬到iCloud-" + n++;
+  local.move(localDir, backup);
+  await notice("已搬到 iCloud", `把這台裝置的資料搬到 iCloud 了（新增 ${people} 位壽星、${trips} 趟旅程，照片也一起）。同一個 Apple 帳號的其他裝置會共用這份資料。`);
+}
+if (!config.runsInWidget) await migrateLocalData();
+
 // 第一次在 App 內執行時，先問圖示要放哪個字，再畫字型和圖片
 const st0 = await loadSettings();
 if (!st0.logoChar && !config.runsInWidget) {
