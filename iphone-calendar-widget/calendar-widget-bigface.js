@@ -692,6 +692,45 @@ async function manageTrips() {
   }
 }
 
+// ---- 移除重複的壽星和旅程：兩台裝置各自輸入過同樣的資料，搬到 iCloud 合併後會出現兩筆。
+// 名字和生日相同算同一位壽星；地點、日期、交通工具相同算同一趟旅程。資料存在 iCloud，整理一次所有裝置都會更新
+const bdayKey = p => `${p.name}|${p.month}|${p.day}`;
+const tripKey = t => `${t.place}|${t.start}|${t.end}|${t.mode}`;
+function splitDuplicates(list, key, preferred) {
+  const keep = [], drop = [], seen = new Map();
+  for (const x of list) {
+    const k = key(x), first = seen.get(k);
+    if (!first) { seen.set(k, x); keep.push(x); }
+    else if (preferred(x) && !preferred(first)) { keep[keep.indexOf(first)] = x; seen.set(k, x); drop.push(first); }
+    else drop.push(x);
+  }
+  return [keep, drop];
+}
+async function findDuplicates() {
+  const hasPhoto = p => store.fileExists(avatarPath(p.id));
+  const [people, peopleDrop] = splitDuplicates(await loadBirthdays(), bdayKey, hasPhoto);
+  const [trips, tripsDrop] = splitDuplicates(await loadTrips(), tripKey, () => false);
+  return { people, peopleDrop, trips, tripsDrop };
+}
+async function removeDuplicates() {
+  const d = await findDuplicates();
+  const a = new Alert();
+  a.title = "移除重複資料";
+  a.message = `找到重複的壽星 ${d.peopleDrop.length} 位、旅程 ${d.tripsDrop.length} 趟。每組只留一筆（有照片的優先），其他刪除。所有裝置會一起更新。`;
+  a.addDestructiveAction("移除重複");
+  a.addCancelAction("取消");
+  if (await a.present() !== 0) return;
+  saveBirthdays(d.people);
+  saveTrips(d.trips);
+  for (const x of [...d.peopleDrop, ...d.tripsDrop]) {
+    for (const f of [`${x.id}.png`, `trip-${x.id}.png`, `kids-trip-${x.id}.png`]) {
+      const p = store.joinPath(bdayDir, f);
+      if (store.fileExists(p)) store.remove(p);
+    }
+  }
+  await notice("已整理", `移除了 ${d.peopleDrop.length} 位重複的壽星、${d.tripsDrop.length} 趟重複的旅程。`);
+}
+
 // 在 App 內執行時的選單；選「預覽小工具」回傳 true
 async function mainMenu() {
   while (true) {
@@ -704,6 +743,8 @@ async function mainMenu() {
     acts.push(["照片位置", choosePhotoPos], ["新增旅程", () => addTrip()]);
     if (trips.length) acts.push(["管理旅程", manageTrips]);
     acts.push([`圖示文字（目前：${(await loadSettings()).logoChar || DEFAULT_LOGO}）`, chooseLogoChar]);
+    const dup = await findDuplicates();
+    if (dup.peopleDrop.length || dup.tripsDrop.length) acts.push([`移除重複資料（${dup.peopleDrop.length + dup.tripsDrop.length} 筆）`, removeDuplicates]);
     acts.forEach(([t]) => a.addAction(t));
     a.addCancelAction("結束");
     const i = await a.presentSheet();
@@ -712,6 +753,47 @@ async function mainMenu() {
     await acts[i][1]();
   }
 }
+// 把本機的壽星、照片、旅程搬到 iCloud：iCloud 雲碟沒開時資料會存在本機，開了之後在 App 內執行一次就自動搬過去。
+// 已經在 iCloud 的資料不會被蓋掉（壽星、旅程依 id 合併），本機那份改名留作備份
+async function migrateLocalData() {
+  const local = FileManager.local();
+  const localDir = local.joinPath(local.documentsDirectory(), "calendar-widget-birthdays");
+  if (store.documentsDirectory() === local.documentsDirectory() || !local.fileExists(localDir)) return;
+  const names = local.listContents(localDir);
+  if (!names.length) return;
+  if (!store.fileExists(bdayDir)) store.createDirectory(bdayDir, true);
+  const readJSON = async (fm, path, def) => {
+    if (!fm.fileExists(path)) return def;
+    if (fm === store) await ensureLocal(path);
+    try { return JSON.parse(fm.readString(path)); } catch (e) { return def; }
+  };
+  // 合併：iCloud 已有的保留，本機多出來的加進去（id 相同，或內容相同的同一位壽星、同一趟旅程都不重複加）
+  const mergeById = async (name, key) => {
+    const mine = await readJSON(local, local.joinPath(localDir, name), []);
+    const cloud = await readJSON(store, store.joinPath(bdayDir, name), []);
+    const ids = new Set(cloud.map(x => x.id)), keys = new Set(cloud.map(key));
+    const added = mine.filter(x => !ids.has(x.id) && !keys.has(key(x)));
+    if (added.length) store.writeString(store.joinPath(bdayDir, name), JSON.stringify([...cloud, ...added]));
+    return added.length;
+  };
+  const people = await mergeById("birthdays.json", bdayKey), trips = await mergeById("trips.json", tripKey);
+  // 設定：iCloud 沒有的項目才用本機的
+  const st = { ...await readJSON(local, local.joinPath(localDir, "settings.json"), {}), ...await readJSON(store, settingsPath, {}) };
+  if (Object.keys(st).length) store.writeString(settingsPath, JSON.stringify(st));
+  // 照片、旅程標籤等其他檔案：iCloud 沒有的才複製
+  for (const name of names) {
+    if (name.endsWith(".json")) continue;
+    const to = store.joinPath(bdayDir, name);
+    if (!store.fileExists(to)) store.write(to, local.read(local.joinPath(localDir, name)));
+  }
+  // 本機那份改名留作備份，之後不會再搬第二次
+  let backup = localDir + "-已搬到iCloud", n = 2;
+  while (local.fileExists(backup)) backup = localDir + "-已搬到iCloud-" + n++;
+  local.move(localDir, backup);
+  await notice("已搬到 iCloud", `把這台裝置的資料搬到 iCloud 了（新增 ${people} 位壽星、${trips} 趟旅程，照片也一起）。同一個 Apple 帳號的其他裝置會共用這份資料。`);
+}
+if (!config.runsInWidget) await migrateLocalData();
+
 // 第一次在 App 內執行時，先問圖示要放哪個字，再畫字型和圖片
 const st0 = await loadSettings();
 if (!st0.logoChar && !config.runsInWidget) {

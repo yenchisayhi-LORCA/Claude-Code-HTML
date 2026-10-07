@@ -37,7 +37,7 @@ iPhone 內建的「月曆」小工具只有小尺寸。這個 [Scriptable](https
 
 當月有壽星時，照片會依生日先後排在最下面一排（不會擋到日期，人多時自動縮小），外框依序是紫、綠、橘，生日那天的日期旁依序出現紅氣球、拉炮、藍氣球（第 4 位起重複）。2/29 生日在平年會顯示在 2/28。
 
-壽星資料和照片存在 iCloud Drive 的 `Scriptable/calendar-widget-birthdays/`（沒開 iCloud 時存在本機）。
+壽星資料和照片存在 iCloud Drive 的 `Scriptable/calendar-widget-birthdays/`（沒開 iCloud 時存在本機）。之後打開 iCloud 雲碟時，在 App 內執行一次月曆（大圓臉版或童趣風版皆可），就會自動把本機的壽星、照片、旅程搬到 iCloud（已在 iCloud 的資料不會被蓋掉，本機那份改名為 `calendar-widget-birthdays-已搬到iCloud` 留作備份），同一個 Apple 帳號的其他裝置就能共用。如果兩台裝置各自輸入過同樣的壽星或旅程，合併後會出現重複，選單會出現「移除重複資料」，每組只留一筆（有照片的優先）。
 
 ![壽星照片預覽](preview-birthday.png)
 
