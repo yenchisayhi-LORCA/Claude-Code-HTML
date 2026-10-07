@@ -48,6 +48,19 @@ const leafPath = fm.joinPath(glyphDir, "leaf.png");
 const ICON_NAMES = ["balloon-red", "popper", "balloon-blue", "plane", "train", "car"];
 const TRANSPORT = { plane: "飛機", train: "火車", car: "汽車" };
 
+// 舊版 iOS（例如 iPhone 7 Plus 的 iOS 15）的 WebView 沒有 canvas 的 roundRect，先補上，不然字型和圖示畫不出來
+const CANVAS_COMPAT_JS = `
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      r = Math.min(Array.isArray(r) ? r[0] : r || 0, Math.abs(w) / 2, Math.abs(h) / 2);
+      this.moveTo(x + r, y);
+      this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+      this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r);
+      this.closePath();
+    };
+  }
+`;
+
 // 交通工具圖示（在 WebView 的 canvas 裡畫，g 已縮放成 1×1 的方格）
 const TRANSPORT_JS = `
   function drawTransport(g, kind) {
@@ -138,7 +151,7 @@ async function buildGlyphs(logoChar) {
   const template = await fetchTemplate("t9.png");
   const wv = new WebView();
   await wv.loadHTML("<html><body></body></html>");
-  const res = await wv.evaluateJavaScript(`
+  const res = await wv.evaluateJavaScript(`${CANVAS_COMPAT_JS}
     (async () => {
       try {
         const specs = ${JSON.stringify(GLYPH_SPECS)}, widths = {}, images = {};
@@ -482,7 +495,7 @@ async function pickPhoto(id) {
   const jpeg = Data.fromJPEG(dc.getImage()).toBase64String();
   const wv = new WebView();
   await wv.loadHTML("<html><body></body></html>");
-  const png = await wv.evaluateJavaScript(`
+  const png = await wv.evaluateJavaScript(`${CANVAS_COMPAT_JS}
     (async () => {
       try {
         const im = document.createElement("img");
@@ -628,7 +641,7 @@ async function renderTripLabel(t) {
     const faces = await fetchFont(FONT, [700], text);
     const wv = new WebView();
     await wv.loadHTML("<html><body></body></html>");
-    const res = await wv.evaluateJavaScript(`
+    const res = await wv.evaluateJavaScript(`${CANVAS_COMPAT_JS}
       (async () => {
         try {
           for (const f of ${JSON.stringify(faces)}) {
