@@ -1,0 +1,14 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": {"v": 1, "at": "2026-10-06T11:00:00Z"},
+  "title": "HD 損益儀表板",
+  "namespace": "HDDash",
+  "libraries": [],
+  "sections": {},
+  "groups": [],
+  "assetGroups": {},
+  "blobs": {},
+  "docs": {"readme": "project/README.md", "sections": []},
+  "lastChange": {"by": "LORCA", "at": "2026-10-06T14:00:00Z", "via": "Claude", "note": "交付原則：函式庫內嵌、不載入外部字型、CSP 封鎖對外連線"}
+}

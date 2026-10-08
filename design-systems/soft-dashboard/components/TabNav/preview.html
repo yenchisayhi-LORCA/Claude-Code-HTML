@@ -1,0 +1,9 @@
+<!-- @dsCard group="導覽與按鈕" height=96 subtitle="膠囊頁籤" -->
+<style>
+  body{margin:0;padding:var(--space-6);background:var(--paper);font-family:var(--font-sans);}
+  .seg{display:inline-flex;background:var(--paper-dim);border-radius:var(--radius-pill);padding:3px;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:700;border:0;background:none;color:var(--ink-soft);padding:5px 16px;border-radius:var(--radius-pill);cursor:pointer;}
+  .seg button:hover{color:var(--ink);}
+  .seg button.on{background:var(--accent-ink);color:var(--card);}
+</style>
+<div class="seg"><button class="on">總覽</button><button>門市</button><button>品項</button><button>時段</button></div>

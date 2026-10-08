@@ -1,0 +1,134 @@
+<!-- @dsCard group="Components" page height=1250 subtitle="卡片與列表" -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>卡片與列表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Gluten:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --sun-yellow: #FFD426; --block-blue: #3F6FD1; --tomato-red: #EE3E33; --ink-navy: #262261;
+  --cream-paper: #FFFCEF; --white: #FFFFFF; --text-body: #5A5788; --text-muted: #8B88B2;
+  --teal-100: #C9F0E9; --pink-100: #FBD3D0; --teal-text: #3C7D74; --teal-check: #17705F;
+  --surface-disabled: #F0EEE4; --text-disabled-2: #A9A6C4; --bubble-pink: #FF9EC4; --lake-teal: #4FD2C2;
+  --radius-pill: 999px; --radius-card: 28px; --radius-input: 18px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px; font-family: 'Noto Sans TC', -apple-system, 'PingFang TC', system-ui, sans-serif; background: var(--cream-paper); color: var(--ink-navy); }
+h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; }
+p.lede { color: var(--text-body); font-size: 15px; margin: 0 0 32px; max-width: 640px; line-height: 1.7; }
+.section { margin-bottom: 34px; }
+.label { font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1px; color: var(--text-body); text-transform: uppercase; margin-bottom: 14px; }
+
+.icon-chip { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-chip svg { color: var(--ink-navy); }
+
+.task-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.task-card {
+  background: var(--white); border-radius: var(--radius-card); padding: 16px 20px;
+  display: flex; align-items: center; gap: 16px; border: none; font-family: inherit; text-align: left; width: 100%;
+}
+.task-card.done { background: var(--teal-100); }
+.task-name { font-weight: 900; font-size: 18px; flex: 1; color: var(--ink-navy); }
+.task-card.done .task-name { color: var(--teal-text); text-decoration: line-through; }
+.task-done-mark { width: 30px; height: 30px; color: var(--teal-check); flex-shrink: 0; }
+.stars-badge {
+  display: inline-flex; align-items: center; gap: 6px; font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 17px;
+  background: var(--sun-yellow); color: var(--ink-navy); border-radius: var(--radius-pill); padding: 6px 16px; flex-shrink: 0;
+}
+.stars-badge svg { width: 18px; height: 18px; }
+
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; }
+.shop-card { background: var(--white); border-radius: var(--radius-card); padding: 20px 16px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.shop-kind-badge { display: inline-block; font-size: 12px; font-weight: 900; letter-spacing: 1px; padding: 3px 12px; border-radius: var(--radius-pill); background: var(--pink-100); color: var(--ink-navy); }
+.shop-card .shop-name { font-weight: 900; font-size: 18px; }
+.btn { border: none; border-radius: var(--radius-pill); padding: 14px 26px; font-weight: 900; cursor: pointer; font-family: inherit; font-size: 15px; }
+.btn-accent { background: var(--sun-yellow); color: var(--ink-navy); }
+
+.cert-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
+.cert-card { padding: 26px 18px; border-radius: 34px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.cert-card.locked { background: var(--surface-disabled); color: var(--text-body); }
+.cert-title { font-weight: 900; font-size: 19px; }
+.cert-stars { font-family: 'Gluten', sans-serif; font-size: 14px; font-weight: 800; }
+
+.simple-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+.simple-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--white); border-radius: 20px; padding: 12px 16px; }
+.simple-list .item-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; font-weight: 700; }
+.simple-list .item-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+.simple-list .item-actions button { border: none; background: transparent; cursor: pointer; font-weight: 900; padding: 6px; border-radius: 10px; color: var(--ink-navy); display:flex; }
+.simple-list .item-actions button:hover { background: var(--surface-disabled); }
+.simple-list .item-actions svg { width: 18px; height: 18px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: var(--radius-pill); background: var(--surface-disabled); color: var(--ink-navy); }
+</style>
+</head>
+<body>
+  <h1>塗鴉童趣風 — 卡片與列表</h1>
+  <p class="lede">卡片一律白底、大圓角（28px）、無邊框無陰影；「完成/已解鎖」狀態改變背景色塊而不是加勾選框。每個 icon-chip 的圓角比例跟旋轉角度都各自用 id 算出一點隨機偏移，呈現手工貼紙感。</p>
+
+  <div class="section">
+    <div class="label">任務卡片 task-card</div>
+    <div class="task-list">
+      <button class="task-card" type="button">
+        <div class="icon-chip" style="width:60px;height:60px;background:#FBD3D0;border-radius:52% 48% 61% 39% / 58% 43% 57% 42%;transform:rotate(-3deg);"><svg width="34" height="34" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 37c2.5-2.8 12-12.5 18.5-19"/><path d="M31.5 15.5c1.8-2 3.6-4 4.6-4.8 1.6-1.3 3.6.6 2.6 2.4-.6 1.2-2.4 3.2-4.2 5.2Z"/><path d="M26 14.5l4.5 4.5M22 18.5l4.5 4.5M18 22.5l4.5 4.5"/></svg></div>
+        <span class="task-name">刷牙</span>
+        <span class="stars-badge"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6c1.6 1 3.4 6.6 5.2 11.6 5.4.4 11 .8 12 1.6.9.9-3.6 4.6-7.6 8.4 1.2 5.2 2.7 10.8 2.1 11.6-.7.8-5.8-2.1-11.7-5.3-5.6 3-10.8 6.1-11.6 5.3-.8-.8.7-6.3 2-11.6-4-3.8-8.5-7.5-7.6-8.4.9-.8 6.5-1.2 12-1.6C20.5 12.6 22.4 7 24 6Z"/></svg>1</span>
+      </button>
+      <button class="task-card done" type="button">
+        <div class="icon-chip" style="width:60px;height:60px;background:#fff;border-radius:58% 42% 45% 55% / 40% 60% 40% 60%;transform:rotate(2deg);"><svg width="34" height="34" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 33.5V13c4.5-1.2 9-2.4 13.5-3.4v6C28 16.6 23.5 17.6 19 18.6"/><path d="M19 33.5c0 2.5-2 4.5-4.5 4.5S10 36 10 33.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5Z"/></svg></div>
+        <span class="task-name">練習鋼琴</span>
+        <svg class="task-done-mark" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 25.5c3 2 6 4.5 8.5 7.5C26 26 31 19.5 37 14"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">星星商店 shop-card</div>
+    <div class="shop-grid">
+      <div class="shop-card">
+        <div class="icon-chip" style="width:72px;height:72px;background:#FFF0AF;border-radius:46% 54% 55% 45% / 56% 45% 55% 44%;transform:rotate(-4deg);"><svg width="40" height="40" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 22.5c9-1 18-1 27 0V39c-9 1-18 1-27 0Z"/><path d="M8.5 15.5c10.5-1 20.5-1 31 0v7c-10.5 1-20.5 1-31 0Z"/><path d="M24 15.5V39"/><path d="M24 15.5c-3.5-1-6-2.5-6-5s3.5-3 6 5Zm0 0c3.5-1 6-2.5 6-5s-3.5-3-6 5Z"/></svg></div>
+        <div class="shop-name">多看 30 分鐘電視</div>
+        <span class="shop-kind-badge">特權</span>
+        <span class="stars-badge"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6c1.6 1 3.4 6.6 5.2 11.6 5.4.4 11 .8 12 1.6.9.9-3.6 4.6-7.6 8.4 1.2 5.2 2.7 10.8 2.1 11.6-.7.8-5.8-2.1-11.7-5.3-5.6 3-10.8 6.1-11.6 5.3-.8-.8.7-6.3 2-11.6-4-3.8-8.5-7.5-7.6-8.4.9-.8 6.5-1.2 12-1.6C20.5 12.6 22.4 7 24 6Z"/></svg>10</span>
+        <button class="btn btn-accent">兌換</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">獎狀牆 cert-card</div>
+    <div class="cert-gallery">
+      <div class="cert-card" style="background:#FFD426;color:#262261;transform:rotate(-2deg);">
+        <svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 9.5c5.5-.8 11.5-.8 17 0 .5 12-2.5 19-8.5 19s-9-7-8.5-19Z"/><path d="M15.5 13c-3-.5-5 .5-5 3.5s2 5 5 5.5M32.5 13c3-.5 5 .5 5 3.5s-2 5-5 5.5"/><path d="M24 28.5V35"/><path d="M16 40c5.5-.8 10.5-.8 16 0-5.5.8-10.5.8-16 0Z"/></svg>
+        <div class="cert-title">星星小達人</div>
+        <div class="cert-stars">10 STARS</div>
+      </div>
+      <div class="cert-card locked" style="transform:rotate(1.5deg);">
+        <svg width="44" height="44" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 22.5c7.5-1 15.5-1 23 0V39c-7.5 1-15.5 1-23 0Z"/><path d="M17.5 22c-.5-6 1.5-9.5 6.5-9.5s7 3.5 6.5 9.5"/><path d="M24 29v4.5"/></svg>
+        <div class="cert-title">星星小富翁</div>
+        <div class="cert-stars">還差 15 顆</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">設定列表 simple-list</div>
+    <ul class="simple-list">
+      <li>
+        <div class="item-main">
+          <div class="icon-chip" style="width:40px;height:40px;background:#CFDDF8;border-radius:50% 50% 45% 55% / 55% 45% 55% 45%;transform:rotate(3deg);"><svg width="22" height="22" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="29" cy="11.5" r="4.5"/><path d="M27 19c-4 1.5-7 4.5-8.5 8.5"/><path d="M27 19c3.5.5 5.5 3 6 6.5.4 3-.5 5.5-2 7.5"/><path d="M25 33l-3.5 7M31 33l4 6.5"/><path d="M20 24l-8 1.5"/></svg></div>
+          走路（steps）・每 7500 = 1 顆
+        </div>
+        <div class="item-actions">
+          <button><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 37c.5-3 1.2-6 2-8.5C20 21 27 14.5 33 9.5c2.5 1.5 4.5 3.5 6 6-5.5 5.5-12 12-19 19-2.5.8-5.5 1.5-9 2.5Z"/><path d="M13 28.5c2.5 1.5 4.5 3.5 6 6"/></svg></button>
+          <button style="font-size:20px;">×</button>
+        </div>
+      </li>
+      <li>
+        <div class="item-main">運動回報核准 <span class="badge">核准 2</span></div>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>

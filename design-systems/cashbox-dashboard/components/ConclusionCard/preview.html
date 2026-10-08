@@ -1,0 +1,26 @@
+<!-- @dsCard group="洞察" height=300 subtitle="KPI 條與結論字卡" -->
+<style>
+  body{margin:0;padding:var(--space-5);background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  .strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);margin-bottom:14px;overflow:hidden;}
+  .strip>div{padding:9px 12px;border-right:1px solid var(--line);border-top:3px solid var(--c);}
+  .strip>div:last-child{border-right:0;}
+  .eyebrow{font-size:11.5px;letter-spacing:.12em;font-weight:700;color:var(--ink-soft);}
+  .v{font-size:20px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums;}
+  .d{font-size:11px;color:var(--pos-ink);font-weight:700;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;}
+  .c{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:var(--radius-md);padding:12px 14px;}
+  .big{font-size:20px;font-weight:700;margin:4px 0;font-variant-numeric:tabular-nums;}
+  h4{font-size:13px;font-weight:700;margin:0 0 6px;}
+  p{margin:0;font-size:12.5px;color:var(--ink-body);line-height:1.6;}
+</style>
+<div class="strip">
+  <div style="--c:var(--brand)"><div class="eyebrow">營收</div><div class="v">NT$ 48.6M</div><div class="d">▲ 6.2% YoY</div></div>
+  <div style="--c:var(--pos)"><div class="eyebrow">營業利益</div><div class="v">NT$ 9.80M</div><div class="d">▲ 4.8% YoY</div></div>
+  <div style="--c:var(--gold)"><div class="eyebrow">利潤率</div><div class="v">20.2%</div><div class="d">▲ 0.9pt</div></div>
+  <div style="--c:var(--neg)"><div class="eyebrow">食材成本率</div><div class="v">37.8%</div><div class="d">▼ 0.8pt</div></div>
+</div>
+<div class="grid">
+  <div class="c" style="--c:var(--brand)"><div class="eyebrow">關鍵發現</div><div class="big">−12.3%</div><h4>門市小計營業淨利下滑</h4><p>本期營業淨利較上期減少，建議搭配門市與科目觀察確認成因。</p></div>
+  <div class="c" style="--c:var(--pos)"><div class="eyebrow">正向表現</div><div class="big">信義店 +8.4%</div><h4>信義店營業收入表現最佳</h4><p>營業收入較去年同期成長，是本期表現最亮眼的單位。</p></div>
+  <div class="c" style="--c:var(--neg)"><div class="eyebrow">需留意</div><div class="big">基隆店</div><h4>基隆店營業收入變動最大（−3.4%）</h4><p>建議進一步查核來客數與科目明細。</p></div>
+</div>

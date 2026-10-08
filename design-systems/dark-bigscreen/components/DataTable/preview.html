@@ -1,0 +1,21 @@
+<!-- @dsCard group="圖表" height=330 subtitle="大螢幕表格與分級標籤（縮小 50%）" -->
+<style>
+  html,body{margin:0;background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  .stage{zoom:.5;width:1200px;padding:26px 40px;box-sizing:content-box;}
+  .p{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3) var(--space-5);}
+  h2{margin:0 0 6px;font-size:28px;font-weight:700;}
+  table{width:100%;border-collapse:collapse;font-size:25px;font-variant-numeric:tabular-nums;}
+  th{color:var(--ink-soft);font-weight:500;padding:6px 10px;text-align:center;border-bottom:1px solid var(--line);}
+  td{padding:5px 10px;text-align:center;border-bottom:1px solid var(--line);}
+  th.r,td.r{text-align:left;width:150px;color:var(--ink-soft);}
+  .tg{display:inline-block;min-width:60px;padding:2px 14px;border-radius:var(--radius-pill);font-weight:800;}
+  .tg.g{background:var(--pos-soft);color:var(--pos);} .tg.m{background:var(--gold-soft);color:var(--gold);} .tg.b{background:var(--neg-soft);color:var(--neg);}
+  .n{color:var(--neg);}
+</style>
+<div class="stage"><div class="p"><h2>門市損益（百萬元）</h2>
+<table><thead><tr><th class="r">門市</th><th>營收</th><th>營業利益</th><th>利潤率</th><th>分級</th></tr></thead><tbody>
+<tr><td class="r">信義店</td><td>8.70</td><td>2.31</td><td>26.6%</td><td><span class="tg g">優</span></td></tr>
+<tr><td class="r">台中店</td><td>6.40</td><td>1.30</td><td>20.3%</td><td><span class="tg m">中</span></td></tr>
+<tr><td class="r">新竹店</td><td>4.80</td><td>0.72</td><td>15.0%</td><td><span class="tg m">中</span></td></tr>
+<tr><td class="r">基隆店</td><td>3.60</td><td class="n">−0.25</td><td class="n">−6.9%</td><td><span class="tg b">劣</span></td></tr>
+</tbody></table></div></div>

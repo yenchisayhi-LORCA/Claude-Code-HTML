@@ -1,0 +1,14 @@
+<!-- @dsCard group="洞察" height=170 subtitle="四張 KPI 卡" -->
+<style>
+  body{margin:0;padding:var(--space-6);background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-4);}
+  .card{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);padding:var(--space-5);}
+  .lab{font-size:13px;color:var(--ink-soft);} .val{font-size:30px;font-weight:700;margin:8px 0 6px;font-variant-numeric:tabular-nums;}
+  .delta{font-size:13px;color:var(--pos-ink);font-weight:600;} .delta.n{color:var(--neg-ink);} .delta span{color:var(--ink-soft);font-weight:400;margin-left:4px;}
+</style>
+<div class="g4">
+  <div class="card"><div class="lab">本月營收</div><div class="val">48.6M</div><div class="delta">▲ 6.2%<span>較去年同期</span></div></div>
+  <div class="card"><div class="lab">營業利益</div><div class="val">9.8M</div><div class="delta">▲ 4.8%<span>較去年同期</span></div></div>
+  <div class="card"><div class="lab">利潤率</div><div class="val">20.2%</div><div class="delta">▲ 0.9pt<span>較去年同期</span></div></div>
+  <div class="card"><div class="lab">食材成本率</div><div class="val">37.8%</div><div class="delta n">▲ 0.8pt<span>較去年同期</span></div></div>
+</div>

@@ -1,0 +1,25 @@
+{
+  "v": 3,
+  "assetGroups": {},
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-06T14:00:00Z",
+    "v": 1
+  },
+  "docs": {
+    "readme": "project/README.md",
+    "sections": []
+  },
+  "groups": [],
+  "lastChange": {
+    "at": "2026-10-06T14:00:00Z",
+    "by": "LORCA",
+    "note": "新增 HOLIDAY 設計系統：企業橘＋深海藍、報表風、頁首不放標誌；匯出格式與交付原則沿用 CB、HD、CASHBOX",
+    "via": "Claude"
+  },
+  "layout": "files",
+  "libraries": [],
+  "namespace": "HOLIDAYDash",
+  "sections": {},
+  "title": "HOLIDAY 損益儀表板"
+}

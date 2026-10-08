@@ -1,0 +1,15 @@
+<!-- @dsCard group="導覽與按鈕" height=96 subtitle="深灰功能列" -->
+<style>
+  body{margin:0;padding:var(--space-5);background:var(--paper);font-family:var(--font-sans);}
+  .nav{display:flex;gap:24px;flex-wrap:wrap;align-items:center;background:var(--charcoal);padding:7px var(--space-5);box-shadow:var(--shadow-sticky);}
+  .tab{font-family:inherit;font-size:12px;font-weight:400;cursor:pointer;background:none;border:0;border-bottom:2px solid transparent;padding:0 0 2px;color:var(--hero-sub);}
+  .tab:hover{color:var(--card);border-bottom-color:var(--hero-muted);}
+  .tab.on{color:var(--card);font-weight:700;border-bottom-color:var(--gold);}
+</style>
+<nav class="nav">
+  <button class="tab on">損益總表</button>
+  <button class="tab">各門市損益明細</button>
+  <button class="tab">各月份損益明細</button>
+  <button class="tab">門市觀察</button>
+  <button class="tab">科目觀察</button>
+</nav>

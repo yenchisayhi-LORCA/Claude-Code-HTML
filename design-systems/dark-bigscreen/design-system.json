@@ -1,0 +1,25 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-06T13:00:00Z"
+  },
+  "title": "大螢幕看板",
+  "namespace": "BigScreenDash",
+  "libraries": [],
+  "sections": {},
+  "groups": [],
+  "assetGroups": {},
+  "blobs": {},
+  "docs": {
+    "readme": "project/README.md",
+    "sections": []
+  },
+  "lastChange": {
+    "by": "LORCA",
+    "at": "2026-10-06T13:00:00Z",
+    "via": "Claude",
+    "note": "新增「大螢幕看板」設計系統：深海軍藍底、超大 KPI、1920×1080 單屏；交付原則沿用 CB、HD"
+  }
+}

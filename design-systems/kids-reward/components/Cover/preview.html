@@ -1,0 +1,62 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>兒童獎勵紀錄本</title>
+<link href="https://fonts.googleapis.com/css2?family=Gluten:wght@800&family=Noto+Sans+TC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--cream-paper); color:var(--ink-navy); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .band { position:absolute; top:0; left:0; width:960px; height:120px; }
+  .band svg { display:block; width:960px; height:120px; }
+  .yel { fill:var(--sun-yellow); }
+  .blu { fill:var(--block-blue); }
+  .tea { fill:var(--lake-teal); }
+  .pnk { fill:var(--bubble-pink); }
+  .red { fill:var(--tomato-red); }
+  .paper { fill:var(--cream-paper); }
+  .card { rx:var(--radius-card); }
+  .words { position:absolute; left:var(--space-4); right:var(--space-4); bottom:var(--space-4); }
+  .name { margin:0; font-size:64px; line-height:.95; font-weight:900; letter-spacing:.02em; color:var(--ink-navy); white-space:nowrap; }
+  .tag { margin:var(--space-2) 0 0 4px; font-size:14px; line-height:20px; font-weight:700; color:var(--text-body); max-width:440px; }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="band" aria-hidden="true">
+<svg viewBox="0 0 960 120" width="960" height="120">
+<!--
+  blocks      sun-yellow 280 wide (the star colour, largest) · block-blue 200 · lake-teal 168 · bubble-pink 136 · tomato-red 56 (a signal, small) — all bleeding off the top, ≈38% of 960×288
+  arrangement top-band skeleton (the 7-character name is wider than 440px at 64px): a strip of unequal bands at staggered depths, each tilted ±2–4° like stickers on a fridge
+  pattern     discs, from "pill buttons, 28px cards, irregular 40–65% blobs": a dozen irregular blob discs cut out in cream-paper and dropped between the bands, each rotated
+  scales      gaps space-2 (16); depths in space-1 steps; corners radius-card (28); discs 16–40 px
+-->
+<g transform="rotate(-2 140 40)"><rect class="yel card" x="16" y="-40" width="280" height="136" rx="28"/></g>
+<g transform="rotate(3 412 30)"><rect class="blu card" x="312" y="-40" width="200" height="112" rx="28"/></g>
+<g transform="rotate(-3 612 40)"><rect class="tea card" x="528" y="-40" width="168" height="128" rx="28"/></g>
+<g transform="rotate(4 780 30)"><rect class="pnk card" x="712" y="-40" width="136" height="104" rx="28"/></g>
+<g transform="rotate(-2 892 20)"><rect class="red card" x="864" y="-40" width="56" height="88" rx="28"/></g>
+<!-- blob discs cut in paper over the yellow and teal, a few loose on the ground -->
+<ellipse class="paper" cx="80" cy="56" rx="20" ry="17" transform="rotate(-8 80 56)"/>
+<ellipse class="paper" cx="132" cy="30" rx="12" ry="10" transform="rotate(12 132 30)"/>
+<ellipse class="paper" cx="232" cy="66" rx="16" ry="13" transform="rotate(-14 232 66)"/>
+<ellipse class="paper" cx="590" cy="48" rx="18" ry="15" transform="rotate(10 590 48)"/>
+<ellipse class="paper" cx="644" cy="74" rx="10" ry="8" transform="rotate(-6 644 74)"/>
+<ellipse class="paper" cx="420" cy="34" rx="14" ry="12" transform="rotate(18 420 34)"/>
+<ellipse class="yel" cx="540" cy="106" rx="9" ry="7" transform="rotate(-10 540 106)"/>
+<ellipse class="pnk" cx="318" cy="104" rx="11" ry="9" transform="rotate(14 318 104)"/>
+<ellipse class="tea" cx="742" cy="96" rx="12" ry="10" transform="rotate(-12 742 96)"/>
+<ellipse class="blu" cx="874" cy="78" rx="8" ry="7" transform="rotate(8 874 78)"/>
+<ellipse class="yel" cx="934" cy="96" rx="13" ry="11" transform="rotate(-16 934 96)"/>
+<ellipse class="red" cx="700" cy="110" rx="6" ry="5"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">兒童獎勵紀錄本</h1>
+<p class="tag">塗鴉童趣風：像貼在冰箱上的手作貼紙，讓孩子一眼就想去集星星。</p>
+</div>
+</div>
+</body>
+</html>

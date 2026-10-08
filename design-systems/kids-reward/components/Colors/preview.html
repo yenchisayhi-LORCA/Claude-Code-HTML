@@ -1,0 +1,102 @@
+<!-- @dsCard group="Foundations" page height=1100 subtitle="色彩" -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>色彩</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Gluten:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --sun-yellow: #FFD426;
+  --block-blue: #3F6FD1;
+  --tomato-red: #EE3E33;
+  --lake-teal: #4FD2C2;
+  --bubble-pink: #FF9EC4;
+  --cream-paper: #FFFCEF;
+  --ink-navy: #262261;
+  --white: #FFFFFF;
+  --yellow-100: #FFF0AF;
+  --blue-100: #CFDDF8;
+  --pink-100: #FBD3D0;
+  --teal-100: #C9F0E9;
+  --text-body: #5A5788;
+  --text-muted: #8B88B2;
+  --text-faint: #9E9BC0;
+  --border-dashed: #8F8CB5;
+  --surface-disabled: #F0EEE4;
+  --teal-text: #3C7D74;
+  --teal-check: #17705F;
+  --tomato-deep: #D93A2F;
+  --tomato-text: #B8261E;
+  --radius-card: 28px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px; font-family: 'Noto Sans TC', -apple-system, 'PingFang TC', system-ui, sans-serif; background: var(--cream-paper); color: var(--ink-navy); }
+h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; }
+p.lede { color: var(--text-body); font-size: 15px; margin: 0 0 32px; max-width: 640px; line-height: 1.7; }
+h2 { font-size: 18px; font-weight: 900; margin: 0 0 14px; letter-spacing: .5px; }
+.section { margin-bottom: 40px; }
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+.swatch {
+  background: var(--white); border-radius: var(--radius-card); overflow: hidden;
+  box-shadow: 0 4px 14px rgba(38,34,97,.08);
+}
+.swatch-color { height: 84px; }
+.swatch-info { padding: 12px 14px; }
+.swatch-name { font-weight: 900; font-size: 14px; margin-bottom: 2px; }
+.swatch-hex { font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 13px; color: var(--text-muted); text-transform: uppercase; }
+.swatch-on-dark .swatch-name, .swatch-on-dark .swatch-hex { color: var(--navy-body-on-dark, #C9C7E4); }
+.swatch-on-dark { background: var(--ink-navy); }
+</style>
+</head>
+<body>
+  <h1>塗鴉童趣風 — 色彩</h1>
+  <p class="lede">「小孩獎勵紀錄本」的設計系統：高彩度原色 + 米白紙感背景，墨藍色收斂所有文字與線稿圖示，不用灰階中性色。</p>
+
+  <div class="section">
+    <h2>主色</h2>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#FFD426"></div><div class="swatch-info"><div class="swatch-name">Sun Yellow</div><div class="swatch-hex">#FFD426</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#3F6FD1"></div><div class="swatch-info"><div class="swatch-name">Block Blue</div><div class="swatch-hex">#3F6FD1</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#EE3E33"></div><div class="swatch-info"><div class="swatch-name">Tomato Red</div><div class="swatch-hex">#EE3E33</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#4FD2C2"></div><div class="swatch-info"><div class="swatch-name">Lake Teal</div><div class="swatch-hex">#4FD2C2</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#FF9EC4"></div><div class="swatch-info"><div class="swatch-name">Bubble Pink</div><div class="swatch-hex">#FF9EC4</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>底色</h2>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#FFFCEF"></div><div class="swatch-info"><div class="swatch-name">Cream Paper（頁面背景）</div><div class="swatch-hex">#FFFCEF</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#FFFFFF"></div><div class="swatch-info"><div class="swatch-name">White（卡片表面）</div><div class="swatch-hex">#FFFFFF</div></div></div>
+      <div class="swatch swatch-on-dark"><div class="swatch-color" style="background:#262261"></div><div class="swatch-info"><div class="swatch-name">Ink Navy（主要文字）</div><div class="swatch-hex">#262261</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>淺色（圖示底塊輪替色，四色循環）</h2>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#FFF0AF"></div><div class="swatch-info"><div class="swatch-name">Yellow 100</div><div class="swatch-hex">#FFF0AF</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#CFDDF8"></div><div class="swatch-info"><div class="swatch-name">Blue 100</div><div class="swatch-hex">#CFDDF8</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#FBD3D0"></div><div class="swatch-info"><div class="swatch-name">Pink 100</div><div class="swatch-hex">#FBD3D0</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#C9F0E9"></div><div class="swatch-info"><div class="swatch-name">Teal 100</div><div class="swatch-hex">#C9F0E9</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>文字 / 中性色</h2>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch-color" style="background:#5A5788"></div><div class="swatch-info"><div class="swatch-name">Text Body</div><div class="swatch-hex">#5A5788</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#8B88B2"></div><div class="swatch-info"><div class="swatch-name">Text Muted</div><div class="swatch-hex">#8B88B2</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#9E9BC0"></div><div class="swatch-info"><div class="swatch-name">Text Faint</div><div class="swatch-hex">#9E9BC0</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#8F8CB5"></div><div class="swatch-info"><div class="swatch-name">Border Dashed</div><div class="swatch-hex">#8F8CB5</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#F0EEE4"></div><div class="swatch-info"><div class="swatch-name">Surface Disabled</div><div class="swatch-hex">#F0EEE4</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#17705F"></div><div class="swatch-info"><div class="swatch-name">Teal Check（完成狀態）</div><div class="swatch-hex">#17705F</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#D93A2F"></div><div class="swatch-info"><div class="swatch-name">Tomato Deep（紅色按鈕底）</div><div class="swatch-hex">#D93A2F</div></div></div>
+      <div class="swatch"><div class="swatch-color" style="background:#B8261E"></div><div class="swatch-info"><div class="swatch-name">Tomato Text（淺粉底上的紅字）</div><div class="swatch-hex">#B8261E</div></div></div>
+    </div>
+  </div>
+</body>
+</html>

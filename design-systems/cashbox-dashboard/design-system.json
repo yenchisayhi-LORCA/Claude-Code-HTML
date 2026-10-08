@@ -1,0 +1,14 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": {"v": 1, "at": "2026-10-06T12:00:00Z"},
+  "title": "CASHBOX 損益儀表板",
+  "namespace": "CASHBOXDash",
+  "libraries": [],
+  "sections": {},
+  "groups": [],
+  "assetGroups": {},
+  "blobs": {},
+  "docs": {"readme": "project/README.md", "sections": []},
+  "lastChange": {"by": "LORCA", "at": "2026-10-06T12:00:00Z", "via": "Claude", "note": "移除標誌圖檔：頁首只留報表標題與四色條；企業色與報表風不變"}
+}

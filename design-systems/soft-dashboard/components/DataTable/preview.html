@@ -1,0 +1,23 @@
+<!-- @dsCard group="資料呈現" height=360 subtitle="門市損益與分級" -->
+<style>
+  body{margin:0;padding:var(--space-6);background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  .card{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow-panel);padding:var(--space-5);}
+  h2{margin:0 0 14px;font-size:15px;font-weight:600;} h2 span{font-size:12px;font-weight:400;color:var(--ink-soft);margin-left:8px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;}
+  th{color:var(--ink-soft);font-weight:500;text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);}
+  td{padding:9px 6px;border-bottom:1px solid var(--line);}
+  .r{text-align:right;} th.r{text-align:right;}
+  .bar{display:inline-block;width:80px;height:8px;border-radius:var(--radius-pill);background:var(--line);vertical-align:middle;margin-right:8px;overflow:hidden;}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:var(--radius-pill);}
+  .up{color:var(--pos-ink);font-weight:600;} .dn{color:var(--neg-ink);font-weight:600;}
+  .tag{display:inline-block;padding:2px 12px;border-radius:var(--radius-pill);font-size:12px;font-weight:700;}
+  .tag.g{background:var(--pos-soft);color:var(--pos-ink);} .tag.m{background:var(--sand-soft);color:var(--sand-ink);} .tag.b{background:var(--neg-soft);color:var(--neg-ink);}
+  tr.total td{font-weight:700;border-top:1px solid var(--line-control);border-bottom:0;}
+</style>
+<div class="card"><h2>門市損益<span>單位：百萬元（示意資料）</span></h2>
+<table><thead><tr><th>門市</th><th class="r">營收</th><th>營業利益</th><th class="r">YoY</th><th>分級</th></tr></thead><tbody>
+<tr><td>信義店</td><td class="r">8.70</td><td><span class="bar"><i style="width:100%"></i></span>2.31</td><td class="r up">▲ 8.4%</td><td><span class="tag g">優</span></td></tr>
+<tr><td>台中店</td><td class="r">6.40</td><td><span class="bar"><i style="width:56%"></i></span>1.30</td><td class="r up">▲ 5.2%</td><td><span class="tag m">中</span></td></tr>
+<tr><td>桃園店</td><td class="r">4.10</td><td><span class="bar"><i style="width:16%"></i></span>0.37</td><td class="r dn">▼ 1.2%</td><td><span class="tag b">劣</span></td></tr>
+<tr class="total"><td>合計</td><td class="r">48.60</td><td>9.80</td><td class="r up">▲ 6.2%</td><td></td></tr>
+</tbody></table></div>

@@ -1,0 +1,36 @@
+{
+  "v": 3,
+  "layout": "files",
+  "createdOnFiles": { "v": 1, "at": "2026-10-06T05:41:14Z" },
+  "title": "旅遊記帳系統",
+  "namespace": "TravelLedger",
+  "libraries": [],
+  "sections": {},
+  "groups": ["Icons"],
+  "assetGroups": {
+    "Icons": {
+      "name": "Icons",
+      "tile": "s",
+      "order": ["transport.svg", "stay.svg", "food.svg", "ticket.svg", "shopping.svg", "entertainment.svg", "telecom.svg", "medical.svg", "other.svg"],
+      "files": {
+        "transport.svg": { "name": "transport.svg", "blob": "8f9c1a0e9ff92d567ab5230fd1e649e2", "size": 356, "type": "image/svg+xml" },
+        "stay.svg": { "name": "stay.svg", "blob": "a41f5ef953276e7571bcbb4752520545", "size": 295, "type": "image/svg+xml" },
+        "food.svg": { "name": "food.svg", "blob": "18aa76783d6b55496a80c059eeb6ab24", "size": 533, "type": "image/svg+xml" },
+        "ticket.svg": { "name": "ticket.svg", "blob": "15a9fdc07944968fa4e0f1d55f4eb4ac", "size": 581, "type": "image/svg+xml" },
+        "shopping.svg": { "name": "shopping.svg", "blob": "5e01b8ca4c41e9fe6837133eea547e9e", "size": 376, "type": "image/svg+xml" },
+        "entertainment.svg": { "name": "entertainment.svg", "blob": "7fe2777caef2ffa9d7bef1f4467cd711", "size": 380, "type": "image/svg+xml" },
+        "telecom.svg": { "name": "telecom.svg", "blob": "64b08ed3a4224937574f6715ce44892a", "size": 304, "type": "image/svg+xml" },
+        "medical.svg": { "name": "medical.svg", "blob": "3e2b90f80c1f4025891de08ee83337b8", "size": 326, "type": "image/svg+xml" },
+        "other.svg": { "name": "other.svg", "blob": "8fa8d4813d9926a7640825de5092505b", "size": 270, "type": "image/svg+xml" }
+      }
+    }
+  },
+  "blobs": {},
+  "docs": { "readme": "project/README.md", "sections": [] },
+  "lastChange": {
+    "by": "yenchisayhi",
+    "via": "Claude Code",
+    "at": "2026-10-06T05:41:14Z",
+    "note": "從旅遊記帳系統（travel-expense-tracker）程式碼擷取視覺風格、色彩、匯出圖卡與 Excel 匯出的設計系統"
+  }
+}

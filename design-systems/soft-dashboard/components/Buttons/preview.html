@@ -1,0 +1,15 @@
+<!-- @dsCard group="導覽與按鈕" height=170 subtitle="按鈕、標籤與輸入框" -->
+<style>
+  body{margin:0;padding:var(--space-6);background:var(--paper);font-family:var(--font-sans);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  button,select{font-family:inherit;cursor:pointer;}
+  .solid{font-size:13px;font-weight:700;color:var(--card);background:var(--accent-ink);border:0;border-radius:var(--radius-md);padding:8px 16px;}
+  .solid:hover{background:#8F3722;}
+  .outline{font-size:13px;font-weight:700;color:var(--accent-ink);background:var(--card);border:1px solid var(--line-control);border-radius:var(--radius-md);padding:7px 16px;}
+  .outline:hover{background:var(--accent-soft);}
+  .tag{display:inline-block;padding:2px 12px;border-radius:var(--radius-pill);font-size:12px;font-weight:700;}
+  .tag.g{background:var(--pos-soft);color:var(--pos-ink);} .tag.m{background:var(--sand-soft);color:var(--sand-ink);} .tag.b{background:var(--neg-soft);color:var(--neg-ink);}
+  select{font-size:13px;padding:7px 10px;border:1px solid var(--line-control);border-radius:var(--radius-md);background:var(--card);color:var(--ink);}
+</style>
+<div class="row"><button class="solid">匯出報表</button><button class="outline">重設</button><select><option>全部門市</option></select></div>
+<div class="row"><span class="tag g">優</span><span class="tag m">中</span><span class="tag b">劣</span><span class="tag g">正向</span><span class="tag m">留意</span><span class="tag b">重大</span></div>

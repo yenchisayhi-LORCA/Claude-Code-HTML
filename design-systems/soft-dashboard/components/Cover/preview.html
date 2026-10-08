@@ -1,0 +1,28 @@
+<!-- @dsCard height=288 -->
+<style>
+  html,body{margin:0;background:var(--paper);}
+  .cover{position:relative;width:960px;height:288px;background:var(--paper);overflow:hidden;}
+  svg{position:absolute;inset:0;width:960px;height:288px;}
+  .text{position:absolute;left:32px;bottom:28px;width:440px;}
+  .name{font-family:var(--font-sans);font-weight:700;font-size:84px;line-height:1;color:var(--ink);margin:0;letter-spacing:.02em;}
+  .tag{font-family:var(--font-sans);font-size:14px;color:var(--ink-soft);margin:14px 0 0;}
+</style>
+<div class="cover">
+  <!-- 派生：
+   色塊：大圓角卡片 440×240（card、無邊框，帶柔和陰影）；其上疊四個圓與膠囊——accent 圓 r=56、sand 膠囊 144×56、sage 圓 r=40、navy 膠囊 96×40。
+   排列：圓與膠囊在卡片內錯落堆疊，彼此略微重疊，像手帳裡的貼紙。
+   圖樣：一條虛線弧（sand）穿過，象徵去年同期對照。
+   尺度：8px 倍數；全部為圓形或膠囊（呼應 radius-lg／pill）。 -->
+  <svg viewBox="0 0 960 288" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="496" y="24" width="440" height="240" rx="20" fill="var(--card)"/>
+    <circle cx="616" cy="152" r="56" fill="var(--chart-1)"/>
+    <rect x="648" y="88" width="144" height="56" rx="28" fill="var(--chart-2)"/>
+    <circle cx="776" cy="196" r="40" fill="var(--chart-3)"/>
+    <rect x="720" y="184" width="96" height="40" rx="20" fill="var(--chart-4)" opacity=".92"/>
+    <path d="M528 216Q640 72 904 112" stroke="var(--chart-5)" stroke-width="3" stroke-dasharray="8 8" fill="none"/>
+  </svg>
+  <div class="text">
+    <h1 class="name">柔和</h1>
+    <p class="tag">讀得下去的營運儀表板</p>
+  </div>
+</div>

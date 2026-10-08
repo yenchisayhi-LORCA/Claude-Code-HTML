@@ -1,0 +1,30 @@
+<!-- @dsCard height=288 -->
+<style>
+  html,body{margin:0;background:var(--paper);}
+  .cover{position:relative;width:960px;height:288px;background:var(--paper);overflow:hidden;}
+  svg{position:absolute;inset:0;width:960px;height:288px;}
+  .charcoal{fill:var(--charcoal);} .brand{fill:var(--brand);} .pos{fill:var(--pos);} .gold{fill:var(--gold);} .neg{fill:var(--neg);}
+  .rule{stroke:var(--paper);stroke-width:2;fill:none;}
+  .text{position:absolute;left:32px;bottom:28px;width:440px;}
+  .name{font-family:var(--font-sans);font-weight:700;font-size:84px;line-height:.95;color:var(--ink);margin:0;letter-spacing:-.01em;}
+  .tag{font-family:var(--font-sans);font-size:13px;color:var(--ink-soft);margin:14px 0 0;}
+</style>
+<div class="cover">
+  <!-- 派生：
+   色塊：charcoal 深灰表頭 440×40；brand 藍 144×200、pos 綠 112×200、gold 橘 96×200、neg 紅 88×200，全部在 x≥496，上緣接在表頭下方。
+   排列：一條深灰表頭帶住四根不等寬的色帶（企業色的藍綠橘紅），像一張被切成欄位的報表。
+   圖樣：報表／編輯式 → 四條紙色橫向細線（y=104、144、184、224）橫跨色帶，像表格的列線；因為這套風格是 Excel 式的報表。
+   尺度：所有邊長皆為 8px 的倍數，列高 40px，色塊方正（square）。 -->
+  <svg viewBox="0 0 960 288" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect class="charcoal" x="496" y="24" width="440" height="40"/>
+    <rect class="brand" x="496" y="64" width="144" height="200"/>
+    <rect class="pos" x="640" y="64" width="112" height="200"/>
+    <rect class="gold" x="752" y="64" width="96" height="200"/>
+    <rect class="neg" x="848" y="64" width="88" height="200"/>
+    <path class="rule" d="M496 104H936M496 144H936M496 184H936M496 224H936"/>
+  </svg>
+  <div class="text">
+    <h1 class="name">CASHBOX<br>損益儀表板</h1>
+    <p class="tag">把分類帳變成一眼看懂的損益報表</p>
+  </div>
+</div>

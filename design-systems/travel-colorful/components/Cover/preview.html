@@ -1,0 +1,26 @@
+<!-- @dsCard height=288 -->
+<svg viewBox="0 0 960 288" width="960" height="288" xmlns="http://www.w3.org/2000/svg">
+<!--
+  derivation:
+  blocks: app-primary ground (full bleed, 960x288) + app-teal disc (r150) bleeding off the top-right corner, app-warn disc (r130) bleeding off the right edge, app-danger disc (r95) lower in the zone, app-primary-tint sliver (r26) near the name for relief
+  arrangement: organic overlapping discs bleeding off the top/right edges, not a grid — mirrors how the real app composes its own page background from overlapping colour blobs
+  pattern: soft overlapping blob discs sized from radius-pill, chosen because the app's page background IS literally four overlapping rounded colour blobs (css/style.css .bg-blob-teal-top / .bg-blob-red / .bg-blob-yellow / .bg-blob-teal-side) — the most literal motif this brand has, not an invented one
+  scales: radius-pill (999px, drawn as circles), space-9 (28px) gaps between blocks
+-->
+<style>
+  .ground { fill: var(--app-primary); }
+  .teal { fill: var(--app-teal); }
+  .warn { fill: var(--app-warn); }
+  .danger { fill: var(--app-danger); }
+  .tint { fill: var(--app-primary-tint); }
+  .name { fill: var(--app-surface); font-family: 'Noto Sans TC', sans-serif; font-weight: 900; }
+  .tagline { fill: var(--app-primary-tint); font-family: 'Noto Sans TC', sans-serif; font-weight: 700; }
+</style>
+<rect class="ground" width="960" height="288"/>
+<circle class="teal" cx="760" cy="10" r="150"/>
+<circle class="warn" cx="930" cy="190" r="130"/>
+<circle class="danger" cx="600" cy="230" r="95"/>
+<circle class="tint" cx="522" cy="80" r="26" opacity="0.55"/>
+<text class="name" x="48" y="208" font-size="64">旅遊記帳系統</text>
+<text class="tagline" x="48" y="238" font-size="14">旅遊花費記帳，分帳自動算清楚。</text>
+</svg>

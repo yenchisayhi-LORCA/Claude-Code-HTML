@@ -1,0 +1,19 @@
+<!-- @dsCard group="洞察" height=250 subtitle="結論字卡" -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;padding:20px;background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
+  .c{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:22px 20px;position:relative;overflow:hidden;}
+  .c::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;}
+  .c.warn::before{background:var(--brand);} .c.note::before{background:var(--gold);}
+  .c.good::before{background:var(--pos);} .c.risk::before{background:var(--neg);}
+  .k{font-size:11.5px;letter-spacing:.1em;font-weight:700;color:var(--ink-soft);margin-bottom:8px;}
+  .big{font-family:var(--font-serif);font-size:26px;font-weight:900;margin:4px 0;}
+  h4{font-family:var(--font-serif);font-size:16.5px;margin:0 0 8px;}
+  p{margin:0;font-size:13.8px;color:var(--ink-body);line-height:1.6;}
+</style>
+<div class="grid">
+  <div class="c warn"><div class="k">關鍵發現</div><div class="big">−12.3%</div><h4>門市小計營業淨利下滑</h4><p>本期營業淨利較上期減少，建議搭配門市與科目觀察確認成因。</p></div>
+  <div class="c good"><div class="k">正向表現</div><div class="big">新林森 +18.6%</div><h4>新林森營業收入表現最佳</h4><p>營業收入變動為 +18.6%，是本期表現最亮眼的單位。</p></div>
+  <div class="c risk"><div class="k">需留意</div><div class="big">南崁店</div><h4>南崁店營業收入變動最大（−9.4%）</h4><p>建議進一步查核來客數與科目明細。</p></div>
+</div>

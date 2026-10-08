@@ -1,0 +1,17 @@
+<!-- @dsCard group="導覽與按鈕" height=120 subtitle="標題頁首與四色條" -->
+<style>
+  body{margin:0;background:var(--paper);font-family:var(--font-sans);}
+  .brandbar{display:flex;justify-content:space-between;align-items:center;padding:12px var(--space-5);background:var(--card);}
+  .l{display:flex;align-items:center;gap:18px;}
+  h1{margin:0;font-size:19px;font-weight:700;color:var(--charcoal);letter-spacing:.06em;}
+  .m{color:var(--ink-soft);font-size:11px;line-height:1.6;text-align:right;}
+  .stripe{display:flex;height:5px;}
+  .stripe i{flex:1;display:block;}
+</style>
+<header>
+  <div class="brandbar">
+    <div class="l"><h1>門市損益彙總表</h1></div>
+    <div class="m">2026 年 9 月 ・ 全省 19 家門市<br>單位：百萬元（NT$ M）・ 示意資料</div>
+  </div>
+  <div class="stripe"><i style="background:var(--brand)"></i><i style="background:var(--pos)"></i><i style="background:var(--gold)"></i><i style="background:var(--neg)"></i></div>
+</header>

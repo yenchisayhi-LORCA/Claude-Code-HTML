@@ -1,0 +1,35 @@
+<!-- @dsCard group="導覽與按鈕" height=190 subtitle="方正按鈕與狀態標籤" -->
+<style>
+  body{margin:0;padding:var(--space-5);background:var(--paper);font-family:var(--font-sans);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  button{font-family:inherit;cursor:pointer;}
+  .outline{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:700;color:var(--brand);background:var(--card);border:1px solid var(--brand);border-radius:var(--radius-xs);padding:6px 14px;}
+  .outline:hover{background:var(--brand-soft);}
+  .ghost{font-size:12px;font-weight:700;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:var(--radius-xs);padding:6px 14px;}
+  .ghost:hover{border-color:var(--brand);color:var(--brand);}
+  .tag{display:inline-block;min-width:26px;text-align:center;padding:1px 8px;border-radius:var(--radius-xs);font-size:12px;font-weight:700;border:1px solid;}
+  .tag.pos{background:var(--pos-soft);color:var(--pos-ink);border-color:var(--pos);}
+  .tag.watch{background:var(--accent-soft);color:var(--accent-ink);border-color:var(--accent);}
+  .tag.neg{background:var(--neg-soft);color:var(--neg-ink);border-color:var(--neg);}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:var(--radius-pill);margin-right:6px;}
+  .legend{font-size:12px;color:var(--ink);}
+</style>
+<div class="row">
+  <button class="outline">展開查看 <span>▾</span></button>
+  <button class="outline">匯出報表 <span>▾</span></button>
+  <button class="ghost">重設</button>
+  <button class="outline">選擇檔案</button>
+</div>
+<div class="row">
+  <span class="tag pos">優</span>
+  <span class="tag watch">中</span>
+  <span class="tag neg">劣</span>
+  <span class="tag pos">正向</span>
+  <span class="tag watch">留意</span>
+  <span class="tag neg">重大</span>
+</div>
+<div class="row legend">
+  <span><span class="dot" style="background:var(--pos)"></span>改善或持平</span>
+  <span><span class="dot" style="background:var(--accent)"></span>下滑但仍為正</span>
+  <span><span class="dot" style="background:var(--neg)"></span>由正轉負</span>
+</div>

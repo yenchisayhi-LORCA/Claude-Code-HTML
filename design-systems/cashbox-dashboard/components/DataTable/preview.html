@@ -1,0 +1,54 @@
+<!-- @dsCard group="資料呈現" height=640 subtitle="簡損表與門市明細" -->
+<style>
+  body{margin:0;padding:var(--space-5);background:var(--paper);font-family:var(--font-sans);color:var(--ink);font-size:12px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:14px;box-shadow:var(--shadow-panel);}
+  .ttl{display:flex;align-items:baseline;gap:10px;font-size:13px;font-weight:700;color:var(--charcoal);margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--charcoal);}
+  .ttl .n{font-size:11px;font-weight:400;color:var(--ink-soft);}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:12px;}
+  th{background:var(--charcoal);color:var(--card);border:1px solid var(--ink-body);padding:6px 8px;font-weight:600;text-align:center;white-space:nowrap;}
+  td{border:1px solid var(--line-soft);padding:4px 8px;text-align:right;}
+  td.t{text-align:left;white-space:nowrap;} td.c{text-align:center;}
+  tbody tr:nth-child(even) td{background-color:var(--paper);}
+  tr.total td{font-weight:700;background-color:var(--paper-dim);border-top:2px double var(--charcoal);}
+  .cum{background-color:var(--paper-dim);font-weight:700;}
+  .bar{background-image:linear-gradient(90deg,var(--brand-tint) var(--w),transparent var(--w));font-weight:600;}
+  .loss{color:var(--neg);font-weight:700;}
+  tr.total .loss,.cum .loss{color:var(--neg-ink);}
+  .up{color:var(--pos-ink);} .dn{color:var(--neg);}
+  .tag{display:inline-block;min-width:26px;text-align:center;padding:0 6px;border-radius:var(--radius-xs);font-weight:700;border:1px solid;}
+  .tag.g{background:var(--pos-soft);color:var(--pos-ink);border-color:var(--pos);}
+  .tag.m{background:var(--gold-soft);color:var(--gold-ink);border-color:var(--gold);}
+  .tag.b{background:var(--neg-soft);color:var(--neg-ink);border-color:var(--neg);}
+  .note{margin-top:8px;font-size:11px;color:var(--ink-soft);}
+</style>
+<div class="panel">
+  <div class="ttl">2026 年　簡損表　<span class="n">單位：新台幣千元</span></div>
+  <table>
+    <thead><tr><th>科目小類</th><th>2026年5月</th><th>2026年6月</th><th>2026年累計（1–6月）</th></tr></thead>
+    <tbody>
+      <tr class="total"><td class="t">營業收入</td><td>12,480</td><td>11,962</td><td class="cum">70,310</td></tr>
+      <tr><td class="t">人力成本</td><td>3,120</td><td>3,205</td><td class="cum">18,940</td></tr>
+      <tr><td class="t">銷貨成本</td><td>2,310</td><td>2,188</td><td class="cum">13,020</td></tr>
+      <tr><td class="t">折舊攤提</td><td>610</td><td>612</td><td class="cum">3,650</td></tr>
+      <tr class="total"><td class="t">營業淨利</td><td>1,840</td><td><span class="loss">−120</span></td><td class="cum">6,310</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="panel">
+  <div class="ttl">門市損益明細　<span class="n">單位：百萬元（示意資料）</span></div>
+  <table>
+    <thead><tr><th>#</th><th>門市</th><th>營收</th><th>總成本</th><th>營業利益</th><th>利潤率</th><th>成本率</th><th>營收 YoY</th><th>分級</th></tr></thead>
+    <tbody>
+      <tr><td class="c">1</td><td class="t">信義店</td><td>8.70</td><td>6.39</td><td class="bar" style="--w:100%">2.31</td><td>26.6%</td><td>35.8%</td><td class="up">+8.4%</td><td class="c"><span class="tag g">優</span></td></tr>
+      <tr><td class="c">2</td><td class="t">忠孝店</td><td>7.90</td><td>5.88</td><td class="bar" style="--w:87%">2.02</td><td>25.6%</td><td>36.5%</td><td class="up">+7.1%</td><td class="c"><span class="tag g">優</span></td></tr>
+      <tr><td class="c">3</td><td class="t">板橋店</td><td>7.20</td><td>5.49</td><td class="bar" style="--w:74%">1.71</td><td>23.8%</td><td>36.9%</td><td class="up">+6.8%</td><td class="c"><span class="tag g">優</span></td></tr>
+      <tr><td class="c">4</td><td class="t">台中店</td><td>6.40</td><td>5.10</td><td class="bar" style="--w:56%">1.30</td><td>20.3%</td><td>37.8%</td><td class="up">+5.2%</td><td class="c"><span class="tag m">中</span></td></tr>
+      <tr><td class="c">5</td><td class="t">高雄店</td><td>5.90</td><td>4.78</td><td class="bar" style="--w:48%">1.12</td><td>19.0%</td><td>38.4%</td><td class="up">+4.9%</td><td class="c"><span class="tag m">中</span></td></tr>
+      <tr><td class="c">6</td><td class="t">新竹店</td><td>4.80</td><td>4.08</td><td class="bar" style="--w:31%">0.72</td><td>15.0%</td><td>38.9%</td><td class="up">+3.1%</td><td class="c"><span class="tag m">中</span></td></tr>
+      <tr><td class="c">7</td><td class="t">桃園店</td><td>4.10</td><td>3.73</td><td class="bar" style="--w:16%">0.37</td><td>9.0%</td><td>40.6%</td><td class="dn">−1.2%</td><td class="c"><span class="tag b">劣</span></td></tr>
+      <tr><td class="c">8</td><td class="t">基隆店</td><td>3.60</td><td>3.35</td><td class="bar" style="--w:11%">0.25</td><td>6.9%</td><td>41.8%</td><td class="dn">−3.4%</td><td class="c"><span class="tag b">劣</span></td></tr>
+      <tr class="total"><td class="c"></td><td class="t">合計</td><td>48.60</td><td>38.80</td><td>9.80</td><td>20.2%</td><td>37.8%</td><td class="up">+6.2%</td><td class="c">—</td></tr>
+    </tbody>
+  </table>
+  <div class="note">分級規則（示意）：食材成本率 &lt; 37% 為「優」、37%–40% 為「中」、&gt; 40% 為「劣」。</div>
+</div>

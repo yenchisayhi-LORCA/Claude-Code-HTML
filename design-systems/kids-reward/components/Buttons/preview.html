@@ -1,0 +1,83 @@
+<!-- @dsCard group="Components" page height=600 subtitle="按鈕" -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>按鈕</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Gluten:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --sun-yellow: #FFD426; --block-blue: #3F6FD1; --tomato-red: #EE3E33; --ink-navy: #262261;
+  --cream-paper: #FFFCEF; --white: #FFFFFF; --text-body: #5A5788; --text-muted: #8B88B2;
+  --text-disabled: #B4B1CE; --surface-disabled: #F0EEE4; --border-dashed: #8F8CB5;
+  --radius-pill: 999px; --radius-card: 28px;
+  --tomato-deep: #D93A2F;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px; font-family: 'Noto Sans TC', -apple-system, 'PingFang TC', system-ui, sans-serif; background: var(--cream-paper); color: var(--ink-navy); }
+h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; }
+p.lede { color: var(--text-body); font-size: 15px; margin: 0 0 32px; max-width: 640px; line-height: 1.7; }
+.section { margin-bottom: 30px; background: var(--white); border-radius: var(--radius-card); padding: 26px 30px; }
+.label { font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1px; color: var(--text-body); text-transform: uppercase; margin-bottom: 16px; }
+.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+
+.btn {
+  border: none; border-radius: var(--radius-pill); padding: 16px 30px; font-weight: 900; cursor: pointer;
+  font-family: inherit; font-size: 17px; transition: transform .1s; display: inline-flex; align-items: center; justify-content: center;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-primary { background: var(--tomato-deep); color: var(--white); }
+.btn-secondary { background: var(--block-blue); color: var(--white); }
+.btn-accent { background: var(--sun-yellow); color: var(--ink-navy); }
+.btn-ghost { background: transparent; color: var(--ink-navy); border: 3px solid var(--ink-navy); padding: 13px 27px; }
+.btn-danger { background: var(--tomato-deep); color: var(--white); }
+.btn:disabled { background: var(--surface-disabled); color: var(--text-disabled); cursor: not-allowed; transform: none; border-color: transparent; }
+
+.btn-icon-only { width: 34px; height: 34px; padding: 0; border: none; background: var(--cream-paper); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--ink-navy); cursor: pointer; }
+.btn-icon-only:hover { background: var(--surface-disabled); }
+.btn-icon-only svg { width: 18px; height: 18px; }
+
+.btn-add-kid {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border-radius: var(--radius-pill); border: 3px dashed var(--border-dashed); background: transparent;
+  font-size: 22px; font-weight: 900; color: var(--border-dashed); cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-add-kid:hover { border-color: var(--tomato-red); color: var(--tomato-red); }
+</style>
+</head>
+<body>
+  <h1>塗鴉童趣風 — 按鈕</h1>
+  <p class="lede">藥丸形（<code>border-radius: 999px</code>），粗重 900 字重，hover 時整顆上浮 2px、active 下沉，不用陰影做立體感。</p>
+
+  <div class="section">
+    <div class="label">實心按鈕</div>
+    <div class="row">
+      <button class="btn btn-primary">儲存</button>
+      <button class="btn btn-secondary">＋ 新增小孩</button>
+      <button class="btn btn-accent">兌換</button>
+      <button class="btn btn-danger">退回</button>
+      <button class="btn btn-primary" disabled>已停用</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">外框按鈕</div>
+    <div class="row">
+      <button class="btn btn-ghost">取消</button>
+      <button class="btn btn-ghost">‹ 上個月</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">圖示按鈕</div>
+    <div class="row">
+      <button class="btn-icon-only"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 37c.5-3 1.2-6 2-8.5C20 21 27 14.5 33 9.5c2.5 1.5 4.5 3.5 6 6-5.5 5.5-12 12-19 19-2.5.8-5.5 1.5-9 2.5Z"/><path d="M13 28.5c2.5 1.5 4.5 3.5 6 6"/></svg></button>
+      <button class="btn-icon-only" style="font-size:20px;font-weight:900;">×</button>
+      <button class="btn-add-kid">+</button>
+    </div>
+  </div>
+</body>
+</html>

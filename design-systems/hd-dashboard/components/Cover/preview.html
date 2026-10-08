@@ -1,0 +1,35 @@
+<!-- @dsCard height=288 -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@900&family=Noto+Sans+TC:wght@400&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;background:var(--paper);}
+  .cover{position:relative;width:960px;height:288px;background:var(--paper);overflow:hidden;}
+  svg{position:absolute;inset:0;width:960px;height:288px;}
+  .brand{fill:var(--brand);} .gold{fill:var(--gold);} .pos{fill:var(--pos);} .neg{fill:var(--neg);}
+  .ink{fill:var(--ink);} .tint{fill:var(--brand-soft);}
+  .b{rx:var(--radius-lg);ry:var(--radius-lg);}
+  .rule{stroke:var(--paper);stroke-width:2;fill:none;}
+  .text{position:absolute;left:32px;bottom:28px;width:440px;}
+  .name{font-family:var(--font-serif);font-weight:900;font-size:84px;line-height:.95;color:var(--ink);margin:0;}
+  .tag{font-family:var(--font-sans);font-size:13px;color:var(--ink-soft);margin:14px 0 0;}
+</style>
+<div class="cover">
+  <!-- 派生：
+   色塊：brand 橘 200×240 主板、gold 120×140、ink 120×84、pos 84×84、neg 84×48、brand-soft 84×76，全部在 x≥500。
+   排列：一塊高橘板配四個衛星塊，錯落如報表欄位；皆用 radius-lg 圓角。
+   圖樣：editorial／報表 → 在橘板與金塊上切出三條紙色細線（像表格橫線），因為這套風格是暖紙色報表。
+   尺度：間距 16px（space-4）、圓角 radius-lg 16px。 -->
+  <svg viewBox="0 0 960 288" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect class="b brand" x="500" y="24" width="200" height="240"/>
+    <rect class="b gold" x="716" y="24" width="120" height="140"/>
+    <rect class="b ink" x="716" y="180" width="120" height="84"/>
+    <rect class="b pos" x="852" y="24" width="84" height="84"/>
+    <rect class="b neg" x="852" y="124" width="84" height="48"/>
+    <rect class="b tint" x="852" y="188" width="84" height="76"/>
+    <path class="rule" d="M500 96H700M500 144H700M500 192H700"/>
+    <path class="rule" d="M716 76H836M716 116H836"/>
+  </svg>
+  <div class="text">
+    <h1 class="name">HD<br>損益儀表板</h1>
+    <p class="tag">把分類帳變成一眼看懂的損益表</p>
+  </div>
+</div>

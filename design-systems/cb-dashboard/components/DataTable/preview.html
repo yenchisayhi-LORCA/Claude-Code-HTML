@@ -1,0 +1,45 @@
+<!-- @dsCard group="資料呈現" height=420 subtitle="簡損表與門市明細" -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;padding:20px;background:var(--paper);font-family:var(--font-sans);color:var(--ink);}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:22px;box-shadow:var(--shadow-panel);margin-bottom:20px;}
+  .ttl{display:flex;align-items:baseline;gap:10px;font-family:var(--font-serif);font-size:15px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+  .ttl .n{font-family:var(--font-sans);font-size:12px;font-weight:400;color:var(--ink-soft);}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{padding:10px;text-align:right;border-bottom:1px solid var(--line);}
+  th:first-child,td:first-child{text-align:left;white-space:nowrap;}
+  .pl thead th{font-size:12px;letter-spacing:.04em;color:var(--ink-soft);border-bottom:2px solid var(--ink);}
+  .pl .cum{background:var(--paper-dim);font-weight:700;}
+  .pl tr.total td{font-weight:900;border-top:2px solid var(--ink);}
+  .loss{color:var(--neg);font-weight:700;}
+  .wrap{border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;}
+  .store thead th{background:var(--ink);color:var(--paper);font-size:11.5px;font-weight:600;padding:12px 10px;}
+  .store tbody tr:nth-child(even){background:rgba(220,211,192,.16);}
+  .store td:first-child{font-weight:700;}
+  .flag{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;}
+  .g{background:var(--pos);} .y{background:var(--gold);} .r{background:var(--neg);}
+  .up{color:var(--pos);font-weight:700;} .dn{color:var(--neg);font-weight:700;}
+</style>
+<div class="panel">
+  <div class="ttl">2026 年　簡損表　<span class="n">單位：新台幣千元</span></div>
+  <table class="pl">
+    <thead><tr><th>科目小類</th><th>2026年5月</th><th>2026年6月</th><th class="cum">2026年累計（1-6月）</th></tr></thead>
+    <tbody>
+      <tr class="total"><td>營業收入</td><td>12,480</td><td>11,962</td><td class="cum">70,310</td></tr>
+      <tr><td>人力成本</td><td>3,120</td><td>3,205</td><td class="cum">18,940</td></tr>
+      <tr><td>銷貨成本</td><td>2,310</td><td>2,188</td><td class="cum">13,020</td></tr>
+      <tr><td>折舊攤提</td><td>610</td><td>612</td><td class="cum">3,650</td></tr>
+      <tr class="total"><td>營業淨利</td><td>1,840</td><td><span class="loss">−120</span></td><td class="cum">6,310</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="wrap">
+  <table class="store">
+    <thead><tr><th>門市 / 單位</th><th>本期營收</th><th>上期營收</th><th>增減率</th><th>本期EBITDA</th><th>上期EBITDA</th><th>增減率</th></tr></thead>
+    <tbody>
+      <tr><td><span class="flag g"></span>新林森</td><td>1,820</td><td>1,535</td><td class="up">+18.6%</td><td>612</td><td>480</td><td class="up">+27.5%</td></tr>
+      <tr><td><span class="flag y"></span>北新館</td><td>1,240</td><td>1,310</td><td class="dn">−5.3%</td><td>205</td><td>284</td><td class="dn">−27.8%</td></tr>
+      <tr><td><span class="flag r"></span>南崁店</td><td>760</td><td>839</td><td class="dn">−9.4%</td><td><span class="loss">−48</span></td><td>36</td><td>N/A</td></tr>
+    </tbody>
+  </table>
+</div>

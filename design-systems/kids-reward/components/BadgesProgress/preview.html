@@ -1,0 +1,78 @@
+<!-- @dsCard group="Components" page height=640 subtitle="徽章與進度" -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>徽章與進度</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Gluten:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --sun-yellow: #FFD426; --tomato-red: #EE3E33; --ink-navy: #262261; --cream-paper: #FFFCEF;
+  --white: #FFFFFF; --text-body: #5A5788; --text-muted: #8B88B2; --teal-100: #C9F0E9; --teal-check: #17705F;
+  --pink-100: #FBD3D0; --surface-disabled: #F0EEE4; --radius-pill: 999px; --radius-card: 28px;
+  --tomato-text: #B8261E;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px; font-family: 'Noto Sans TC', -apple-system, 'PingFang TC', system-ui, sans-serif; background: var(--cream-paper); color: var(--ink-navy); }
+h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; }
+p.lede { color: var(--text-body); font-size: 15px; margin: 0 0 32px; max-width: 640px; line-height: 1.7; }
+.section { margin-bottom: 30px; background: var(--white); border-radius: var(--radius-card); padding: 26px 30px; }
+.label { font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1px; color: var(--text-body); text-transform: uppercase; margin-bottom: 16px; }
+.row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+
+.badge { display: inline-block; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: var(--radius-pill); background: var(--surface-disabled); color: var(--ink-navy); }
+.badge.badge-approved { background: var(--teal-100); color: var(--teal-check); }
+.badge.badge-rejected { background: var(--pink-100); color: var(--tomato-text); }
+
+.stars-badge { display: inline-flex; align-items: center; gap: 6px; font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 17px; background: var(--sun-yellow); color: var(--ink-navy); border-radius: var(--radius-pill); padding: 6px 16px; }
+.stars-badge svg { width: 18px; height: 18px; }
+
+.progress-wrap { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+.progress-head { display: flex; justify-content: space-between; align-items: baseline; }
+.progress-head strong { font-size: 18px; }
+.progress-frac { font-family: 'Gluten', sans-serif; font-weight: 800; font-size: 20px; color: var(--tomato-red); }
+.progress-track { height: 26px; border-radius: var(--radius-pill); background: var(--surface-disabled); position: relative; }
+.progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--tomato-red); }
+.progress-star { position: absolute; right: -6px; top: -11px; width: 48px; height: 48px; color: var(--sun-yellow); }
+
+.streak-badge { background: var(--sun-yellow); border-radius: var(--radius-pill); padding: 12px 20px; text-align: center; font-weight: 900; color: var(--ink-navy); display: inline-block; }
+.streak-badge.streak-none { background: var(--surface-disabled); color: var(--text-body); font-weight: 700; }
+.streak-flames { width: 20px; height: 20px; color: var(--ink-navy); vertical-align: -4px; margin-right: 2px; }
+</style>
+</head>
+<body>
+  <h1>塗鴉童趣風 — 徽章與進度</h1>
+  <p class="lede">所有徽章都是藥丸形小色塊；進度條用西紅柿紅實心填滿，星星圖示疊在終點當「快到了」的視覺提示。</p>
+
+  <div class="section">
+    <div class="label">狀態徽章</div>
+    <div class="row">
+      <span class="badge">待處理</span>
+      <span class="badge badge-approved">核准 2</span>
+      <span class="badge badge-rejected">退回</span>
+      <span class="stars-badge"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6c1.6 1 3.4 6.6 5.2 11.6 5.4.4 11 .8 12 1.6.9.9-3.6 4.6-7.6 8.4 1.2 5.2 2.7 10.8 2.1 11.6-.7.8-5.8-2.1-11.7-5.3-5.6 3-10.8 6.1-11.6 5.3-.8-.8.7-6.3 2-11.6-4-3.8-8.5-7.5-7.6-8.4.9-.8 6.5-1.2 12-1.6C20.5 12.6 22.4 7 24 6Z"/></svg>5</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">獎狀門檻進度條</div>
+    <div class="progress-wrap">
+      <div class="progress-head"><strong>下一張：星星小富翁</strong><span class="progress-frac">12 / 20</span></div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:60%"></div>
+        <svg class="progress-star" viewBox="0 0 48 48" fill="currentColor" stroke="none"><path d="M24 6c1.6 1 3.4 6.6 5.2 11.6 5.4.4 11 .8 12 1.6.9.9-3.6 4.6-7.6 8.4 1.2 5.2 2.7 10.8 2.1 11.6-.7.8-5.8-2.1-11.7-5.3-5.6 3-10.8 6.1-11.6 5.3-.8-.8.7-6.3 2-11.6-4-3.8-8.5-7.5-7.6-8.4.9-.8 6.5-1.2 12-1.6C20.5 12.6 22.4 7 24 6Z"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">連續天數 streak-badge</div>
+    <div class="row">
+      <span class="streak-badge"><svg class="streak-flames" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8c1 6 3.5 12 8 16-4.5 4-7 10-8 16-1-6-3.5-12-8-16 4.5-4 7-10 8-16Z"/></svg>連續 <strong>5</strong> 天都有完成任務！</span>
+      <span class="streak-badge streak-none">還沒開始連續紀錄，今天完成一項任務開始吧！</span>
+    </div>
+  </div>
+</body>
+</html>

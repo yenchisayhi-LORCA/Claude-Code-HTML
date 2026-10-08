@@ -1,0 +1,28 @@
+<!-- @dsCard group="導覽與按鈕" height=190 subtitle="膠囊按鈕與狀態標籤" -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;padding:20px;background:var(--paper);font-family:var(--font-sans);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  button{font-family:inherit;cursor:pointer;}
+  .outline{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700;color:var(--brand);background:none;border:1px solid var(--brand);border-radius:var(--radius-pill);padding:6px 14px;}
+  .outline:hover{background:var(--brand-soft);}
+  .ghost{font-size:12px;font-weight:700;color:var(--ink-soft);background:none;border:1px solid var(--line);border-radius:var(--radius-pill);padding:6px 14px;}
+  .upload{font-size:12px;font-weight:700;color:var(--upload);background:var(--card);border:1px solid var(--upload);border-radius:var(--radius-pill);padding:6px 14px;}
+  .pill{display:inline-block;padding:3px 10px;border-radius:var(--radius-pill);font-size:11.5px;font-weight:700;}
+  .pill.pos{background:var(--pos-soft);color:var(--pos);}
+  .pill.neg{background:var(--neg-soft);color:var(--neg);}
+  .pill.watch{background:var(--gold-soft);color:var(--gold-ink);}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;}
+</style>
+<div class="row">
+  <button class="outline">展開查看 <span>▾</span></button>
+  <button class="outline">查看22個門市完整明細 <span>▾</span></button>
+  <button class="ghost">重設</button>
+  <button class="upload">選擇檔案</button>
+</div>
+<div class="row">
+  <span class="pill pos">正向</span>
+  <span class="pill watch">留意</span>
+  <span class="pill neg">重大</span>
+  <span style="font-size:13px;color:var(--ink)"><span class="dot" style="background:var(--pos)"></span>改善或持平　<span class="dot" style="background:var(--gold)"></span>下滑但仍為正　<span class="dot" style="background:var(--neg)"></span>由正轉負</span>
+</div>

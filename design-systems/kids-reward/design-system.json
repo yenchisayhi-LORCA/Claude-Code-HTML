@@ -1,0 +1,203 @@
+{
+  "v": 3,
+  "assetGroups": {
+    "Icons": {
+      "name": "Icons",
+      "tile": "s",
+      "order": [
+        "ic-star.svg",
+        "ic-heart.svg",
+        "ic-broom.svg",
+        "ic-tooth.svg",
+        "ic-book.svg",
+        "ic-dish.svg",
+        "ic-bed.svg",
+        "ic-run.svg",
+        "ic-plant.svg",
+        "ic-paw.svg",
+        "ic-music.svg",
+        "ic-shirt.svg",
+        "ic-bag.svg",
+        "ic-trophy.svg",
+        "ic-gift.svg",
+        "ic-shop.svg",
+        "ic-calendar.svg",
+        "ic-lock.svg",
+        "ic-check.svg",
+        "ic-pencil.svg",
+        "ic-sparkle.svg",
+        "ic-flower.svg",
+        "ic-squiggle.svg",
+        "ic-arrow.svg"
+      ],
+      "files": {
+        "ic-star.svg": {
+          "name": "ic-star.svg",
+          "blob": "b9561504f00c3756afe0044a78a289aa",
+          "size": 402,
+          "type": "image/svg+xml"
+        },
+        "ic-heart.svg": {
+          "name": "ic-heart.svg",
+          "blob": "756fb30da07beb29fb550f62fcee0268",
+          "size": 317,
+          "type": "image/svg+xml"
+        },
+        "ic-broom.svg": {
+          "name": "ic-broom.svg",
+          "blob": "2386c8e6327050a3624c3be8a731c3c5",
+          "size": 346,
+          "type": "image/svg+xml"
+        },
+        "ic-tooth.svg": {
+          "name": "ic-tooth.svg",
+          "blob": "ff14876829069ef17bbc3ed5b181d8b2",
+          "size": 369,
+          "type": "image/svg+xml"
+        },
+        "ic-book.svg": {
+          "name": "ic-book.svg",
+          "blob": "57a3b54365f924bf88d548d22bd4544b",
+          "size": 300,
+          "type": "image/svg+xml"
+        },
+        "ic-dish.svg": {
+          "name": "ic-dish.svg",
+          "blob": "149ef196aa491c4e7c0f7d3681402dce",
+          "size": 415,
+          "type": "image/svg+xml"
+        },
+        "ic-bed.svg": {
+          "name": "ic-bed.svg",
+          "blob": "93f88fe19e9af8ce9b3450a640da5883",
+          "size": 402,
+          "type": "image/svg+xml"
+        },
+        "ic-run.svg": {
+          "name": "ic-run.svg",
+          "blob": "bd812561f1fb10b92a05118e0c28e683",
+          "size": 382,
+          "type": "image/svg+xml"
+        },
+        "ic-plant.svg": {
+          "name": "ic-plant.svg",
+          "blob": "3b19343c49f2224a8c2e31453c621801",
+          "size": 374,
+          "type": "image/svg+xml"
+        },
+        "ic-paw.svg": {
+          "name": "ic-paw.svg",
+          "blob": "35b10b79c98690f4c3938325fa39d429",
+          "size": 508,
+          "type": "image/svg+xml"
+        },
+        "ic-music.svg": {
+          "name": "ic-music.svg",
+          "blob": "5182b2b2f56b762f0f3d089389937f13",
+          "size": 330,
+          "type": "image/svg+xml"
+        },
+        "ic-shirt.svg": {
+          "name": "ic-shirt.svg",
+          "blob": "350b881367fe067357d537def9e1a54b",
+          "size": 312,
+          "type": "image/svg+xml"
+        },
+        "ic-bag.svg": {
+          "name": "ic-bag.svg",
+          "blob": "6549f68b6d6604fcc0370fa5240b0e3a",
+          "size": 375,
+          "type": "image/svg+xml"
+        },
+        "ic-trophy.svg": {
+          "name": "ic-trophy.svg",
+          "blob": "27f5852558f716ea79b0e7ab9cbd984e",
+          "size": 421,
+          "type": "image/svg+xml"
+        },
+        "ic-gift.svg": {
+          "name": "ic-gift.svg",
+          "blob": "01e7190a48667ed6e54b1970f82c0636",
+          "size": 406,
+          "type": "image/svg+xml"
+        },
+        "ic-shop.svg": {
+          "name": "ic-shop.svg",
+          "blob": "1a486d9a38cb0c480b2656182fdcad92",
+          "size": 357,
+          "type": "image/svg+xml"
+        },
+        "ic-calendar.svg": {
+          "name": "ic-calendar.svg",
+          "blob": "9de342cbf63ad3dbbaf4734304fcb5ba",
+          "size": 367,
+          "type": "image/svg+xml"
+        },
+        "ic-lock.svg": {
+          "name": "ic-lock.svg",
+          "blob": "1d43435e61dbda94f39e29e25acb7013",
+          "size": 320,
+          "type": "image/svg+xml"
+        },
+        "ic-check.svg": {
+          "name": "ic-check.svg",
+          "blob": "61050c44446813427ffb3df52e774baf",
+          "size": 225,
+          "type": "image/svg+xml"
+        },
+        "ic-pencil.svg": {
+          "name": "ic-pencil.svg",
+          "blob": "d638cfcd8065bc263e4aec3d229c4a80",
+          "size": 330,
+          "type": "image/svg+xml"
+        },
+        "ic-sparkle.svg": {
+          "name": "ic-sparkle.svg",
+          "blob": "d6f3e46616e7cbdfc54bbe2cfe5d0793",
+          "size": 249,
+          "type": "image/svg+xml"
+        },
+        "ic-flower.svg": {
+          "name": "ic-flower.svg",
+          "blob": "ea49735501d6216777c12f1a7237b215",
+          "size": 255,
+          "type": "image/svg+xml"
+        },
+        "ic-squiggle.svg": {
+          "name": "ic-squiggle.svg",
+          "blob": "a9eb6d870e0a47fb2133a180a84ddf0a",
+          "size": 219,
+          "type": "image/svg+xml"
+        },
+        "ic-arrow.svg": {
+          "name": "ic-arrow.svg",
+          "blob": "7fabf487b2857a0e73e3fae7243b231a",
+          "size": 260,
+          "type": "image/svg+xml"
+        }
+      }
+    }
+  },
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-06T07:17:28Z",
+    "v": 1
+  },
+  "docs": {
+    "sections": []
+  },
+  "groups": [
+    "Icons"
+  ],
+  "lastChange": {
+    "by": "LORCA",
+    "at": "2026-10-06T07:46:55Z",
+    "via": "Claude (Cowork)",
+    "note": "區塊小標與表單欄位名稱改用 text-body"
+  },
+  "layout": "files",
+  "libraries": [],
+  "namespace": "KidReward",
+  "sections": {},
+  "title": "兒童獎勵紀錄本"
+}
