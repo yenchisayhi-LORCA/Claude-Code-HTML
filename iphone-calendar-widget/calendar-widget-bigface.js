@@ -6,7 +6,7 @@ const C = {
   bg: "#FFFBEF", text: "#2B3159", muted: "#8A93B5",
   primary: "#3B4CB8", teal: "#4CBFB5", tealDark: "#2E8C84",
   danger: "#E8574B", dangerDark: "#B93E34", warn: "#F5B324", warnDark: "#D9971A",
-  today: "#6BD861", todayDark: "#4DB044", // 今天的圓圈：電話圖示的綠色
+  today: "#FF9500", todayDark: "#CC7600", // 今天的圓圈：iOS 系統橘
 };
 const col = (hex, a = 1) => new Color(hex, a);
 
