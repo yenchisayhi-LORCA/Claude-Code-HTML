@@ -378,7 +378,7 @@ const artImage = name => local.fileExists(artPath(name)) ? Image.fromFile(artPat
 // ---- 筆記畫面
 const js = v => JSON.stringify(v).replace(/</g, "\\u003c");
 
-async function openApp(openNoteId) {
+async function openApp(openNoteId, filter) {
   let data;
   try { data = await loadData(); } catch (e) {
     const a = new Alert(); a.title = "讀不到筆記"; a.message = String(e); a.addAction("好"); await a.present();
@@ -393,7 +393,7 @@ async function openApp(openNoteId) {
     if (!(id in thumbs)) thumbs[id] = await photoDataURL(id, true) || "";
   }
   const boot = {
-    cats: data.cats, notes: data.notes, thumbs, iconImages: await animalDataURLs(), openNote: openNoteId || null,
+    cats: data.cats, notes: data.notes, thumbs, iconImages: await animalDataURLs(), openNote: openNoteId || null, filter: filter || null,
     logo: logo ? "data:image/png;base64," + Data.fromPNG(logo).toBase64String() : null,
     warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。"
       : artFailed ? "左上角圖示畫不出來，連上網路後再打開一次就會補上。" : "",
@@ -560,7 +560,21 @@ async function buildWidget(family) {
   w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
   let data;
   try { data = await loadData(); } catch (e) { data = { cats: [], notes: [] }; }
-  const notes = [...data.notes].sort((a, b) => b.updated - a.updated);
+  let notes = [...data.notes].sort((a, b) => b.updated - a.updated);
+
+  // 小工具的 Parameter（長按 →「編輯小工具」）：填分類名稱只顯示那個分類，填「未完成」只顯示還沒打勾完的清單
+  const param = (args.widgetParameter || "").trim();
+  let title = "筆記", filterKey = null, missing = false;
+  if (param === "未完成") {
+    notes = notes.filter(n => n.lines.some(l => l.type === "c" && !l.done));
+    title = "未完成"; filterKey = "未完成";
+  } else if (param) {
+    const cat = data.cats.find(c => c.name.toLowerCase() === param.toLowerCase());
+    if (cat) { notes = notes.filter(n => n.cat === cat.id); title = cat.name; filterKey = "cat:" + cat.id; }
+    else { notes = []; title = param; missing = true; }
+  }
+  // 點卡片以外的地方：打開筆記，並篩選成這個小工具的分類
+  if (filterKey) w.url = URLScheme.forRunningScript() + "?filter=" + encodeURIComponent(filterKey);
 
   // 標題列：左上角「彥」圖示 + 筆記 + 則數（白色膠囊，疊在右上角的黃色色塊上）
   const head = w.addStack();
@@ -571,7 +585,8 @@ async function buildWidget(family) {
     const li = head.addImage(logo);
     li.imageSize = family === "small" ? new Size(34, 34) : new Size(42, 42); // 原本 26／32，放大 1.3 倍
   }
-  const h = head.addText("筆記");
+  const h = head.addText(title);
+  h.lineLimit = 1;
   h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
   h.textColor = col(K.ink);
   head.addSpacer();
@@ -585,7 +600,8 @@ async function buildWidget(family) {
   w.addSpacer(family === "small" ? 6 : 8);
 
   if (!notes.length) {
-    const e = w.addText("還沒有筆記，點一下開始寫");
+    const e = w.addText(missing ? `找不到「${param}」這個分類。長按小工具 →「編輯小工具」，把 Parameter 改成分類名稱，或清空顯示全部。`
+      : filterKey ? "這裡還沒有筆記" : "還沒有筆記，點一下開始寫");
     e.font = Font.boldRoundedSystemFont(12);
     e.textColor = col(K.body);
     w.addSpacer();
@@ -624,6 +640,7 @@ function pageHTML() {
 if (config.runsInWidget) {
   Script.setWidget(await buildWidget(config.widgetFamily || "medium"));
 } else {
-  await openApp(args.queryParameters && args.queryParameters.note);
+  const q = args.queryParameters || {};
+  await openApp(q.note, q.filter);
 }
 Script.complete();

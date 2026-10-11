@@ -719,6 +719,8 @@ $("#fab").addEventListener("click", () => openEditor(null));
 $("#scrim").addEventListener("click", (e) => { if (e.target.id === "scrim") closeSheet(); });
 $("#searchToggle").addEventListener("click", () => { const b = $("#searchBar"); b.hidden = !b.hidden; if (!b.hidden) $("#q").focus(); else { query = ""; $("#q").value = ""; render(); } });
 $("#q").addEventListener("input", (e) => { query = e.target.value.trim(); render(); });
+// 從分類小工具點進來時，先篩選成那個分類
+if (boot.filter) filter = boot.filter;
 // 左上角換成跟月曆一樣的「彥」圖示
 if (boot.logo) { const lg = $("#logo"); lg.classList.add("img"); lg.innerHTML = `<img src="${boot.logo}" alt="">`; }
 render();
