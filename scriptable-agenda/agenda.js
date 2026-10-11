@@ -203,7 +203,7 @@ function addDayHeader(parent, g) {
   }
 }
 
-// 左上角：字圖示 + 今天日期（紅）+ 農曆
+// 左上角：字圖示 + 今天日期（深藍）+ 農曆
 function addTopHeader(w, size, compact) {
   const now = new Date();
   const head = w.addStack();
@@ -215,7 +215,7 @@ function addTopHeader(w, size, compact) {
   box.layoutVertically();
   const d = box.addText(compact ? `${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEK[now.getDay()]}`);
   d.font = Font.heavyRoundedSystemFont(compact ? 13 : 16);
-  d.textColor = col(K.red);
+  d.textColor = col(K.ink); // 日期和星期都用深藍色（不用行事曆的紅色）
   d.lineLimit = 1;
   const l = lunar(now);
   if (l) {
@@ -302,7 +302,7 @@ async function buildWidget(family) {
     const now = new Date();
     const d = left.addText(`${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}`);
     d.font = Font.heavyRoundedSystemFont(15);
-    d.textColor = col(K.red);
+    d.textColor = col(K.ink);
     const l = lunar(now);
     if (l) { const lt = left.addText(l); lt.font = Font.semiboldRoundedSystemFont(11); lt.textColor = col(K.body); }
     left.addSpacer();
