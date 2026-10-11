@@ -1,6 +1,6 @@
 // 待辦事項・童趣風行事曆小工具（Scriptable）
 // 讀 iPhone 內建「行事曆」的活動和「提醒事項」，依日期排成彩色卡片；放得下多少就顯示多少
-// 左上角的字圖示和彩色底圖沿用「筆記」腳本在這台裝置畫好的圖（kids-notes-art），兩個小工具看起來是同一套
+// 左上角的字圖示沿用「童趣風月曆」畫好的「彥」（calendar-widget-kids），彩色底圖沿用「筆記」腳本畫好的圖（kids-notes-art）
 // 點小工具打開行事曆；點提醒事項的卡片打開提醒事項
 const K = {
   cream: "#FFFCEF", white: "#FFFFFF", ink: "#262261", body: "#5A5788", red: "#D93A2F", sun: "#FFD426",
@@ -58,12 +58,15 @@ function widgetSizes() {
   return { small: [t[0], t[0]], medium: [t[1], t[0]], large: [t[1], t[2]] };
 }
 
-// ---- 沿用筆記腳本畫好的圖：左上角的字圖示（logo-0～2）和彩色底圖（bg-large 等）
+// ---- 沿用筆記腳本畫好的圖：彩色底圖（bg-large 等）；左上角的字圖示用月曆的，沒有時退回筆記的 logo-0
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const artImage = name => local.fileExists(artPath(name)) ? Image.fromFile(artPath(name)) : null;
+// 左上圖示跟童趣風月曆的「彥」一樣（月曆腳本畫好存在 calendar-widget-kids/logo.png）；沒跑過月曆才退回筆記的字圖示
 function logoImages() {
+  const calLogo = local.joinPath(local.joinPath(local.documentsDirectory(), "calendar-widget-kids"), "logo.png");
+  if (local.fileExists(calLogo)) return [Image.fromFile(calLogo)];
   let n = 0;
   try { n = [...String(JSON.parse(local.readString(local.joinPath(ART_DIR, "meta.json"))).logoChar || "")].filter(c => c.trim()).slice(0, 3).length; } catch (e) {}
   const out = [];
