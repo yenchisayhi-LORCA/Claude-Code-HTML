@@ -74,6 +74,112 @@ function logoImages() {
   return out;
 }
 
+// ---- 右上角的照片：黃色色塊可以換成一張照片（外框跟色塊同一個形狀）
+// 照片和設定存在 iCloud 的 kids-agenda/（兩台裝置共用）；疊好照片的底圖畫在每台裝置自己的 kids-agenda-art/
+// 小工具裡不能畫圖，所以換照片後，另一台要在 Scriptable 裡執行一次這個腳本，小工具才會換
+const cloud = (() => { try { const f = FileManager.iCloud(); f.documentsDirectory(); return f; } catch (e) { return local; } })();
+const AG_DIR = cloud.joinPath(cloud.documentsDirectory(), "kids-agenda");
+const CORNER_PATH = cloud.joinPath(AG_DIR, "corner.jpg");
+const SETTINGS_PATH = cloud.joinPath(AG_DIR, "settings.json");
+const AG_ART = local.joinPath(local.documentsDirectory(), "kids-agenda-art");
+const agArt = name => local.joinPath(AG_ART, name + ".png");
+const AG_META = local.joinPath(AG_ART, "meta.json");
+const readJSON = (fm, p) => { try { return JSON.parse(fm.readString(p)); } catch (e) { return null; } };
+async function download(p) {
+  try { if (cloud.fileExists(p)) await Promise.race([cloud.downloadFileFromiCloud(p), new Promise(r => Timer.schedule(3000, false, r))]); } catch (e) {}
+}
+async function cornerVersion() {
+  await download(SETTINGS_PATH);
+  return (readJSON(cloud, SETTINGS_PATH) || {}).cornerPhoto || 0;
+}
+// 底圖的版本：照片版本 + 筆記畫的底圖（-plain）的修改時間，任何一個變了就要重畫
+const baseStamp = () => ["small", "medium", "large"].map(f => { try { return local.modificationDate(artPath("bg-" + f + "-plain")).getTime(); } catch (e) { return 0; } }).join(",");
+function cornerBg(family, corner) {
+  const meta = readJSON(local, AG_META);
+  if (!corner || !meta || meta.corner !== corner || meta.base !== baseStamp() || !local.fileExists(agArt("bg-" + family))) return null;
+  return Image.fromFile(agArt("bg-" + family));
+}
+// 在 App 內執行時：照片換過、或筆記的底圖重畫過，就重畫疊好照片的底圖
+async function ensureCornerArt() {
+  const corner = await cornerVersion();
+  const meta = readJSON(local, AG_META);
+  if (!corner || (meta && meta.corner === corner && meta.base === baseStamp())) return;
+  await download(CORNER_PATH);
+  if (!cloud.fileExists(CORNER_PATH)) return;
+  const bases = {};
+  for (const f of ["small", "medium", "large"]) if (local.fileExists(artPath("bg-" + f + "-plain"))) bases[f] = local.read(artPath("bg-" + f + "-plain")).toBase64String();
+  if (!Object.keys(bases).length) return;
+  const wv = new WebView();
+  await wv.loadHTML("<html><body></body></html>");
+  const res = await wv.evaluateJavaScript(`
+    (async () => {
+      try {
+        const load = b64 => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = "data:image/png;base64," + b64; });
+        const photo = await load(${JSON.stringify(cloud.read(CORNER_PATH).toBase64String())});
+        const out = {};
+        for (const [f, b64] of Object.entries(${JSON.stringify(bases)})) {
+          const base = await load(b64), S = 3, W = base.width / S, H = base.height / S, u = Math.min(W, H) / 170;
+          const cv = document.createElement("canvas"); cv.width = base.width; cv.height = base.height;
+          const g = cv.getContext("2d"); g.drawImage(base, 0, 0);
+          // 跟筆記的底圖同一個黃色色塊：中心 (W-4u, 2u)、92u×80u、轉 -8 度
+          const pc = document.createElement("canvas"); pc.width = cv.width; pc.height = cv.height;
+          const pg = pc.getContext("2d"); pg.scale(S, S);
+          const bx = W - 4 * u, by = 2 * u, bw = 92 * u, bh = 80 * u;
+          blob(pg, bx, by, bw, bh, R1, -8, "#000");
+          pg.globalCompositeOperation = "source-in";
+          // 照片放滿色塊在小工具裡看得到的那一塊（左下四分之一），照片中間對齊
+          const vx = bx - bw / 2 - 2, vw = W - vx, vh = by + bh / 2 + 2, k = Math.max(vw / photo.width, vh / photo.height);
+          pg.drawImage(photo, vx + (vw - photo.width * k) / 2, (vh - photo.height * k) / 2, photo.width * k, photo.height * k);
+          g.drawImage(pc, 0, 0);
+          out[f] = cv.toDataURL("image/png").split(",")[1];
+        }
+        completion(out);
+      } catch (e) { completion({ error: String(e) }); }
+    })();
+    // 不規則色塊（跟筆記腳本的 BLOB_JS 一樣）
+  function blob(g, cx, cy, w, h, r, deg, fill) {
+    g.save(); g.translate(cx, cy); g.rotate(deg * Math.PI / 180); g.translate(-w / 2, -h / 2);
+    const [a, b, c, d, e, f, gg, hh] = r.map(v => v / 100);
+    g.beginPath(); g.moveTo(a * w, 0); g.lineTo(w - b * w, 0);
+    g.ellipse(w - b * w, f * h, b * w, f * h, 0, -Math.PI / 2, 0); g.lineTo(w, h - gg * h);
+    g.ellipse(w - c * w, h - gg * h, c * w, gg * h, 0, 0, Math.PI / 2); g.lineTo(d * w, h);
+    g.ellipse(d * w, h - hh * h, d * w, hh * h, 0, Math.PI / 2, Math.PI); g.lineTo(0, e * h);
+    g.ellipse(a * w, e * h, a * w, e * h, 0, Math.PI, Math.PI * 1.5);
+    g.closePath(); g.fillStyle = fill; g.fill(); g.restore();
+  }
+  const R1 = [52, 48, 61, 39, 58, 43, 57, 42], R2 = [60, 40, 44, 56, 46, 55, 45, 54],
+        R3 = [45, 55, 52, 48, 62, 40, 60, 38], R4 = [55, 45, 48, 52, 44, 58, 42, 56];
+    0;`, true);
+  if (!res || res.error) return;
+  if (!local.fileExists(AG_ART)) local.createDirectory(AG_ART, true);
+  for (const f in res) local.write(agArt("bg-" + f), Data.fromBase64String(res[f]));
+  local.writeString(AG_META, JSON.stringify({ corner, base: baseStamp() }));
+}
+// 從相簿選照片，或拿掉改回黃色色塊
+async function changeCorner() {
+  const a = new Alert();
+  a.title = "右上角的照片";
+  a.addAction("從相簿選");
+  a.addDestructiveAction("拿掉照片，改回黃色色塊");
+  a.addCancelAction("取消");
+  const i = await a.presentSheet();
+  if (i < 0) return;
+  if (!cloud.fileExists(AG_DIR)) cloud.createDirectory(AG_DIR, true);
+  if (i === 0) {
+    let img;
+    try { img = await Photos.fromLibrary(); } catch (e) { return; }
+    // 長邊縮到 900 像素
+    const k = Math.min(1, 900 / Math.max(img.size.width, img.size.height));
+    const dc = new DrawContext();
+    dc.size = new Size(Math.round(img.size.width * k), Math.round(img.size.height * k));
+    dc.respectScreenScale = false; dc.opaque = true;
+    dc.drawImageInRect(img, new Rect(0, 0, dc.size.width, dc.size.height));
+    cloud.write(CORNER_PATH, Data.fromJPEG(dc.getImage()));
+  } else if (cloud.fileExists(CORNER_PATH)) cloud.remove(CORNER_PATH);
+  cloud.writeString(SETTINGS_PATH, JSON.stringify({ ...(readJSON(cloud, SETTINGS_PATH) || {}), cornerPhoto: i === 0 ? Date.now() : 0 }));
+  await ensureCornerArt();
+}
+
 // ---- 讀行事曆和提醒事項
 // 回傳 { groups: [{ day, label, lunar, items }], undated: [...] }，items 依時間排好
 async function loadAgenda(days = 30) {
@@ -259,8 +365,8 @@ async function buildWidget(family) {
   const [W, H] = widgetSizes()[family];
   const w = new ListWidget();
   w.backgroundColor = col(K.cream);
-  // 底圖用筆記畫好的「沒有手繪菱形」版本（舊版筆記還沒畫的話，先用一般版本）
-  const bg = artImage("bg-" + family + "-plain") || artImage("bg-" + family);
+  // 底圖：右上角換過照片就用疊好照片的版本，不然用筆記畫好的「沒有手繪菱形」版本（舊版筆記還沒畫的話，先用一般版本）
+  const bg = cornerBg(family, await cornerVersion()) || artImage("bg-" + family + "-plain") || artImage("bg-" + family);
   if (bg) w.backgroundImage = bg;
   w.setPadding(10, 12, 12, 12);
   w.url = "calshow://";
@@ -375,16 +481,22 @@ if (config.runsInWidget) {
   wd.refreshAfterDate = new Date(Math.min(Date.now() + 15 * 60000, midnight.getTime() + 5000));
   Script.setWidget(wd);
 } else {
-  const a = new Alert();
-  a.title = "待辦事項";
-  a.message = "預覽主畫面小工具。第一次執行時，請允許 Scriptable 取用行事曆和提醒事項。";
-  a.addAction("預覽大尺寸");
-  a.addAction("預覽中尺寸");
-  a.addAction("預覽小尺寸");
-  a.addCancelAction("結束");
-  const i = await a.presentSheet();
-  if (i === 0) await (await buildWidget("large")).presentLarge();
-  if (i === 1) await (await buildWidget("medium")).presentMedium();
-  if (i === 2) await (await buildWidget("small")).presentSmall();
+  await ensureCornerArt(); // 另一台換過照片：在這台也畫好
+  for (;;) {
+    const a = new Alert();
+    a.title = "待辦事項";
+    a.message = "預覽主畫面小工具。第一次執行時，請允許 Scriptable 取用行事曆和提醒事項。";
+    a.addAction("預覽大尺寸");
+    a.addAction("預覽中尺寸");
+    a.addAction("預覽小尺寸");
+    a.addAction("換右上角的照片");
+    a.addCancelAction("結束");
+    const i = await a.presentSheet();
+    if (i === 0) await (await buildWidget("large")).presentLarge();
+    if (i === 1) await (await buildWidget("medium")).presentMedium();
+    if (i === 2) await (await buildWidget("small")).presentSmall();
+    if (i === 3) { await changeCorner(); continue; } // 換好回到選單，可以馬上預覽
+    break;
+  }
 }
 Script.complete();
