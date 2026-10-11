@@ -370,9 +370,9 @@ async function buildWidget(family) {
 // ---- 進入點：在 App 內執行時可以預覽三種尺寸（第一次會詢問行事曆和提醒事項的權限）
 if (config.runsInWidget) {
   const wd = await buildWidget(config.widgetFamily || "large");
-  // 下一次更新：30 分鐘後或明天 0 點，看哪個先到
+  // 下一次更新：15 分鐘後或明天 0 點，看哪個先到
   const midnight = addDays(day0(new Date()), 1);
-  wd.refreshAfterDate = new Date(Math.min(Date.now() + 30 * 60000, midnight.getTime() + 5000));
+  wd.refreshAfterDate = new Date(Math.min(Date.now() + 15 * 60000, midnight.getTime() + 5000));
   Script.setWidget(wd);
 } else {
   const a = new Alert();
