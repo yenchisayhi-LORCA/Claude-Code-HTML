@@ -80,7 +80,11 @@ async function loadAgenda(days = 30) {
   const now = new Date(), today = day0(now), end = addDays(today, days);
   const items = [];
   let events = [], reminders = [];
-  try { events = await CalendarEvent.between(today, end); } catch (e) {}
+  try {
+    // 只讀自己建立的行事曆（可以編輯的）和通訊錄生日；內建的節日、訂閱的行事曆不顯示
+    const cals = (await Calendar.forEvents()).filter(c => c.allowsContentModifications || /生日|birthday/i.test(c.title));
+    if (cals.length) events = await CalendarEvent.between(today, end, cals);
+  } catch (e) {}
   try { reminders = await Reminder.allIncomplete(); } catch (e) {}
   for (const e of events) {
     if (e.endDate <= now && !e.isAllDay) continue; // 已經結束的不顯示
@@ -110,13 +114,14 @@ async function loadAgenda(days = 30) {
   return { groups, undated };
 }
 
-// 卡片顏色：依行程隨機（同一個行程每次都同色），跟前一張同色就換下一個顏色
+// 卡片顏色：依行程隨機（同一個行程每次都同色），同一個小工具裡不重複，8 色用完才重來
 function makePicker() {
-  let last = -1;
+  const used = new Set();
   return it => {
+    if (used.size >= PALETTE.length) used.clear();
     let i = hash(it.id + it.title) % PALETTE.length;
-    if (i === last) i = (i + 1) % PALETTE.length;
-    last = i;
+    while (used.has(i)) i = (i + 1) % PALETTE.length;
+    used.add(i);
     return PALETTE[i];
   };
 }
