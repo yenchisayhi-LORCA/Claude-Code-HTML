@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 10; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝）
+const ART_VERSION = 11; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝；11：多畫一張沒有菱形的底圖給行事曆小工具）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -322,7 +322,11 @@ async function ensureArt(ch) {
             g.drawImage(im, 0, 0, 32, 32);
             out["icon-" + k] = png(cv);
           }
-          for (const f in sizes) out["bg-" + f] = drawBackground(sizes[f][0], sizes[f][1], f);
+          // 底圖畫兩種：筆記用的（右上有手繪菱形），和行事曆小工具用的沒有菱形版本（-plain）
+          for (const f in sizes) {
+            out["bg-" + f] = drawBackground(sizes[f][0], sizes[f][1], f, true);
+            out["bg-" + f + "-plain"] = drawBackground(sizes[f][0], sizes[f][1], f, false);
+          }
           completion(out);
         } catch (e) { completion({ error: String(e) }); }
       })();
@@ -372,13 +376,15 @@ async function ensureArt(ch) {
     }
 
       // 底圖：米白紙，四周放童趣風的彩色色塊（黃、粉、青、綠、橘、藍）和幾顆小圓點
-      function drawBackground(W, H, family) {
+      function drawBackground(W, H, family, sparkle) {
         const [cv, g] = canvas(W, H, 3), u = Math.min(W, H) / 170;
         g.fillStyle = "#FFFCEF"; g.fillRect(0, 0, W, H);
         blob(g, W - 4 * u, 2 * u, 92 * u, 80 * u, R1, -8, "#FFD426");
-        g.save(); g.translate(W - 34 * u, 8 * u); g.scale(20 * u / 48, 20 * u / 48);
-        g.strokeStyle = "#262261"; g.lineWidth = 3.4; g.lineCap = g.lineJoin = "round";
-        g.stroke(new Path2D("M24 8c1 6 3.5 12 8 16-4.5 4-7 10-8 16-1-6-3.5-12-8-16 4.5-4 7-10 8-16Z")); g.restore();
+        if (sparkle) {
+          g.save(); g.translate(W - 34 * u, 8 * u); g.scale(20 * u / 48, 20 * u / 48);
+          g.strokeStyle = "#262261"; g.lineWidth = 3.4; g.lineCap = g.lineJoin = "round";
+          g.stroke(new Path2D("M24 8c1 6 3.5 12 8 16-4.5 4-7 10-8 16-1-6-3.5-12-8-16 4.5-4 7-10 8-16Z")); g.restore();
+        }
         blob(g, -6 * u, H + 4 * u, 96 * u, 74 * u, R2, 6, "#FBD3D0");
         blob(g, W + 6 * u, H + 6 * u, 104 * u, 78 * u, R3, -5, "#C9F0E9");
         if (family !== "small") {
