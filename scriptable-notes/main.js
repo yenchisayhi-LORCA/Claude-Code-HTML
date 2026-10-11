@@ -517,7 +517,6 @@ function distinctColors(list, cats) {
 function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
   const checks = n.lines.filter(l => l.type === "c");
   const allDone = checks.length && checks.every(l => l.done);
-  const cat = cats.find(c => c.id === n.cat);
   // 卡片用分類的顏色（沒分類就依筆記輪流配色）；清單全部打勾時變淡青色
   const bg = bgColor || cardColor(n, cats);
   const card = parent.addStack();
