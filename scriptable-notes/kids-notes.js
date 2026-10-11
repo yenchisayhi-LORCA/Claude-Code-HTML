@@ -471,7 +471,7 @@ function addIcon(stack, n, size, onColor) {
   im.imageSize = new Size(size * 0.56, size * 0.56);
 }
 
-function addCard(parent, n, cats, maxLines, compact) {
+function addCard(parent, n, cats, maxLines, compact, width) {
   const checks = n.lines.filter(l => l.type === "c");
   const allDone = checks.length && checks.every(l => l.done);
   const cat = cats.find(c => c.id === n.cat);
@@ -479,6 +479,8 @@ function addCard(parent, n, cats, maxLines, compact) {
   const bg = allDone ? K.teal100 : cat ? CAT_BG[cat.color] || K.yellow100 : CHIP_BG[hash(n.id) % CHIP_BG.length];
   const card = parent.addStack();
   card.layoutVertically();
+  // 寬度寫死，左右邊距才會一樣（高度 0 = 依內容）
+  if (width) card.size = new Size(width, 0);
   card.backgroundColor = col(bg);
   card.cornerRadius = 16;
   card.setPadding(9, 10, 8, 10);
@@ -567,7 +569,7 @@ async function buildWidget(family) {
   const logo = artImage("logo");
   if (logo) {
     const li = head.addImage(logo);
-    li.imageSize = family === "small" ? new Size(26, 26) : new Size(32, 32);
+    li.imageSize = family === "small" ? new Size(34, 34) : new Size(42, 42); // 原本 26／32，放大 1.3 倍
   }
   const h = head.addText("筆記");
   h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
@@ -592,21 +594,23 @@ async function buildWidget(family) {
   if (family === "small") {
     // 小尺寸只能整個小工具一個連結
     w.url = URLScheme.forRunningScript() + "?note=" + encodeURIComponent(notes[0].id);
-    addCard(w, notes[0], data.cats, 3, true);
+    addCard(w, notes[0], data.cats, 3, true, widgetSizes().small[0] - 24);
     return w;
   }
+  // 卡片寬度：小工具寬度扣掉左右各 12 的邊距，兩張之間隔 8；只有一則筆記時佔滿整排
+  const inner = widgetSizes()[family][0] - 24, GAP = 8;
   const rows = family === "large" ? 2 : 1;
   const grid = w.addStack();
   grid.layoutVertically();
-  grid.spacing = 8;
+  grid.spacing = GAP;
   for (let r = 0; r < rows; r++) {
+    const pair = notes.slice(r * 2, r * 2 + 2);
+    if (!pair.length) break;
     const row = grid.addStack();
-    row.spacing = 8;
-    for (let c = 0; c < 2; c++) {
-      const n = notes[r * 2 + c];
-      if (n) addCard(row, n, data.cats, family === "large" ? 5 : 3, false);
-      else row.addSpacer();
-    }
+    row.spacing = GAP;
+    const cw = notes.length === 1 ? inner : (inner - GAP) / 2;
+    for (const n of pair) addCard(row, n, data.cats, family === "large" ? 5 : 2, false, cw); // 中尺寸圖示變大，內容少一行才放得下
+    if (pair.length === 1 && notes.length > 1) row.addSpacer(); // 落單的卡片靠左，保持半寬
   }
   return w;
 }
