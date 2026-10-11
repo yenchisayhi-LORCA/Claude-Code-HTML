@@ -175,6 +175,8 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 .sheet { max-height: 100%; }
 .lightbox { padding-top: var(--top-bar); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); top: var(--top-bar); z-index: 30; background: var(--ink-navy); color: var(--white); border-radius: var(--radius-pill); padding: 10px 18px; font-weight: 900; font-size: 14px; max-width: calc(100% - 32px); }
+.logo.img { background: none; border-radius: 0; transform: none; width: 56px; height: 56px; }
+.logo.img img { width: 100%; height: 100%; display: block; }
 .del-note { align-self: center; border: 0; background: transparent; font: inherit; font-weight: 900; font-size: 15px; color: var(--tomato-deep); padding: 10px 16px; border-radius: var(--radius-pill); cursor: pointer; }
 .del-note.armed { background: var(--tomato-deep); color: var(--white); }
 </style>
@@ -201,7 +203,7 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 
 <main class="app">
   <header class="head">
-    <div class="logo" aria-hidden="true"><svg class="ic"><use href="#ic-note"/></svg></div>
+    <div class="logo" id="logo" aria-hidden="true"><svg class="ic"><use href="#ic-note"/></svg></div>
     <div class="titles">
       <div class="eyebrow">My Notes</div>
       <h1>筆記</h1>
@@ -680,6 +682,8 @@ $("#fab").addEventListener("click", () => openEditor(null));
 $("#scrim").addEventListener("click", (e) => { if (e.target.id === "scrim") closeSheet(); });
 $("#searchToggle").addEventListener("click", () => { const b = $("#searchBar"); b.hidden = !b.hidden; if (!b.hidden) $("#q").focus(); else { query = ""; $("#q").value = ""; render(); } });
 $("#q").addEventListener("input", (e) => { query = e.target.value.trim(); render(); });
+// 左上角換成跟月曆一樣的「彥」圖示
+if (boot.logo) { const lg = $("#logo"); lg.classList.add("img"); lg.innerHTML = `<img src="${boot.logo}" alt="">`; }
 render();
 if (boot.openNote) openNote(boot.openNote);
 if (boot.warn) toast(boot.warn);

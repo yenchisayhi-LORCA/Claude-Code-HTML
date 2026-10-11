@@ -206,7 +206,175 @@ async function animalDataURLs() {
   return out;
 }
 
-// ---- 筆記畫面（HTML 在最下面的 PAGE_HTML）
+// ---- 小工具的圖：左上角「彥」圖示（跟童趣風月曆同一個畫法）和彩色色塊底圖
+// 第一次在 App 內執行時用 WebView 畫好，存在這台裝置（每台裝置的小工具大小不同）
+// 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
+const local = FileManager.local();
+const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
+const ART_VERSION = 1; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫
+const artPath = name => local.joinPath(ART_DIR, name + ".png");
+const ART_META = local.joinPath(ART_DIR, "meta.json");
+const DEFAULT_LOGO = "彥";
+
+// 依螢幕寬度推算小工具的大小（單位：點）
+function widgetSizes() {
+  const s = Device.screenSize();
+  const w = Math.min(s.width, s.height), h = Math.max(s.width, s.height);
+  const t = w >= 428 ? [170, 364, 382] : w >= 414 ? (h >= 896 ? [169, 360, 379] : [159, 348, 357])
+    : w >= 390 ? [158, 338, 354] : w >= 375 ? (h >= 812 ? [155, 329, 345] : [148, 321, 324]) : [141, 292, 311];
+  return { small: [t[0], t[0]], medium: [t[1], t[0]], large: [t[1], t[2]] };
+}
+
+async function logoChar() {
+  const p = store.joinPath(store.documentsDirectory(), "calendar-widget-birthdays", "settings.json");
+  try {
+    if (!store.fileExists(p)) return DEFAULT_LOGO;
+    await ensureLocal(p);
+    return JSON.parse(store.readString(p)).logoChar || DEFAULT_LOGO;
+  } catch (e) { return DEFAULT_LOGO; }
+}
+
+function artMeta() {
+  try { return JSON.parse(local.readString(ART_META)); } catch (e) { return null; }
+}
+
+// 舊版 iOS 的 WebView 沒有 canvas 的 roundRect，先補上
+const CANVAS_COMPAT_JS = `
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      r = Math.min(Array.isArray(r) ? r[0] : r || 0, Math.abs(w) / 2, Math.abs(h) / 2);
+      this.moveTo(x + r, y);
+      this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+      this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r);
+      this.closePath();
+    };
+  }
+`;
+
+// 不規則色塊：(cx, cy) 為中心、寬 w 高 h，r 是 8 個 border-radius 百分比，旋轉 deg 度
+const BLOB_JS = `
+  function blob(g, cx, cy, w, h, r, deg, fill) {
+    g.save(); g.translate(cx, cy); g.rotate(deg * Math.PI / 180); g.translate(-w / 2, -h / 2);
+    const [a, b, c, d, e, f, gg, hh] = r.map(v => v / 100);
+    g.beginPath(); g.moveTo(a * w, 0); g.lineTo(w - b * w, 0);
+    g.ellipse(w - b * w, f * h, b * w, f * h, 0, -Math.PI / 2, 0); g.lineTo(w, h - gg * h);
+    g.ellipse(w - c * w, h - gg * h, c * w, gg * h, 0, 0, Math.PI / 2); g.lineTo(d * w, h);
+    g.ellipse(d * w, h - hh * h, d * w, hh * h, 0, Math.PI / 2, Math.PI); g.lineTo(0, e * h);
+    g.ellipse(a * w, e * h, a * w, e * h, 0, Math.PI, Math.PI * 1.5);
+    g.closePath(); g.fillStyle = fill; g.fill(); g.restore();
+  }
+  const R1 = [52, 48, 61, 39, 58, 43, 57, 42], R2 = [60, 40, 44, 56, 46, 55, 45, 54],
+        R3 = [45, 55, 52, 48, 62, 40, 60, 38], R4 = [55, 45, 48, 52, 44, 58, 42, 56];
+`;
+
+// 用 Scriptable 的 Request 下載 Google Fonts 字型檔（只抓要用到的字），回傳 base64
+async function fetchFont(family, weights, chars) {
+  const w = weights ? ":wght@" + weights.join(";") : "";
+  const req = new Request(`https://fonts.googleapis.com/css2?family=${family.replace(/ /g, "+")}${w}&text=${encodeURIComponent(chars)}`);
+  req.headers = { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" };
+  const css = await req.loadString();
+  const faces = [];
+  for (const block of css.match(/@font-face\s*{[^}]*}/g) || []) {
+    const weight = (block.match(/font-weight:\s*(\d+)/) || [])[1] || "400";
+    const src = (block.match(/url\(([^)]+)\)/) || [])[1];
+    if (!src) continue;
+    const data = await new Request(src).load();
+    faces.push({ family, weight, b64: data.toBase64String() });
+  }
+  if (!faces.length) throw new Error(`下載不到字型「${family}」`);
+  return faces;
+}
+const LOAD_FONTS_JS = faces => `
+  for (const f of ${JSON.stringify(faces)}) {
+    const face = new FontFace(f.family, Uint8Array.from(atob(f.b64), c => c.charCodeAt(0)), { weight: f.weight });
+    await face.load(); document.fonts.add(face);
+  }`;
+
+// 圖還沒畫、字改過、或畫法改過時重畫；成功回傳 null，失敗回傳原因
+async function ensureArt() {
+  const ch = await logoChar(), sizes = widgetSizes();
+  const meta = artMeta();
+  if (meta && meta.version === ART_VERSION && meta.logoChar === ch && JSON.stringify(meta.sizes) === JSON.stringify(sizes)) return null;
+  try {
+    const faces = await fetchFont("Huninn", null, ch);
+    const wv = new WebView();
+    await wv.loadHTML("<html><body></body></html>");
+    const res = await wv.evaluateJavaScript(`${CANVAS_COMPAT_JS}
+      (async () => {
+        try {
+          await 0; // 先讓下面的 png、canvas 等定義跑完
+          ${LOAD_FONTS_JS(faces)}
+          const sizes = ${JSON.stringify(sizes)}, out = { logo: drawLogo(${JSON.stringify(ch)}) };
+          for (const f in sizes) out["bg-" + f] = drawBackground(sizes[f][0], sizes[f][1], f);
+          completion(out);
+        } catch (e) { completion({ error: String(e) }); }
+      })();
+
+      ${BLOB_JS}
+      const png = cv => cv.toDataURL("image/png").split(",")[1];
+      function canvas(w, h, s) {
+        const cv = document.createElement("canvas"), g = cv.getContext("2d");
+        cv.width = Math.round(w * s); cv.height = Math.round(h * s); g.scale(s, s);
+        return [cv, g];
+      }
+
+      // 左上角圖示（256×256 設計稿）：深藍不規則色塊、紅花、黃色不規則圓、黃枝 + 藍枝，中間是設定的字
+    function drawLogo(ch) {
+      const [cv, g] = canvas(256, 256, 3);
+      blob(g, 128, 129, 246, 240, [46, 54, 40, 60, 52, 44, 58, 42], -4, "#232058");
+      blob(g, 128, 128, 176, 168, [44, 56, 62, 38, 46, 54, 46, 54], 0, "#F7D44C");
+      const twig = (color, width, paths) => {
+        g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
+        for (const d of paths) g.stroke(new Path2D(d));
+      };
+      twig("#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
+      twig("#F2CF4A", 6.5, ["M60 236 C 61 222, 61 208, 60 194", "M61 218 C 54 216, 51 210, 51 202", "M60 206 C 66 204, 69 198, 69 190"]);
+      g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
+      for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * Math.PI / 4); g.beginPath(); g.ellipse(0, -23, 8.5, 20, 0, 0, 7); g.fill(); g.restore(); }
+      g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore();
+      // 字：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中（比較寬的字會縮小放進黃圓）
+      g.font = '90px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
+      let m = g.measureText(ch);
+      const fit = Math.min(1, 120 / (m.actualBoundingBoxLeft + m.actualBoundingBoxRight || 90));
+      g.font = (90 * fit) + 'px "Huninn"'; m = g.measureText(ch);
+      const base = 128 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+      g.strokeStyle = g.fillStyle = "#262261"; g.lineWidth = 2; g.lineJoin = "round";
+      g.strokeText(ch, 128, base); g.fillText(ch, 128, base);
+      return png(cv);
+    }
+
+      // 底圖：米白紙，四周放童趣風的彩色色塊（黃、粉、青、綠、橘、藍）和幾顆小圓點
+      function drawBackground(W, H, family) {
+        const [cv, g] = canvas(W, H, 3), u = Math.min(W, H) / 170;
+        g.fillStyle = "#FFFCEF"; g.fillRect(0, 0, W, H);
+        blob(g, W - 4 * u, 2 * u, 92 * u, 80 * u, R1, -8, "#FFD426");
+        g.save(); g.translate(W - 34 * u, 8 * u); g.scale(20 * u / 48, 20 * u / 48);
+        g.strokeStyle = "#262261"; g.lineWidth = 3.4; g.lineCap = g.lineJoin = "round";
+        g.stroke(new Path2D("M24 8c1 6 3.5 12 8 16-4.5 4-7 10-8 16-1-6-3.5-12-8-16 4.5-4 7-10 8-16Z")); g.restore();
+        blob(g, -6 * u, H + 4 * u, 96 * u, 74 * u, R2, 6, "#FBD3D0");
+        blob(g, W + 6 * u, H + 6 * u, 104 * u, 78 * u, R3, -5, "#C9F0E9");
+        if (family !== "small") {
+          blob(g, -10 * u, H * 0.42, 34 * u, 46 * u, R4, 8, "#D5F5D0");
+          blob(g, W + 8 * u, H * 0.5, 30 * u, 42 * u, R2, -6, "#FFE2BA");
+          blob(g, W * 0.52, H + 10 * u, 70 * u, 34 * u, R1, 3, "#CFDDF8");
+        }
+        const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r * u, 0, 7); g.fill(); };
+        dot(W * 0.62, 9 * u, 3, "#FF9EC4");
+        dot(W * 0.7, 18 * u, 2, "#4FD2C2");
+        dot(W - 70 * u, 24 * u, 2.2, "#FF9500");
+        return png(cv);
+      }
+      0;`, true);
+    if (!res || res.error) return res ? res.error : "WebView 沒有回應";
+    if (!local.fileExists(ART_DIR)) local.createDirectory(ART_DIR, true);
+    for (const name in res) local.write(artPath(name), Data.fromBase64String(res[name]));
+    local.writeString(ART_META, JSON.stringify({ version: ART_VERSION, logoChar: ch, sizes }));
+    return null;
+  } catch (e) { return String(e); }
+}
+const artImage = name => local.fileExists(artPath(name)) ? Image.fromFile(artPath(name)) : null;
+
+// ---- 筆記畫面
 const js = v => JSON.stringify(v).replace(/</g, "\\u003c");
 
 async function openApp(openNoteId) {
@@ -217,13 +385,17 @@ async function openApp(openNoteId) {
   }
   if (!store.fileExists(DATA_PATH)) saveData(data);
   const iconFailed = await ensureAnimalIcons();
+  const artFailed = await ensureArt();
+  const logo = artImage("logo");
   const thumbs = {};
   for (const n of data.notes) for (const id of n.photos || []) {
     if (!(id in thumbs)) thumbs[id] = await photoDataURL(id, true) || "";
   }
   const boot = {
     cats: data.cats, notes: data.notes, thumbs, iconImages: await animalDataURLs(), openNote: openNoteId || null,
-    warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。" : "",
+    logo: logo ? "data:image/png;base64," + Data.fromPNG(logo).toBase64String() : null,
+    warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。"
+      : artFailed ? "左上角圖示畫不出來，連上網路後再打開一次就會補上。" : "",
   };
   const html = pageHTML().replace("/*BOOT*/null", () => js(boot));
 
@@ -276,7 +448,7 @@ const SF = {
 };
 const hash = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 
-function addIcon(stack, n, size) {
+function addIcon(stack, n, size, onColor) {
   const p = iconPath(n.icon);
   if (ANIMALS[n.icon] && store.fileExists(p) && store.isFileDownloaded(p)) {
     const im = stack.addImage(Image.fromFile(p));
@@ -287,7 +459,8 @@ function addIcon(stack, n, size) {
   const chip = stack.addStack();
   chip.size = new Size(size, size);
   chip.cornerRadius = size / 2;
-  chip.backgroundColor = col(CHIP_BG[hash(n.id) % CHIP_BG.length]);
+  // 卡片本身有顏色時，圖示底改白色才看得出來
+  chip.backgroundColor = col(onColor ? K.white : CHIP_BG[hash(n.id) % CHIP_BG.length]);
   chip.centerAlignContent();
   const sym = SFSymbol.named(SF[n.icon] || "star");
   if (!sym) return;
@@ -300,9 +473,12 @@ function addIcon(stack, n, size) {
 function addCard(parent, n, cats, maxLines, compact) {
   const checks = n.lines.filter(l => l.type === "c");
   const allDone = checks.length && checks.every(l => l.done);
+  const cat = cats.find(c => c.id === n.cat);
+  // 卡片用分類的顏色（沒分類就依筆記輪流配色）；清單全部打勾時變淡青色
+  const bg = allDone ? K.teal100 : cat ? CAT_BG[cat.color] || K.yellow100 : CHIP_BG[hash(n.id) % CHIP_BG.length];
   const card = parent.addStack();
   card.layoutVertically();
-  card.backgroundColor = col(allDone ? K.teal100 : K.white);
+  card.backgroundColor = col(bg);
   card.cornerRadius = 16;
   card.setPadding(9, 10, 8, 10);
   card.spacing = 4;
@@ -311,17 +487,16 @@ function addCard(parent, n, cats, maxLines, compact) {
   const head = card.addStack();
   head.centerAlignContent();
   head.spacing = 6;
-  addIcon(head, n, compact ? 18 : 20);
+  addIcon(head, n, compact ? 18 : 20, true);
   const t = head.addText(n.title || "未命名筆記");
   t.font = Font.heavyRoundedSystemFont(compact ? 12 : 13);
   t.textColor = col(K.ink);
   t.lineLimit = 1;
   head.addSpacer();
 
-  const cat = cats.find(c => c.id === n.cat);
   if (cat && !compact) {
     const tag = card.addStack();
-    tag.backgroundColor = col(allDone ? K.white : CAT_BG[cat.color] || K.yellow100);
+    tag.backgroundColor = col(K.white);
     tag.cornerRadius = 7;
     tag.setPadding(1, 6, 1, 6);
     const tt = tag.addText(cat.name);
@@ -376,22 +551,35 @@ function addCard(parent, n, cats, maxLines, compact) {
 async function buildWidget(family) {
   const w = new ListWidget();
   w.backgroundColor = col(K.cream);
-  w.setPadding(12, 12, 12, 12);
+  const bgImg = artImage("bg-" + family);
+  if (bgImg) w.backgroundImage = bgImg;
+  w.setPadding(10, 12, 12, 12);
   w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
   let data;
   try { data = await loadData(); } catch (e) { data = { cats: [], notes: [] }; }
   const notes = [...data.notes].sort((a, b) => b.updated - a.updated);
 
+  // 標題列：左上角「彥」圖示 + 筆記 + 則數（白色膠囊，疊在右上角的黃色色塊上）
   const head = w.addStack();
   head.centerAlignContent();
+  head.spacing = 6;
+  const logo = artImage("logo");
+  if (logo) {
+    const li = head.addImage(logo);
+    li.imageSize = family === "small" ? new Size(26, 26) : new Size(32, 32);
+  }
   const h = head.addText("筆記");
-  h.font = Font.heavyRoundedSystemFont(family === "small" ? 14 : 16);
+  h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
   h.textColor = col(K.ink);
   head.addSpacer();
-  const cnt = head.addText(`${notes.length} 則`);
-  cnt.font = Font.boldRoundedSystemFont(11);
-  cnt.textColor = col(K.body);
-  w.addSpacer(8);
+  const pill = head.addStack();
+  pill.backgroundColor = col(K.white);
+  pill.cornerRadius = 9;
+  pill.setPadding(2, 8, 2, 8);
+  const cnt = pill.addText(`${notes.length} 則`);
+  cnt.font = Font.heavyRoundedSystemFont(11);
+  cnt.textColor = col(K.ink);
+  w.addSpacer(family === "small" ? 6 : 8);
 
   if (!notes.length) {
     const e = w.addText("還沒有筆記，點一下開始寫");
