@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 1; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫
+const ART_VERSION = 2; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -298,6 +298,8 @@ async function ensureArt() {
   if (meta && meta.version === ART_VERSION && meta.logoChar === ch && JSON.stringify(meta.sizes) === JSON.stringify(sizes)) return null;
   try {
     const faces = await fetchFont("Huninn", null, ch);
+    const stickerSvgs = {};
+    for (const k of ICONS) if (!ANIMALS[k]) stickerSvgs[k] = stickerSVG(k, ICON_SVGS);
     const wv = new WebView();
     await wv.loadHTML("<html><body></body></html>");
     const res = await wv.evaluateJavaScript(`${CANVAS_COMPAT_JS}
@@ -306,6 +308,15 @@ async function ensureArt() {
           await 0; // 先讓下面的 png、canvas 等定義跑完
           ${LOAD_FONTS_JS(faces)}
           const sizes = ${JSON.stringify(sizes)}, out = { logo: drawLogo(${JSON.stringify(ch)}) };
+          // 圖示貼紙：把 SVG 畫成 96×96 的 PNG，小工具用
+          for (const [k, svg] of Object.entries(${JSON.stringify(stickerSvgs)})) {
+            const im = new Image();
+            im.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+            await im.decode();
+            const [cv, g] = canvas(32, 32, 3);
+            g.drawImage(im, 0, 0, 32, 32);
+            out["icon-" + k] = png(cv);
+          }
           for (const f in sizes) out["bg-" + f] = drawBackground(sizes[f][0], sizes[f][1], f);
           completion(out);
         } catch (e) { completion({ error: String(e) }); }
@@ -376,6 +387,12 @@ async function ensureArt() {
 const artImage = name => local.fileExists(artPath(name)) ? Image.fromFile(artPath(name)) : null;
 
 // ---- 筆記畫面
+// 線條圖示（跟日常記帳同一套）和貼紙樣式，由 build.py 塞進來
+const ICONS = /*ICONS*/[];
+const ICON_SVGS = /*ICON_SVGS*/{};
+/*STICKERS*/
+Object.assign(ICON_SVGS, EXTRA_ICON_SVGS);
+
 const js = v => JSON.stringify(v).replace(/</g, "\\u003c");
 
 async function openApp(openNoteId, filter) {
@@ -450,6 +467,13 @@ const SF = {
 const hash = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 
 function addIcon(stack, n, size, onColor) {
+  // 線條圖示：用 App 內畫好的貼紙圖（跟 App 畫面一樣有塗色和底色）
+  const sticker = !ANIMALS[n.icon] && artImage("icon-" + n.icon);
+  if (sticker) {
+    const im = stack.addImage(sticker);
+    im.imageSize = new Size(size + 2, size + 2);
+    return;
+  }
   const p = iconPath(n.icon);
   if (ANIMALS[n.icon] && store.fileExists(p) && store.isFileDownloaded(p)) {
     const im = stack.addImage(Image.fromFile(p));
