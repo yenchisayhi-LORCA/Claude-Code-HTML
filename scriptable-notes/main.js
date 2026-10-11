@@ -29,6 +29,19 @@ async function ensureLocal(path) {
   if (store.isFileStoredIniCloud(path) && !store.isFileDownloaded(path)) await store.downloadFileFromiCloud(path);
 }
 
+// iCloud 還沒下載到這台裝置的檔案，資料夾裡只有「.notes.json.icloud」這種佔位檔，fileExists 會說不存在
+function cloudPlaceholder(path) {
+  const name = path.split("/").pop();
+  return store.joinPath(path.slice(0, path.length - name.length), "." + name + ".icloud");
+}
+async function fetchFromCloud(path) {
+  try {
+    if (store.fileExists(path)) { await ensureLocal(path); return true; }
+    if (store.fileExists(cloudPlaceholder(path))) { await store.downloadFileFromiCloud(path); return store.fileExists(path); }
+  } catch (e) {}
+  return false;
+}
+
 // 第一次使用時的分類和一則說明筆記
 function starterData() {
   const now = Date.now();
@@ -54,9 +67,15 @@ function starterData() {
   };
 }
 
+// 只有真的從來沒存過筆記才用說明筆記；iCloud 還沒同步好時丟錯誤，免得說明筆記蓋掉真正的筆記
 async function loadData() {
-  if (!store.fileExists(DATA_PATH)) return starterData();
-  await ensureLocal(DATA_PATH);
+  if (!await fetchFromCloud(DATA_PATH)) {
+    if (await fetchFromCloud(BACKUP_PATH)) {
+      try { return JSON.parse(store.readString(BACKUP_PATH)); } catch (e) {}
+    }
+    if (store.fileExists(cloudPlaceholder(DATA_PATH)) || store.fileExists(cloudPlaceholder(BACKUP_PATH))) throw new Error("筆記還在從 iCloud 下載，等一下再試");
+    return starterData();
+  }
   try {
     const d = JSON.parse(store.readString(DATA_PATH));
     return { cats: d.cats || [], notes: d.notes || [], settings: d.settings || {} };
@@ -633,7 +652,17 @@ async function buildWidget(family) {
   w.setPadding(10, 12, 12, 12);
   w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
   let data;
-  try { data = await loadData(); } catch (e) { data = { cats: [], notes: [] }; }
+  try { data = await loadData(); } catch (e) {
+    // iCloud 還沒同步好：先顯示提示，1 分鐘後再試，不要顯示說明筆記
+    w.refreshAfterDate = new Date(Date.now() + 60000);
+    const t = w.addText("筆記還在從 iCloud 同步，等一下會自動更新");
+    t.font = Font.boldRoundedSystemFont(12);
+    t.textColor = col(K.body);
+    w.addSpacer();
+    return w;
+  }
+  // 小工具不顯示第一次使用的說明筆記（還沒存過筆記時就顯示「點一下開始寫」）
+  if (!store.fileExists(DATA_PATH)) data.notes = data.notes.filter(n => n.id !== "n-welcome");
   // 釘選的筆記排最前面，其他依最後修改時間
   let notes = [...data.notes].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updated - a.updated);
 
@@ -704,6 +733,7 @@ async function buildWidget(family) {
     // 小尺寸只能整個小工具一個連結
     w.url = runURL({ note: notes[0].id });
     addCard(w, notes[0], data.cats, maxLines, true, WW - 24, null, cardH);
+    w.addSpacer(); // 內容靠上
     return w;
   }
   // 卡片寬度：小工具寬度扣掉左右各 12 的邊距，兩張之間隔 8；只有一則筆記時佔滿整排
@@ -722,6 +752,7 @@ async function buildWidget(family) {
     pair.forEach((n, i) => addCard(row, n, data.cats, maxLines, false, cw, colors[r * 2 + i], cardH));
     if (pair.length === 1 && notes.length > 1) row.addSpacer(); // 落單的卡片靠左，保持半寬
   }
+  w.addSpacer(); // 筆記少的時候內容也靠上，不會整組掉到中間
   return w;
 }
 
