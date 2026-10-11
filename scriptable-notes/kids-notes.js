@@ -633,8 +633,6 @@ function distinctColors(list, cats) {
 }
 
 function addCard(parent, n, cats, maxLines, compact, width, bgColor, height) {
-  const checks = n.lines.filter(l => l.type === "c");
-  const allDone = checks.length && checks.every(l => l.done);
   // 卡片用分類的顏色（沒分類就依筆記輪流配色）；清單全部打勾時變淡青色
   const bg = bgColor || cardColor(n, cats);
   const card = parent.addStack();
@@ -697,15 +695,7 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor, height) {
     ph.font = Font.mediumRoundedSystemFont(10);
     ph.textColor = col(K.body);
   }
-  card.addSpacer();
-  // 底部只放清單進度（例如 0/5），靠右；主畫面不顯示修改日期
-  const foot = card.addStack();
-  foot.addSpacer();
-  if (checks.length) {
-    const pr = foot.addText(`${checks.filter(l => l.done).length}/${checks.length}`);
-    pr.font = Font.heavyRoundedSystemFont(9);
-    pr.textColor = col(allDone ? K.tealCheck : K.ink);
-  }
+  card.addSpacer(); // 內容靠上；主畫面的卡片不顯示修改日期和清單進度
 }
 
 async function buildWidget(family) {
@@ -739,8 +729,8 @@ async function buildWidget(family) {
   head.centerAlignContent();
   head.spacing = 6;
   const logo = artImage("logo");
-  // 大尺寸 42、小尺寸 34（原本 32／26，放大 1.3 倍）；中尺寸高度不夠，用 34
-  const LOGO = family === "large" ? 42 : 34;
+  // 大尺寸 50、中和小尺寸 41（拿掉卡片底部的日期和進度後，再放大 1.2 倍）
+  const LOGO = family === "large" ? 50 : 41;
   if (logo) {
     const li = head.addImage(logo);
     li.imageSize = new Size(LOGO, LOGO);
@@ -754,11 +744,11 @@ async function buildWidget(family) {
   w.addSpacer(HEAD_GAP);
 
   // 卡片高度：小工具高度扣掉上下邊距（10+12）、標題列、標題下的間距；大尺寸再分成兩排
-  // 每張卡片能放幾行：扣掉卡片內距、標題、日期等固定高度約 58，每行約 17
+  // 每張卡片能放幾行：扣掉卡片內距、標題等固定高度約 43，每行約 17
   const GAP = 8, [WW, WH] = widgetSizes()[family];
   const area = WH - 22 - Math.max(LOGO, 24) - HEAD_GAP;
   const cardH = Math.floor(family === "large" ? (area - GAP) / 2 : area);
-  const maxLines = Math.max(1, Math.floor((cardH - 58) / 17));
+  const maxLines = Math.max(1, Math.floor((cardH - 43) / 17));
 
   if (!notes.length) {
     const e = w.addText(missing ? `找不到「${param}」這個分類。長按小工具 →「編輯小工具」，把 Parameter 改成分類名稱，或清空顯示全部。`
