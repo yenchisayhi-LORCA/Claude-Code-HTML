@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>童趣風備忘錄</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gluten:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap">
+<style>
+/* 版面：手機寬的一欄，兩欄瀑布流卡片放在米白紙底上，下方紅色「寫筆記」；編輯畫面是底部面板，工具列有勾選清單鍵 */
+:root {
+  --sun-yellow: #FFD426; --block-blue: #3F6FD1; --tomato-red: #EE3E33; --tomato-deep: #D93A2F;
+  --lake-teal: #4FD2C2; --bubble-pink: #FF9EC4; --cream-paper: #FFFCEF; --white: #FFFFFF; --ink-navy: #262261;
+  --ios-orange: #FF9500; --phone-green: #6BD861; --orange-100: #FFE2BA; --green-100: #D5F5D0;
+  --yellow-100: #FFF0AF; --blue-100: #CFDDF8; --pink-100: #FBD3D0; --teal-100: #C9F0E9;
+  --text-body: #5A5788; --surface-disabled: #F0EEE4; --teal-text: #3C7D74; --teal-check: #17705F;
+  --font-display: Gluten, "Noto Sans TC", sans-serif;
+  --font-sans: "Noto Sans TC", -apple-system, "PingFang TC", system-ui, sans-serif;
+  --radius-pill: 999px; --radius-panel: 40px; --radius-card: 28px; --radius-input: 18px; --radius-icon-btn: 10px;
+  --shadow-frame: 0 18px 40px rgba(38, 34, 97, 0.12);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--cream-paper); color: var(--ink-navy); font-family: var(--font-sans); font-weight: 500; }
+svg.ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+button { -webkit-tap-highlight-color: transparent; }
+
+.app { max-width: 480px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 120px; display: flex; flex-direction: column; gap: 16px; }
+
+.head { display: flex; align-items: center; gap: 12px; }
+.logo { width: 52px; height: 52px; background: var(--sun-yellow); border-radius: 52% 48% 61% 39% / 58% 43% 57% 42%; transform: rotate(-4deg); display: grid; place-items: center; flex: none; }
+.logo svg.ic { width: 28px; height: 28px; }
+.titles { min-width: 0; flex: 1; }
+.eyebrow { font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 1px; color: var(--text-body); text-transform: uppercase; }
+h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
+.icon-btn { width: 40px; height: 40px; border: 0; border-radius: var(--radius-icon-btn); background: var(--white); color: var(--ink-navy); display: grid; place-items: center; cursor: pointer; flex: none; }
+.icon-btn:hover { background: var(--surface-disabled); }
+:focus-visible { outline: 3px solid var(--sun-yellow); outline-offset: 2px; }
+
+.search { display: flex; align-items: center; gap: 8px; background: var(--white); border-radius: var(--radius-pill); padding: 10px 16px; }
+.search input { border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink-navy); flex: 1; min-width: 0; }
+.search input::placeholder { color: var(--text-body); }
+
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.chip { border: 0; border-radius: var(--radius-pill); padding: 8px 16px; font: inherit; font-weight: 900; font-size: 14px; background: var(--white); color: var(--text-body); cursor: pointer; white-space: nowrap; }
+.chip[aria-pressed="true"] { background: var(--ink-navy); color: var(--white); }
+.chip .n { font-family: var(--font-display); font-weight: 800; margin-left: 4px; }
+
+/* note icon (same set as 日常記帳) */
+.nicon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; overflow: hidden; color: var(--ink-navy); }
+.nicon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nicon svg { width: 58%; height: 58%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* masonry */
+.grid { columns: 2; column-gap: 12px; }
+.card { break-inside: avoid; margin-bottom: 12px; background: var(--white); border-radius: var(--radius-card); padding: 14px 14px 14px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform .15s; border: 0; width: 100%; text-align: left; font: inherit; color: inherit; }
+.card:hover { transform: translateY(-2px); }
+.card:active { transform: translateY(1px); }
+.card.done-all { background: var(--teal-100); }
+.c-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.card .nicon { width: 30px; height: 30px; }
+.sheet .c-head > .nicon { width: 48px; height: 48px; }
+.c-title { font-size: 16px; font-weight: 900; line-height: 1.35; overflow-wrap: anywhere; min-width: 0; }
+.c-text { font-size: 14px; line-height: 1.6; color: var(--text-body); overflow-wrap: anywhere; }
+.lines { display: flex; flex-direction: column; gap: 6px; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.45; font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+.box { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--ink-navy); flex: none; margin-top: 1px; display: grid; place-items: center; background: var(--white); padding: 0; }
+.box svg.ic { width: 15px; height: 15px; stroke-width: 5; color: var(--white); }
+.chk.done { color: var(--teal-text); text-decoration: line-through; text-decoration-thickness: 2px; }
+.chk.done .box { border-color: var(--teal-check); background: var(--teal-check); }
+.more { font-size: 13px; color: var(--text-body); font-weight: 700; }
+.thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.thumbs.three { grid-template-columns: repeat(3, 1fr); }
+.thumb { aspect-ratio: 1; max-width: 100%; border-radius: 14px; display: grid; place-items: center; position: relative; overflow: hidden; color: var(--ink-navy); }
+.thumb svg.ic { width: 46%; height: 46%; }
+.thumb .plus { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(38,34,97,.72); color: var(--white); font-family: var(--font-display); font-weight: 800; font-size: 20px; }
+.meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.date { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--text-body); font-variant-numeric: tabular-nums; }
+.prog { font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--ink-navy); background: var(--surface-disabled); border-radius: var(--radius-pill); padding: 1px 8px; }
+.card.done-all .prog { background: var(--white); color: var(--teal-check); }
+.empty { text-align: center; color: var(--text-body); font-weight: 700; padding: 40px 0; }
+
+.fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); border: 0; border-radius: var(--radius-pill); background: var(--tomato-deep); color: var(--white); font: inherit; font-weight: 900; font-size: 17px; padding: 14px 28px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: transform .15s; }
+.fab:hover { transform: translateX(-50%) translateY(-2px); }
+
+/* sheet */
+.scrim { position: fixed; inset: 0; background: rgba(38,34,97,.28); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+.sheet { background: var(--cream-paper); width: 100%; max-width: 480px; max-height: 92%; overflow-y: auto; border-radius: var(--radius-panel) var(--radius-panel) 0 0; box-shadow: var(--shadow-frame); padding: 22px 20px 0; display: flex; flex-direction: column; gap: 14px; }
+.sheet > :last-child { margin-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+.sheet-top { display: flex; align-items: center; gap: 10px; }
+.sheet-top .sp { flex: 1; }
+.sheet h2 { margin: 0; font-size: 22px; font-weight: 900; line-height: 1.35; overflow-wrap: anywhere; min-width: 0; }
+.sheet .c-text { font-size: 15px; line-height: 1.7; }
+.sheet .chk { font-size: 16px; }
+.sheet .chk .box { width: 24px; height: 24px; cursor: pointer; }
+.sheet .chk .box svg.ic { width: 17px; height: 17px; }
+.sheet .thumbs { grid-template-columns: repeat(3, 1fr); }
+
+.btn-save { width: 48px; height: 48px; border: 0; border-radius: 50%; background: var(--sun-yellow); color: var(--ink-navy); display: grid; place-items: center; cursor: pointer; flex: none; }
+.btn-save svg.ic { width: 28px; height: 28px; stroke-width: 4.5; }
+
+/* editor */
+.ed-title { border: 0; background: transparent; font: inherit; font-size: 22px; font-weight: 900; color: var(--ink-navy); padding: 0; min-width: 0; flex: 1; outline: 0; }
+.ed-title::placeholder { color: var(--text-body); opacity: .6; }
+.pick-btn { border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 50%; position: relative; }
+.pick-btn .nicon { width: 48px; height: 48px; }
+.pick-btn .edit-dot { position: absolute; right: -2px; bottom: -2px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink-navy); color: var(--white); display: grid; place-items: center; }
+.pick-btn .edit-dot svg.ic { width: 12px; height: 12px; stroke-width: 4; }
+.icon-panel { background: var(--white); border-radius: 24px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.icon-panel .lbl { font-size: 13px; font-weight: 700; color: var(--text-body); }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; }
+.icon-opt { aspect-ratio: 1; max-width: 100%; border: 0; border-radius: 16px; background: var(--cream-paper); display: grid; place-items: center; cursor: pointer; padding: 3px; color: var(--ink-navy); }
+.icon-opt .nicon { width: 100%; height: 100%; background: transparent !important; }
+.icon-opt.img .nicon { background: none; }
+.icon-opt[aria-pressed="true"] { background: var(--sun-yellow); transform: rotate(-3deg); }
+
+.ed-lines { display: flex; flex-direction: column; gap: 4px; min-height: 180px; padding-bottom: 8px; }
+.ed-line { display: flex; gap: 10px; align-items: flex-start; }
+.ed-line .box { width: 24px; height: 24px; margin-top: 5px; cursor: pointer; }
+.ed-line .box svg.ic { width: 17px; height: 17px; }
+.ed-line textarea { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; background: transparent; font: inherit; font-size: 17px; line-height: 1.6; color: var(--ink-navy); padding: 2px 0; overflow: hidden; height: auto; }
+.ed-line.done textarea { color: var(--teal-text); text-decoration: line-through; }
+.ed-line textarea::placeholder { color: var(--text-body); opacity: .6; }
+
+.toolbar { position: sticky; bottom: 0; margin-inline: -20px; padding: 10px 20px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--cream-paper); display: flex; justify-content: center; }
+.toolbar-inner { display: flex; gap: 6px; align-items: center; background: var(--white); border-radius: var(--radius-pill); padding: 6px 10px; box-shadow: 0 4px 14px rgba(38,34,97,.08); }
+.tool { border: 0; background: transparent; color: var(--ink-navy); border-radius: var(--radius-pill); height: 44px; min-width: 52px; padding: 0 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; font: inherit; font-weight: 900; font-size: 14px; }
+.tool:hover { background: var(--surface-disabled); }
+.tool.on { background: var(--teal-100); color: var(--teal-check); }
+.tool svg.ic { width: 28px; height: 28px; stroke-width: 3.4; }
+.tool-sep { width: 2px; height: 26px; background: var(--surface-disabled); border-radius: 2px; }
+.ed-photos .thumb { cursor: default; }
+
+
+@media (prefers-reduced-motion: reduce) { .card, .fab { transition: none; } }
+/* categories */
+.tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-pill); padding: 3px 10px; font-size: 12px; font-weight: 900; letter-spacing: 1px; color: var(--ink-navy); border: 0; font-family: inherit; }
+.t-yellow { background: var(--yellow-100); } .t-blue { background: var(--blue-100); } .t-pink { background: var(--pink-100); } .t-teal { background: var(--teal-100); } .t-orange { background: var(--orange-100); } .t-green { background: var(--green-100); }
+.card.done-all .tag { background: var(--white); }
+.cat-box { display: flex; flex-direction: column; gap: 10px; }
+.lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lbl { font-size: 13px; font-weight: 700; color: var(--text-body); }
+.link-btn { border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 900; color: var(--block-blue); cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.cat-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.cat-row .tag { font-size: 15px; padding: 8px 16px; cursor: pointer; border: 2.5px solid transparent; letter-spacing: .5px; }
+.cat-row .tag[aria-pressed="true"] { border-color: var(--ink-navy); }
+.cat-row .tag.add { background: transparent; border: 2.5px dashed var(--text-body); color: var(--text-body); }
+.cat-edit { display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-pill); padding: 4px 6px 4px 6px; }
+.cat-edit input { border: 0; background: var(--white); border-radius: var(--radius-pill); font: inherit; font-size: 15px; font-weight: 900; color: var(--ink-navy); padding: 5px 10px; width: 6.5em; min-width: 0; }
+.mini { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--white); color: var(--ink-navy); display: grid; place-items: center; cursor: pointer; padding: 0; flex: none; font: inherit; }
+.mini svg.ic { width: 16px; height: 16px; stroke-width: 4; }
+.mini.swatch { border: 2.5px solid var(--ink-navy); }
+.mini.danger { width: auto; padding: 0 10px; border-radius: var(--radius-pill); background: var(--tomato-deep); color: var(--white); font-size: 13px; font-weight: 900; }
+.add-row { display: flex; gap: 8px; align-items: center; }
+.add-row input { flex: 1; min-width: 0; border: 0; border-radius: var(--radius-input); background: var(--white); padding: 10px 14px; font: inherit; font-size: 16px; color: var(--ink-navy); }
+.btn-sm { border: 0; border-radius: var(--radius-pill); padding: 10px 18px; font: inherit; font-weight: 900; font-size: 15px; background: var(--block-blue); color: var(--white); cursor: pointer; flex: none; }
+.chip.manage { background: transparent; border: 2.5px dashed var(--text-body); padding: 6px 14px; }
+
+/* photos */
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb[data-src] { cursor: zoom-in; }
+.thumb .rm { position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(38,34,97,.8); color: var(--white); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.thumb .rm svg.ic { width: 14px; height: 14px; stroke-width: 4.5; }
+.ed-photos .thumbs { grid-template-columns: repeat(3, 1fr); }
+.lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(38,34,97,.92); display: grid; place-items: center; padding: 24px 16px; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; border-radius: 20px; }
+.busy { font-size: 13px; font-weight: 700; color: var(--text-body); }
+
+/* Scriptable 版：避開瀏海、提示訊息 */
+.app { padding-top: max(18px, env(safe-area-inset-top, 0px)); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(16px + env(safe-area-inset-top, 0px)); z-index: 30; background: var(--ink-navy); color: var(--white); border-radius: var(--radius-pill); padding: 10px 18px; font-weight: 900; font-size: 14px; max-width: calc(100% - 32px); }
+.sheet { padding-top: max(22px, calc(env(safe-area-inset-top, 0px) * .4)); }
+</style>
+
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-search" viewBox="0 0 48 48"><circle cx="21" cy="21" r="12"/><path d="M30 31l9 9"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 48 48"><path d="M24 11v26M11 24h26"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 48 48"><path d="M11 25l9 9 17-19"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 48 48"><path d="M14 14l20 20M34 14L14 34"/></symbol>
+  <symbol id="ic-back" viewBox="0 0 48 48"><path d="M29 11L16 24l13 13"/></symbol>
+  <symbol id="ic-pencil" viewBox="0 0 48 48"><path d="M30 10l8 8-20 20-10 2 2-10z M26 14l8 8"/></symbol>
+  <symbol id="ic-note" viewBox="0 0 48 48"><path d="M13 8h17l8 8v23a2 2 0 0 1-2 2H13a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/><path d="M17 22h14M17 29h10"/></symbol>
+  <symbol id="ic-checklist" viewBox="0 0 48 48"><circle cx="11" cy="14" r="5"/><path d="M8.5 14l2 2 3.5-4"/><circle cx="11" cy="33" r="5"/><path d="M22 14h18M22 33h18"/></symbol>
+  <symbol id="ic-bottle" viewBox="0 0 48 48"><path d="M19 7h10v6H19z"/><path d="M17 13h14c2 0 3 1 3 3v23c0 2-1 3-3 3H17c-2 0-3-1-3-3V16c0-2 1-3 3-3z"/><path d="M14 23h20v10H14"/></symbol>
+  <symbol id="ic-tube" viewBox="0 0 48 48"><path d="M16 9h16l-2 26H18z"/><path d="M20 35h8v6h-8z"/><path d="M19 17h10"/></symbol>
+  <symbol id="ic-box" viewBox="0 0 48 48"><path d="M8 16l16-8 16 8v17L24 41 8 33z"/><path d="M8 16l16 8 16-8M24 24v17"/></symbol>
+  <symbol id="ic-photo" viewBox="0 0 48 48"><rect x="7" y="10" width="34" height="28" rx="5"/><circle cx="17" cy="19" r="3"/><path d="M8 34l11-10 8 7 5-4 9 8"/></symbol>
+  <symbol id="ic-star" viewBox="0 0 48 48"><path d="M24 6l5.3 11.2 12.2 1.6-9 8.4 2.3 12.1L24 33.4l-10.8 5.9 2.3-12.1-9-8.4 12.2-1.6z"/></symbol>
+</svg>
+  <symbol id="ic-trash" viewBox="0 0 48 48"><path d="M9 13h30M19 13V9h10v4M13 13l2 26h18l2-26M21 21v12M27 21v12"/></symbol>
+</svg>
+
+<main class="app">
+  <header class="head">
+    <div class="logo" aria-hidden="true"><svg class="ic"><use href="#ic-note"/></svg></div>
+    <div class="titles">
+      <div class="eyebrow">My Notes</div>
+      <h1>靈感筆記</h1>
+    </div>
+    <button class="icon-btn" id="searchToggle" aria-label="搜尋"><svg class="ic"><use href="#ic-search"/></svg></button>
+  </header>
+
+  <div class="search" id="searchBar" hidden>
+    <svg class="ic"><use href="#ic-search"/></svg>
+    <input id="q" type="search" placeholder="找筆記，例如：益生菌" autocomplete="off">
+  </div>
+
+  <nav class="chips" id="chips" aria-label="篩選"></nav>
+
+  <section class="grid" id="grid" aria-live="polite"></section>
+</main>
+
+<button class="fab" id="fab"><svg class="ic"><use href="#ic-plus"/></svg>寫筆記</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="lightbox" id="lightbox" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const ICONS = /*ICONS*/[];
+const ICON_SVGS = /*ICON_SVGS*/{};
+const BOOT = /*BOOT*/null;
+</script>
+<script>
+// Scriptable 打開這一頁時，BOOT 會帶入 iCloud 裡的分類、筆記、照片縮圖和小動物圖示
+const boot = BOOT || { cats: [], notes: [], thumbs: {}, iconImages: {} };
+const ICON_IMAGES = boot.iconImages || {};
+const THUMBS = boot.thumbs || {};
+
+const CHIP_BG = ["var(--yellow-100)", "var(--blue-100)", "var(--orange-100)", "var(--pink-100)", "var(--green-100)", "var(--teal-100)"];
+const CAT_COLORS = ["yellow", "orange", "green", "blue", "pink", "teal"];
+const CAT_STRONG = { yellow: "sun-yellow", orange: "ios-orange", green: "phone-green", blue: "block-blue", pink: "bubble-pink", teal: "lake-teal" };
+
+// 筆記內容是一行一行：c = 勾選項目，t = 文字
+const C = (s, d) => ({ type: "c", text: s, done: !!d });
+const T = (s) => ({ type: "t", text: s });
+
+let cats = boot.cats;
+let notes = boot.notes;
+
+let filter = "全部";
+let query = "";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const icon = (id) => `<svg class="ic"><use href="#ic-${id}"/></svg>`;
+const hash = (s) => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
+const catOf = (id) => cats.find((c) => c.id === id);
+const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/* ---------- 跟 Scriptable 溝通：要做的事放進 outbox，再用 kidsnotes:// 網址叫 Scriptable 來拿 ---------- */
+let outbox = [];
+let pingTimer = null, saveTimer = null;
+function ping() {
+  location.href = "kidsnotes://ping?" + Date.now();
+  clearTimeout(pingTimer);
+  // 萬一這次沒被收到，過一下再叫一次，直到 outbox 清空
+  pingTimer = setTimeout(() => { if (outbox.length) ping(); }, 1500);
+}
+function send(cmd) { outbox.push(cmd); ping(); }
+window.__takeOutbox = () => {
+  const out = outbox; outbox = [];
+  return JSON.stringify(out);
+};
+// 有改動就在 0.3 秒後存一次（連續打勾只存最後一次）
+function changed() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    outbox = outbox.filter((c) => c.type !== "save");
+    send({ type: "save", cats, notes });
+  }, 300);
+}
+// 關掉畫面前 Scriptable 會直接呼叫這個，確保最後的改動有存到
+window.__finalState = () => JSON.stringify({ cats, notes });
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, 2200);
+}
+
+function fmtDate(ms) {
+  const d = new Date(ms), p = (x) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function noteIcon(key, seed) {
+  if (ICON_IMAGES[key]) return `<span class="nicon"><img src="${ICON_IMAGES[key]}" alt=""></span>`;
+  const inner = ICON_SVGS[key] || ICON_SVGS.star;
+  return `<span class="nicon" style="background:${CHIP_BG[hash(seed ?? key) % CHIP_BG.length]}"><svg viewBox="0 0 24 24">${inner}</svg></span>`;
+}
+
+function photoInner(id) {
+  return THUMBS[id] ? `<img src="${THUMBS[id]}" alt="">` : icon("photo");
+}
+
+function thumbsHTML(photos, max, opts = {}) {
+  if (!photos || !photos.length) return "";
+  const shown = photos.slice(0, max);
+  const extra = photos.length - max;
+  return `<div class="${max > 4 ? "thumbs three" : "thumbs"}">` + shown.map((id, i) => {
+    const plus = extra > 0 && i === shown.length - 1 ? `<span class="plus">+${extra + 1}</span>` : "";
+    const rm = opts.removable ? `<button class="rm" data-rm="${i}" aria-label="移除照片">${icon("close")}</button>` : "";
+    const zoom = opts.zoom ? ` data-src="${esc(id)}"` : "";
+    return `<div class="thumb"${zoom} style="background:${CHIP_BG[i % CHIP_BG.length]}">${photoInner(id)}${plus}${rm}</div>`;
+  }).join("") + `</div>`;
+}
+
+function linesHTML(lines, max) {
+  const shown = max ? lines.slice(0, max) : lines;
+  let h = `<div class="lines">` + shown.map((l, i) => l.type === "c"
+    ? `<div class="chk ${l.done ? "done" : ""}" data-i="${i}"><span class="box">${l.done ? icon("check") : ""}</span><span>${esc(l.text)}</span></div>`
+    : `<div class="c-text">${esc(l.text)}</div>`).join("") + `</div>`;
+  if (max && lines.length > max) h += `<div class="more">還有 ${lines.length - max} 行</div>`;
+  return h;
+}
+
+function tagHTML(id) {
+  const c = catOf(id);
+  return c ? `<span class="tag t-${c.color}">${esc(c.name)}</span>` : "";
+}
+
+const checks = (n) => n.lines.filter((l) => l.type === "c");
+
+function matches(n, f = filter) {
+  if (f === "未完成" && !checks(n).some((l) => !l.done)) return false;
+  if (f === "有照片" && !(n.photos && n.photos.length)) return false;
+  if (f.startsWith("cat:") && n.cat !== f.slice(4)) return false;
+  if (!query) return true;
+  const hay = [n.title, catOf(n.cat)?.name || "", ...n.lines.map((l) => l.text)].join(" ").toLowerCase();
+  return hay.includes(query.toLowerCase());
+}
+
+function renderChips() {
+  if (filter.startsWith("cat:") && !catOf(filter.slice(4))) filter = "全部";
+  const list = [["全部", "全部"], ["未完成", "未完成"], ["有照片", "有照片"], ...cats.map((c) => ["cat:" + c.id, c.name])];
+  $("#chips").innerHTML = list.map(([key, label]) =>
+    `<button class="chip" aria-pressed="${key === filter}" data-c="${esc(key)}">${esc(label)}<span class="n">${notes.filter((n) => matches(n, key)).length}</span></button>`).join("")
+    + `<button class="chip manage" data-manage="1">編輯分類</button>`;
+}
+
+function renderGrid() {
+  notes.sort((a, b) => b.updated - a.updated);
+  const list = notes.filter((n) => matches(n));
+  if (!notes.length) { $("#grid").innerHTML = `<p class="empty">還沒有筆記，按下面的「寫筆記」開始</p>`; return; }
+  if (!list.length) { $("#grid").innerHTML = `<p class="empty">找不到符合的筆記</p>`; return; }
+  $("#grid").innerHTML = list.map((n) => {
+    const cs = checks(n), done = cs.filter((l) => l.done).length;
+    const allDone = cs.length && done === cs.length;
+    return `<button class="card ${allDone ? "done-all" : ""}" data-id="${esc(n.id)}">
+      <span class="c-head">${noteIcon(n.icon, n.id)}<span class="c-title">${esc(n.title)}</span></span>
+      ${tagHTML(n.cat)}
+      ${linesHTML(n.lines, 5)}
+      ${thumbsHTML(n.photos, n.photos && n.photos.length > 4 ? 6 : 4)}
+      <span class="meta"><span class="date">${fmtDate(n.updated)}</span>${cs.length ? `<span class="prog">${done}/${cs.length}</span>` : ""}</span>
+    </button>`;
+  }).join("");
+}
+
+function render() { renderChips(); renderGrid(); }
+
+function openSheet(html, onMount) {
+  const s = $("#scrim");
+  s.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  s.hidden = false;
+  onMount && onMount(s.firstElementChild);
+}
+let onPhotoPicked = null; // 編輯器打開時，Scriptable 選好的照片交給它
+function closeSheet() { $("#scrim").hidden = true; $("#scrim").innerHTML = ""; onPhotoPicked = null; }
+
+/* ---------- 照片放大：先顯示縮圖，Scriptable 送來原圖再換掉 ---------- */
+let fullWanted = null;
+function showPhoto(id) {
+  const lb = $("#lightbox");
+  lb.innerHTML = THUMBS[id] ? `<img src="${THUMBS[id]}" alt="照片">` : "";
+  lb.hidden = false;
+  fullWanted = id;
+  send({ type: "full", id });
+}
+window.__showFull = (id, src) => {
+  if (fullWanted !== id || $("#lightbox").hidden) return;
+  $("#lightbox").innerHTML = `<img src="${src}" alt="照片">`;
+};
+$("#lightbox").addEventListener("click", () => { $("#lightbox").hidden = true; $("#lightbox").innerHTML = ""; fullWanted = null; });
+
+window.__photoAdded = (res) => {
+  if (res && res.error) { toast(res.error); }
+  if (res && res.id) THUMBS[res.id] = res.thumb;
+  if (onPhotoPicked) onPhotoPicked(res && res.id ? res.id : null);
+};
+
+/* ---------- 分類：選擇、新增、改名、換顏色、刪除 ---------- */
+function catEditor(host, opts) {
+  // opts.selected: 目前選的分類 id（null = 不分類）；opts.onSelect 有給才可以選
+  let editing = !!opts.startEditing;
+  let adding = false;
+  let armed = null; // 按過一次刪除、等第二次確認的分類 id
+
+  function paint(focusAdd) {
+    let chips;
+    if (!editing) {
+      chips = (opts.onSelect ? [`<button class="tag" style="background:var(--surface-disabled)" data-sel="" aria-pressed="${!opts.selected}">不分類</button>`] : [])
+        .concat(cats.map((c) => `<button class="tag t-${c.color}" data-sel="${esc(c.id)}" aria-pressed="${opts.onSelect ? c.id === opts.selected : false}">${esc(c.name)}</button>`))
+        .concat(adding ? [] : [`<button class="tag add" data-add="1">＋ 新增分類</button>`]).join("");
+    } else {
+      chips = cats.map((c) => `
+        <span class="cat-edit t-${c.color}">
+          <input value="${esc(c.name)}" data-name="${esc(c.id)}" aria-label="分類名稱" maxlength="10">
+          <button class="mini swatch" style="background:var(--${CAT_STRONG[c.color]})" data-color="${esc(c.id)}" aria-label="換顏色"></button>
+          ${armed === c.id
+            ? `<button class="mini danger" data-del="${esc(c.id)}">確定刪除</button>`
+            : `<button class="mini" data-del="${esc(c.id)}" aria-label="刪除 ${esc(c.name)}">${icon("close")}</button>`}
+        </span>`).join("") || `<span class="lbl">還沒有分類</span>`;
+    }
+    host.innerHTML = `
+      <div class="lbl-row"><span class="lbl">分類</span>
+        <button class="link-btn" data-toggle="1">${editing ? "完成" : "編輯"}</button></div>
+      <div class="cat-row">${chips}</div>
+      ${adding || (editing && opts.alwaysAdd) ? `<div class="add-row">
+        <input id="cat-new" placeholder="新分類名稱，例如：日本" maxlength="10">
+        <button class="btn-sm" data-addok="1">加入</button></div>` : ""}
+      ${editing ? `<span class="lbl">點色塊換顏色（黃、橘、綠、藍、粉、青），按 × 刪除；刪掉的分類，裡面的筆記會變成不分類。</span>` : ""}`;
+    if (focusAdd) host.querySelector("#cat-new")?.focus();
+  }
+
+  function addCat() {
+    const inp = host.querySelector("#cat-new");
+    const name = inp && inp.value.trim();
+    if (!name) { inp && inp.focus(); return; }
+    const c = { id: uid("k"), name, color: CAT_COLORS[cats.length % CAT_COLORS.length] };
+    cats.push(c);
+    adding = false;
+    if (opts.onSelect && !editing) { opts.selected = c.id; opts.onSelect(c.id); }
+    changed(); render(); paint(editing && opts.alwaysAdd);
+  }
+
+  host.addEventListener("click", (e) => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.toggle) { editing = !editing; adding = false; armed = null; paint(); return; }
+    if (t.dataset.add) { adding = true; paint(true); return; }
+    if (t.dataset.addok) { addCat(); return; }
+    if (t.dataset.sel !== undefined && opts.onSelect) { opts.selected = t.dataset.sel || null; opts.onSelect(opts.selected); paint(); return; }
+    if (t.dataset.color) { const c = catOf(t.dataset.color); c.color = CAT_COLORS[(CAT_COLORS.indexOf(c.color) + 1) % CAT_COLORS.length]; changed(); render(); paint(); return; }
+    if (t.dataset.del) {
+      const id = t.dataset.del;
+      if (armed !== id) { armed = id; paint(); return; }
+      cats = cats.filter((c) => c.id !== id);
+      notes.forEach((n) => { if (n.cat === id) n.cat = null; });
+      if (opts.selected === id) { opts.selected = null; opts.onSelect && opts.onSelect(null); }
+      armed = null; changed(); render(); paint();
+    }
+  });
+  host.addEventListener("input", (e) => {
+    const id = e.target.dataset.name; if (!id) return;
+    const v = e.target.value.trim(); if (v) { catOf(id).name = v; changed(); render(); }
+  });
+  host.addEventListener("keydown", (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === "Enter" && e.target.id === "cat-new") { e.preventDefault(); addCat(); }
+  });
+  paint();
+}
+
+function openCatManager() {
+  openSheet(`
+    <div class="sheet-top"><h2>編輯分類</h2><span class="sp"></span>
+      <button class="icon-btn" data-act="close" aria-label="關閉">${icon("close")}</button></div>
+    <div class="cat-box" id="cat-box"></div>`, (el) => {
+    catEditor(el.querySelector("#cat-box"), { selected: null, startEditing: true, alwaysAdd: true });
+    el.addEventListener("click", (e) => { if (e.target.closest('[data-act="close"]')) closeSheet(); });
+  });
+}
+
+function openNote(id, armedDelete) {
+  const n = notes.find((x) => x.id === id);
+  if (!n) { closeSheet(); return; }
+  openSheet(`
+    <div class="sheet-top">
+      <button class="icon-btn" data-act="close" aria-label="返回">${icon("back")}</button>
+      <span class="sp"></span>
+      ${armedDelete
+        ? `<button class="mini danger" data-act="del" style="height:40px;padding:0 16px">確定刪除這則筆記</button>`
+        : `<button class="icon-btn" data-act="del" aria-label="刪除">${icon("trash")}</button>`}
+      <button class="icon-btn" data-act="edit" aria-label="編輯">${icon("pencil")}</button>
+    </div>
+    <div class="c-head">${noteIcon(n.icon, n.id)}<h2>${esc(n.title)}</h2></div>
+    ${tagHTML(n.cat)}
+    ${linesHTML(n.lines)}
+    ${thumbsHTML(n.photos, 99, { zoom: true })}
+    <div class="date">${fmtDate(n.updated)}</div>`, (el) => {
+    el.addEventListener("click", (e) => {
+      const ph = e.target.closest("[data-src]");
+      if (ph) { showPhoto(ph.dataset.src); return; }
+      const row = e.target.closest(".chk[data-i]");
+      if (row) { const l = n.lines[+row.dataset.i]; l.done = !l.done; changed(); render(); openNote(id); return; }
+      const act = e.target.closest("[data-act]")?.dataset.act;
+      if (act === "close") closeSheet();
+      if (act === "edit") openEditor(n);
+      if (act === "del") {
+        if (!armedDelete) { openNote(id, true); return; }
+        notes = notes.filter((x) => x.id !== id);
+        changed(); closeSheet(); render(); toast("已刪除");
+      }
+    });
+  });
+}
+
+/* ---------- 編輯器：一行一列，勾選清單鍵切換目前這一行 ---------- */
+function openEditor(n) {
+  const draft = {
+    icon: n ? n.icon : "star",
+    cat: n ? n.cat : (filter.startsWith("cat:") ? filter.slice(4) : null),
+    title: n ? n.title : "",
+    lines: n ? n.lines.map((l) => ({ ...l })) : [T("")],
+    photos: n && n.photos ? [...n.photos] : [],
+  };
+  let focusIdx = 0, caret = 0;
+
+  openSheet(`
+    <div class="sheet-top">
+      <button class="icon-btn" data-act="close" aria-label="取消">${icon("back")}</button>
+      <span class="sp"></span>
+      <button class="btn-save" data-act="save" aria-label="完成">${icon("check")}</button>
+    </div>
+    <div class="c-head">
+      <button class="pick-btn" data-act="pick" aria-label="換圖示" aria-expanded="false"><span id="ed-icon"></span><span class="edit-dot">${icon("pencil")}</span></button>
+      <input class="ed-title" id="ed-title" placeholder="標題" value="${esc(draft.title)}">
+    </div>
+    <div class="icon-panel" id="icon-panel" hidden>
+      <span class="lbl">選個圖示</span>
+      <div class="icon-grid">${ICONS.map((k) =>
+        `<button class="icon-opt" data-icon="${k}" aria-pressed="${k === draft.icon}" aria-label="${k}">${noteIcon(k)}</button>`).join("")}</div>
+    </div>
+    <div class="cat-box" id="ed-cats"></div>
+    <div class="ed-lines" id="ed-lines"></div>
+    <div class="ed-photos" id="ed-photos"></div>
+    <div class="toolbar"><div class="toolbar-inner">
+      <button class="tool" data-tool="check" aria-label="勾選清單">${icon("checklist")}</button>
+      <span class="tool-sep"></span>
+      <button class="tool" data-tool="photo" aria-label="加照片">${icon("photo")}</button>
+    </div></div>`, (el) => {
+    const linesEl = el.querySelector("#ed-lines");
+    const checkTool = el.querySelector('[data-tool="check"]');
+    const paintIcon = () => { el.querySelector("#ed-icon").innerHTML = noteIcon(draft.icon, n ? n.id : "new"); };
+
+    catEditor(el.querySelector("#ed-cats"), { selected: draft.cat, onSelect: (id) => { draft.cat = id; } });
+
+    const autosize = (ta) => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+    const syncTool = () => checkTool.classList.toggle("on", draft.lines[focusIdx]?.type === "c");
+
+    function paintLines(focusAt) {
+      linesEl.innerHTML = draft.lines.map((l, i) => `
+        <div class="ed-line ${l.type === "c" && l.done ? "done" : ""}" data-i="${i}">
+          ${l.type === "c" ? `<button class="box" data-box="${i}" aria-label="打勾">${l.done ? icon("check") : ""}</button>` : ""}
+          <textarea rows="1" data-i="${i}" placeholder="${i === 0 && draft.lines.length === 1 ? "寫點什麼…" : ""}">${esc(l.text)}</textarea>
+        </div>`).join("");
+      linesEl.querySelectorAll("textarea").forEach(autosize);
+      if (focusAt) {
+        const ta = linesEl.querySelector(`textarea[data-i="${focusAt[0]}"]`);
+        if (ta) { ta.focus(); ta.setSelectionRange(focusAt[1], focusAt[1]); }
+      }
+      syncTool();
+    }
+
+    function paintPhotos(msg) {
+      el.querySelector("#ed-photos").innerHTML = (msg ? `<p class="busy">${msg}</p>` : "") + thumbsHTML(draft.photos, 99, { removable: true });
+    }
+
+    linesEl.addEventListener("focusin", (e) => { if (e.target.dataset.i) { focusIdx = +e.target.dataset.i; syncTool(); } });
+    linesEl.addEventListener("input", (e) => {
+      const ta = e.target; draft.lines[+ta.dataset.i].text = ta.value; autosize(ta);
+    });
+    linesEl.addEventListener("keydown", (e) => {
+      const ta = e.target; if (ta.tagName !== "TEXTAREA") return;
+      if (e.isComposing || e.keyCode === 229) return; // 注音選字中，不處理
+      const i = +ta.dataset.i, line = draft.lines[i];
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // 空的勾選項目按換行 → 變回一般文字（跟 iPhone 備忘錄一樣）
+        if (line.type === "c" && !ta.value) { line.type = "t"; paintLines([i, 0]); return; }
+        const pos = ta.selectionStart;
+        const rest = ta.value.slice(pos);
+        line.text = ta.value.slice(0, pos);
+        draft.lines.splice(i + 1, 0, line.type === "c" ? C(rest) : T(rest));
+        paintLines([i + 1, 0]);
+      } else if (e.key === "Backspace" && ta.selectionStart === 0 && ta.selectionEnd === 0) {
+        if (line.type === "c") { e.preventDefault(); line.type = "t"; line.done = false; paintLines([i, 0]); }
+        else if (i > 0) {
+          e.preventDefault();
+          const prev = draft.lines[i - 1], at = prev.text.length;
+          prev.text += line.text; draft.lines.splice(i, 1);
+          paintLines([i - 1, at]);
+        }
+      }
+    });
+    linesEl.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-box]");
+      if (b) { const l = draft.lines[+b.dataset.box]; l.done = !l.done; paintLines(); }
+    });
+
+    // 工具列按下時不要讓文字框失去焦點，鍵盤才不會收起來
+    el.querySelector(".toolbar").addEventListener("pointerdown", (e) => {
+      if (e.target.closest('[data-tool="check"]')) {
+        const ta = linesEl.querySelector(`textarea[data-i="${focusIdx}"]`);
+        if (ta) caret = ta.selectionStart;
+        e.preventDefault();
+      }
+    });
+    el.querySelector(".toolbar").addEventListener("click", (e) => {
+      const t = e.target.closest("[data-tool]")?.dataset.tool;
+      if (t === "check") {
+        const l = draft.lines[focusIdx] || draft.lines[draft.lines.length - 1];
+        l.type = l.type === "c" ? "t" : "c"; l.done = false;
+        paintLines([focusIdx, caret]);
+      }
+      if (t === "photo") {
+        document.activeElement && document.activeElement.blur();
+        paintPhotos("正在打開相簿…");
+        send({ type: "photo" });
+      }
+    });
+    onPhotoPicked = (id) => { if (id) draft.photos.push(id); paintPhotos(); };
+
+    el.querySelector("#ed-photos").addEventListener("click", (e) => {
+      const rm = e.target.closest("[data-rm]");
+      if (rm) { draft.photos.splice(+rm.dataset.rm, 1); paintPhotos(); }
+    });
+
+    el.addEventListener("click", (e) => {
+      const opt = e.target.closest("[data-icon]");
+      if (opt) {
+        draft.icon = opt.dataset.icon; paintIcon();
+        el.querySelectorAll("[data-icon]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.icon === draft.icon));
+        return;
+      }
+      const act = e.target.closest("[data-act]")?.dataset.act;
+      if (act === "pick") {
+        const p = el.querySelector("#icon-panel"); p.hidden = !p.hidden;
+        e.target.closest("[data-act]").setAttribute("aria-expanded", String(!p.hidden));
+      }
+      if (act === "close") { n ? openNote(n.id) : closeSheet(); }
+      if (act === "save") {
+        const lines = draft.lines.filter((l) => l.text.trim());
+        const title = el.querySelector("#ed-title").value.trim();
+        if (!title && !lines.length && !draft.photos.length) { closeSheet(); return; }
+        const data = { icon: draft.icon, cat: draft.cat, title: title || "未命名筆記",
+          lines, photos: draft.photos, updated: Date.now() };
+        if (n) Object.assign(n, data); else notes.unshift({ id: uid("n"), ...data });
+        changed(); closeSheet(); render();
+      }
+    });
+
+    paintIcon(); paintPhotos();
+    paintLines(n ? null : [0, 0]);
+    if (!n) el.querySelector("#ed-title").focus();
+  });
+}
+
+$("#grid").addEventListener("click", (e) => { const c = e.target.closest(".card"); if (c) openNote(c.dataset.id); });
+$("#chips").addEventListener("click", (e) => {
+  if (e.target.closest("[data-manage]")) { openCatManager(); return; }
+  const c = e.target.closest(".chip"); if (c) { filter = c.dataset.c; render(); }
+});
+$("#fab").addEventListener("click", () => openEditor(null));
+$("#scrim").addEventListener("click", (e) => { if (e.target.id === "scrim") closeSheet(); });
+$("#searchToggle").addEventListener("click", () => { const b = $("#searchBar"); b.hidden = !b.hidden; if (!b.hidden) $("#q").focus(); else { query = ""; $("#q").value = ""; render(); } });
+$("#q").addEventListener("input", (e) => { query = e.target.value.trim(); render(); });
+render();
+if (boot.openNote) openNote(boot.openNote);
+if (boot.warn) toast(boot.warn);
+</script>
+</body>
+</html>

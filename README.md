@@ -11,6 +11,7 @@
 - [🖼️ 照片沖印排版](photo-print-layout/README.md)（自訂底稿樣板，套照片匯出 4×6／5×7 沖印用圖檔）
 - [🧾 日常記帳](daily-expense-tracker/README.md)（單一 HTML 檔案的多帳本記帳工具，快速輸入金額＋備註、日期自動帶入，純本機不同步）
 - [📅 iPhone 大尺寸月曆小工具](iphone-calendar-widget/README.md)（Scriptable 腳本，旅遊記帳配色的大尺寸月曆，含農曆）
+- [📝 靈感筆記・童趣風備忘錄](scriptable-notes/README.md)（Scriptable 腳本，兩欄卡片預覽、勾選清單、分類、照片，資料存 iCloud）
 
 ## 功能
 
