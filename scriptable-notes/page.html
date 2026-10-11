@@ -191,8 +191,6 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 .icon-btn.pin-btn[aria-pressed="true"] { background: var(--sun-yellow); }
 .pin-badge { margin-left: auto; color: var(--tomato-deep); flex: none; display: grid; place-items: center; }
 .pin-badge svg.ic { width: 18px; height: 18px; stroke-width: 3.6; fill: var(--tomato-deep); }
-.del-note { align-self: center; border: 0; background: transparent; font: inherit; font-weight: 900; font-size: 15px; color: var(--tomato-deep); padding: 10px 16px; border-radius: var(--radius-pill); cursor: pointer; }
-.del-note.armed { background: var(--tomato-deep); color: var(--white); }
 </style>
 
 </head>
@@ -583,6 +581,7 @@ function openEditor(n) {
     <div class="sheet-top">
       <button class="icon-btn" data-act="close" aria-label="取消">${icon("back")}</button>
       <span class="sp"></span>
+      ${n ? `<button class="icon-btn" data-act="delnote" aria-label="刪除">${icon("trash")}</button>` : ""}
       <button class="icon-btn pin-btn" data-act="pin" aria-pressed="${draft.pinned}" aria-label="釘選">${icon("pin")}</button>
       <button class="btn-save" data-act="save" aria-label="完成">${icon("check")}</button>
     </div>
@@ -598,7 +597,6 @@ function openEditor(n) {
     <div class="cat-box" id="ed-cats"></div>
     <div class="ed-lines" id="ed-lines"></div>
     <div class="ed-photos" id="ed-photos"></div>
-    ${n ? `<button class="del-note" data-act="delnote">刪除這則筆記</button>` : ""}
     <div class="toolbar"><div class="toolbar-inner">
       <button class="tool" data-tool="check" aria-label="勾選清單">${icon("checklist")}</button>
       <span class="tool-sep"></span>
@@ -714,11 +712,12 @@ function openEditor(n) {
       if (act === "pin") {
         draft.pinned = !draft.pinned;
         e.target.closest("[data-act]").setAttribute("aria-pressed", String(draft.pinned));
-        toast(draft.pinned ? "按完成後會釘選在最前面" : "按完成後取消釘選");
+        toast(draft.pinned ? "已釘選，會一直排在最前面" : "取消釘選");
       }
       if (act === "delnote") {
         const b = e.target.closest("[data-act]");
-        if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "再按一次，確定刪除"; return; }
+        // 第一次按：垃圾桶變成紅色的「確定刪除」，再按一次才刪（跟閱讀畫面一樣）
+        if (!b.classList.contains("danger")) { b.className = "mini danger"; b.style.cssText = "height:40px;padding:0 16px"; b.textContent = "確定刪除"; return; }
         editorCommit = null; // 要刪掉的筆記不用再存
         notes = notes.filter((x) => x.id !== n.id);
         changed(); closeSheet(); render(); toast("已刪除");

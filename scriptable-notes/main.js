@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 2; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙）
+const ART_VERSION = 3; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -463,6 +463,7 @@ const SF = {
   overcast: "smoke", rain: "cloud.rain", thunderstorm: "cloud.bolt", lightning: "bolt", snow: "snowflake",
   rainbow: "rainbow", gift: "gift", idea: "lightbulb", shoppingbag: "bag", travel: "paperplane", train: "tram",
   bus: "bus", car: "car", bicycle: "bicycle", camera: "camera", location: "mappin",
+  balloon: "balloon", fork: "fork.knife", drink: "cup.and.saucer",
 };
 const hash = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 
