@@ -740,6 +740,13 @@ async function buildWidget(family) {
   h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
   h.textColor = col(K.ink);
   head.addSpacer();
+  // 這台裝置還沒在 App 內執行過（圖示、底圖、貼紙都是在 App 內畫好存在這台裝置的）：提醒一下
+  if (!logo) {
+    const hint = head.addText("到 Scriptable 按 ▶︎ 執行一次");
+    hint.font = Font.boldRoundedSystemFont(10);
+    hint.textColor = col(K.body);
+    hint.lineLimit = 1;
+  }
   const HEAD_GAP = family === "small" ? 6 : 8;
   w.addSpacer(HEAD_GAP);
 
@@ -758,6 +765,12 @@ async function buildWidget(family) {
     w.addSpacer();
     return w;
   }
+  // 小動物圖示存在 iCloud：另一台裝置可能還沒下載到本機，先下載，不然會顯示成替代圖示
+  for (const n of notes.slice(0, family === "large" ? 4 : family === "medium" ? 2 : 1)) {
+    if (!ANIMALS[n.icon]) continue;
+    try { const p = iconPath(n.icon); if (store.fileExists(p)) await ensureLocal(p); } catch (e) {}
+  }
+
   if (family === "small") {
     // 小尺寸只能整個小工具一個連結
     w.url = runURL({ note: notes[0].id });
