@@ -471,12 +471,31 @@ function addIcon(stack, n, size, onColor) {
   im.imageSize = new Size(size * 0.56, size * 0.56);
 }
 
-function addCard(parent, n, cats, maxLines, compact, width) {
+// 卡片原本的底色：清單全部打勾是淡青色，有分類用分類的顏色，沒分類依筆記輪流配色
+function cardColor(n, cats) {
+  const checks = n.lines.filter(l => l.type === "c");
+  if (checks.length && checks.every(l => l.done)) return K.teal100;
+  const cat = cats.find(c => c.id === n.cat);
+  return cat ? CAT_BG[cat.color] || K.yellow100 : CHIP_BG[hash(n.id) % CHIP_BG.length];
+}
+
+// 同一個小工具裡的卡片都用不同底色：跟前面重複時，改用還沒用過的顏色（淡青留給「全部打勾」）
+function distinctColors(list, cats) {
+  const used = new Set();
+  return list.map(n => {
+    let c = cardColor(n, cats);
+    if (used.has(c)) c = CHIP_BG.find(x => !used.has(x) && x !== K.teal100) || c;
+    used.add(c);
+    return c;
+  });
+}
+
+function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
   const checks = n.lines.filter(l => l.type === "c");
   const allDone = checks.length && checks.every(l => l.done);
   const cat = cats.find(c => c.id === n.cat);
   // 卡片用分類的顏色（沒分類就依筆記輪流配色）；清單全部打勾時變淡青色
-  const bg = allDone ? K.teal100 : cat ? CAT_BG[cat.color] || K.yellow100 : CHIP_BG[hash(n.id) % CHIP_BG.length];
+  const bg = bgColor || cardColor(n, cats);
   const card = parent.addStack();
   card.layoutVertically();
   // 寬度寫死，左右邊距才會一樣（高度 0 = 依內容）
@@ -615,6 +634,7 @@ async function buildWidget(family) {
   }
   // 卡片寬度：小工具寬度扣掉左右各 12 的邊距，兩張之間隔 8；只有一則筆記時佔滿整排
   const inner = widgetSizes()[family][0] - 24, GAP = 8;
+  const colors = distinctColors(notes.slice(0, family === "large" ? 4 : 2), data.cats);
   const rows = family === "large" ? 2 : 1;
   const grid = w.addStack();
   grid.layoutVertically();
@@ -625,7 +645,8 @@ async function buildWidget(family) {
     const row = grid.addStack();
     row.spacing = GAP;
     const cw = notes.length === 1 ? inner : (inner - GAP) / 2;
-    for (const n of pair) addCard(row, n, data.cats, family === "large" ? 5 : 2, false, cw); // 中尺寸圖示變大，內容少一行才放得下
+    // 中尺寸圖示變大，內容少一行才放得下
+    pair.forEach((n, i) => addCard(row, n, data.cats, family === "large" ? 5 : 2, false, cw, colors[r * 2 + i]));
     if (pair.length === 1 && notes.length > 1) row.addSpacer(); // 落單的卡片靠左，保持半寬
   }
   return w;
