@@ -13,9 +13,9 @@ tracker = (HERE.parent / "daily-expense-tracker" / "index.html").read_text(encod
 icons = re.search(r"var ICONS = (\[.*?\]);", tracker).group(1)
 svgs = re.search(r"var ICON_SVGS = (\{.*?\n  \});", tracker, re.S).group(1)
 
-# 圖示清單多一個氣球（放在禮物後面）；貼紙樣式在 stickers.js
-icons = icons.replace('"gift",', '"gift","balloon",')
-assert '"balloon"' in icons
+# 圖示清單多了氣球、叉子、飲料杯（放在禮物後面）；貼紙樣式在 stickers.js
+icons = icons.replace('"gift",', '"gift","balloon","fork","drink",')
+assert '"drink"' in icons
 stickers = (HERE / "stickers.js").read_text(encoding="utf-8").strip()
 
 def fill(src):
