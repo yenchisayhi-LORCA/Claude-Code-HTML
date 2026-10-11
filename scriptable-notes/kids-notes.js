@@ -651,15 +651,7 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
   t.lineLimit = 1;
   head.addSpacer();
 
-  if (cat && !compact) {
-    const tag = card.addStack();
-    tag.backgroundColor = col(K.white);
-    tag.cornerRadius = 7;
-    tag.setPadding(1, 6, 1, 6);
-    const tt = tag.addText(cat.name);
-    tt.font = Font.heavyRoundedSystemFont(9);
-    tt.textColor = col(K.ink);
-  }
+  // 主畫面的卡片不顯示分類標籤（卡片底色已經看得出來）
 
   for (const l of n.lines.filter(l => l.text.trim()).slice(0, maxLines)) {
     const row = card.addStack();
