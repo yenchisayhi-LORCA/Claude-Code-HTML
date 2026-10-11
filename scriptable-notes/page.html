@@ -12,6 +12,7 @@
   --lake-teal: #4FD2C2; --bubble-pink: #FF9EC4; --cream-paper: #FFFCEF; --white: #FFFFFF; --ink-navy: #262261;
   --ios-orange: #FF9500; --phone-green: #6BD861; --orange-100: #FFE2BA; --green-100: #D5F5D0;
   --yellow-100: #FFF0AF; --blue-100: #CFDDF8; --pink-100: #FBD3D0; --teal-100: #C9F0E9;
+  --grape: #8E6FD8; --purple-100: #E3DAFA; --rose: #F2649E; --rose-100: #FFD8E8;
   --text-body: #5A5788; --surface-disabled: #F0EEE4; --teal-text: #3C7D74; --teal-check: #17705F;
   --font-display: Gluten, "Noto Sans TC", sans-serif;
   --font-sans: "Noto Sans TC", -apple-system, "PingFang TC", system-ui, sans-serif;
@@ -136,7 +137,7 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 @media (prefers-reduced-motion: reduce) { .card, .fab { transition: none; } }
 /* categories */
 .tag { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-pill); padding: 3px 10px; font-size: 12px; font-weight: 900; letter-spacing: 1px; color: var(--ink-navy); border: 0; font-family: inherit; }
-.t-yellow { background: var(--yellow-100); } .t-blue { background: var(--blue-100); } .t-pink { background: var(--pink-100); } .t-teal { background: var(--teal-100); } .t-orange { background: var(--orange-100); } .t-green { background: var(--green-100); }
+.t-yellow { background: var(--yellow-100); } .t-blue { background: var(--blue-100); } .t-pink { background: var(--pink-100); } .t-teal { background: var(--teal-100); } .t-orange { background: var(--orange-100); } .t-green { background: var(--green-100); } .t-purple { background: var(--purple-100); } .t-rose { background: var(--rose-100); }
 .card.done-all .tag { background: var(--white); }
 .cat-box { display: flex; flex-direction: column; gap: 10px; }
 .lbl-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -151,6 +152,14 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 .mini { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--white); color: var(--ink-navy); display: grid; place-items: center; cursor: pointer; padding: 0; flex: none; font: inherit; }
 .mini svg.ic { width: 16px; height: 16px; stroke-width: 4; }
 .mini.swatch { border: 2.5px solid var(--ink-navy); }
+.cat-row.editing { flex-direction: column; align-items: flex-start; }
+.cat-item { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: 100%; }
+.palette { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 2px; }
+.palette .dot { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.palette .dot[aria-pressed="true"] { border-color: var(--ink-navy); }
+.palette .dot svg.ic { width: 18px; height: 18px; stroke-width: 5; }
+.add-box { display: flex; flex-direction: column; gap: 8px; }
+.new-dot { width: 20px; height: 20px; border-radius: 50%; flex: none; }
 .mini.danger { width: auto; padding: 0 10px; border-radius: var(--radius-pill); background: var(--tomato-deep); color: var(--white); font-size: 13px; font-weight: 900; }
 .add-row { display: flex; gap: 8px; align-items: center; }
 .add-row input { flex: 1; min-width: 0; border: 0; border-radius: var(--radius-input); background: var(--white); padding: 10px 14px; font: inherit; font-size: 16px; color: var(--ink-navy); }
@@ -169,7 +178,7 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 
 /* Scriptable 版：避開瀏海、提示訊息 */
 /* Scriptable 在畫面最上面疊了自己的「Close」和分享鍵，內容和面板都往下讓出這一條 */
-:root { --top-bar: max(100px, calc(env(safe-area-inset-top, 0px) + 56px)); }
+:root { --top-bar: max(58px, calc(env(safe-area-inset-top, 0px) + 48px)); }
 .app { padding-top: var(--top-bar); }
 .scrim { padding-top: var(--top-bar); }
 .sheet { max-height: 100%; }
@@ -238,9 +247,10 @@ const boot = BOOT || { cats: [], notes: [], thumbs: {}, iconImages: {} };
 const ICON_IMAGES = boot.iconImages || {};
 const THUMBS = boot.thumbs || {};
 
-const CHIP_BG = ["var(--yellow-100)", "var(--blue-100)", "var(--orange-100)", "var(--pink-100)", "var(--green-100)", "var(--teal-100)"];
-const CAT_COLORS = ["yellow", "orange", "green", "blue", "pink", "teal"];
-const CAT_STRONG = { yellow: "sun-yellow", orange: "ios-orange", green: "phone-green", blue: "block-blue", pink: "bubble-pink", teal: "lake-teal" };
+const CHIP_BG = ["var(--yellow-100)", "var(--blue-100)", "var(--orange-100)", "var(--pink-100)", "var(--green-100)", "var(--teal-100)", "var(--purple-100)", "var(--rose-100)"];
+const CAT_COLORS = ["yellow", "orange", "green", "blue", "pink", "teal", "purple", "rose"];
+const COLOR_NAMES = { yellow: "黃", orange: "橘", green: "綠", blue: "藍", pink: "粉", teal: "青", purple: "紫", rose: "桃紅" };
+const CAT_STRONG = { yellow: "sun-yellow", orange: "ios-orange", green: "phone-green", blue: "block-blue", pink: "bubble-pink", teal: "lake-teal", purple: "grape", rose: "rose" };
 
 // 筆記內容是一行一行：c = 勾選項目，t = 文字
 const C = (s, d) => ({ type: "c", text: s, done: !!d });
@@ -399,11 +409,29 @@ window.__photoAdded = (res) => {
 };
 
 /* ---------- 分類：選擇、新增、改名、換顏色、刪除 ---------- */
+// 還沒被用過（或用最少次）的顏色，新分類預設用它，儘量不重複
+function freshColor() {
+  const used = {};
+  cats.forEach((c) => { used[c.color] = (used[c.color] || 0) + 1; });
+  return CAT_COLORS.reduce((best, c) => ((used[c] || 0) < (used[best] || 0) ? c : best), CAT_COLORS[0]);
+}
+
+// 一排 8 個色點，點一下選顏色；目前的顏色有外框和勾
+function paletteHTML(current, attr) {
+  return `<div class="palette" role="group" aria-label="選顏色">${CAT_COLORS.map((c) => {
+    const taken = cats.filter((x) => x.color === c).length;
+    return `<button class="dot" ${attr}="${c}" aria-pressed="${c === current}" aria-label="${COLOR_NAMES[c]}${taken ? `（已有 ${taken} 個分類）` : ""}"
+      style="background:var(--${CAT_STRONG[c]});color:var(--${["blue", "purple", "rose"].includes(c) ? "white" : "ink-navy"})">${c === current ? icon("check") : ""}</button>`;
+  }).join("")}</div>`;
+}
+
 function catEditor(host, opts) {
   // opts.selected: 目前選的分類 id（null = 不分類）；opts.onSelect 有給才可以選
   let editing = !!opts.startEditing;
   let adding = false;
-  let armed = null; // 按過一次刪除、等第二次確認的分類 id
+  let armed = null;   // 按過一次刪除、等第二次確認的分類 id
+  let picking = null; // 正在選顏色的分類 id
+  let newName = "", newColor = freshColor();
 
   function paint(focusAdd) {
     let chips;
@@ -413,22 +441,28 @@ function catEditor(host, opts) {
         .concat(adding ? [] : [`<button class="tag add" data-add="1">＋ 新增分類</button>`]).join("");
     } else {
       chips = cats.map((c) => `
-        <span class="cat-edit t-${c.color}">
-          <input value="${esc(c.name)}" data-name="${esc(c.id)}" aria-label="分類名稱" maxlength="10">
-          <button class="mini swatch" style="background:var(--${CAT_STRONG[c.color]})" data-color="${esc(c.id)}" aria-label="換顏色"></button>
-          ${armed === c.id
-            ? `<button class="mini danger" data-del="${esc(c.id)}">確定刪除</button>`
-            : `<button class="mini" data-del="${esc(c.id)}" aria-label="刪除 ${esc(c.name)}">${icon("close")}</button>`}
-        </span>`).join("") || `<span class="lbl">還沒有分類</span>`;
+        <div class="cat-item">
+          <span class="cat-edit t-${c.color}">
+            <input value="${esc(c.name)}" data-name="${esc(c.id)}" aria-label="分類名稱" maxlength="10">
+            <button class="mini swatch" style="background:var(--${CAT_STRONG[c.color]})" data-pick="${esc(c.id)}" aria-label="選顏色" aria-expanded="${picking === c.id}"></button>
+            ${armed === c.id
+              ? `<button class="mini danger" data-del="${esc(c.id)}">確定刪除</button>`
+              : `<button class="mini" data-del="${esc(c.id)}" aria-label="刪除 ${esc(c.name)}">${icon("close")}</button>`}
+          </span>
+          ${picking === c.id ? paletteHTML(c.color, "data-setcolor") : ""}
+        </div>`).join("") || `<span class="lbl">還沒有分類</span>`;
     }
     host.innerHTML = `
       <div class="lbl-row"><span class="lbl">分類</span>
         <button class="link-btn" data-toggle="1">${editing ? "完成" : "編輯"}</button></div>
-      <div class="cat-row">${chips}</div>
-      ${adding || (editing && opts.alwaysAdd) ? `<div class="add-row">
-        <input id="cat-new" placeholder="新分類名稱，例如：日本" maxlength="10">
-        <button class="btn-sm" data-addok="1">加入</button></div>` : ""}
-      ${editing ? `<span class="lbl">點色塊換顏色（黃、橘、綠、藍、粉、青），按 × 刪除；刪掉的分類，裡面的筆記會變成不分類。</span>` : ""}`;
+      <div class="cat-row ${editing ? "editing" : ""}">${chips}</div>
+      ${adding || (editing && opts.alwaysAdd) ? `<div class="add-box">
+        <div class="add-row">
+          <span class="new-dot" style="background:var(--${CAT_STRONG[newColor]})"></span>
+          <input id="cat-new" placeholder="新分類名稱，例如：日本" maxlength="10" value="${esc(newName)}">
+          <button class="btn-sm" data-addok="1">加入</button></div>
+        ${paletteHTML(newColor, "data-newcolor")}</div>` : ""}
+      ${editing ? `<span class="lbl">點名字旁邊的色塊選顏色，按 × 刪除；刪掉的分類，裡面的筆記會變成不分類。</span>` : ""}`;
     if (focusAdd) host.querySelector("#cat-new")?.focus();
   }
 
@@ -436,23 +470,25 @@ function catEditor(host, opts) {
     const inp = host.querySelector("#cat-new");
     const name = inp && inp.value.trim();
     if (!name) { inp && inp.focus(); return; }
-    const c = { id: uid("k"), name, color: CAT_COLORS[cats.length % CAT_COLORS.length] };
+    const c = { id: uid("k"), name, color: newColor };
     cats.push(c);
-    adding = false;
+    adding = false; newName = ""; newColor = freshColor();
     if (opts.onSelect && !editing) { opts.selected = c.id; opts.onSelect(c.id); }
     changed(); render(); paint(editing && opts.alwaysAdd);
   }
 
   host.addEventListener("click", (e) => {
     const t = e.target.closest("button"); if (!t) return;
-    if (t.dataset.toggle) { editing = !editing; adding = false; armed = null; paint(); return; }
-    if (t.dataset.add) { adding = true; paint(true); return; }
+    if (t.dataset.toggle) { editing = !editing; adding = false; armed = null; picking = null; paint(); return; }
+    if (t.dataset.add) { adding = true; newColor = freshColor(); paint(true); return; }
     if (t.dataset.addok) { addCat(); return; }
+    if (t.dataset.newcolor) { newColor = t.dataset.newcolor; paint(); host.querySelector("#cat-new")?.focus(); return; }
     if (t.dataset.sel !== undefined && opts.onSelect) { opts.selected = t.dataset.sel || null; opts.onSelect(opts.selected); paint(); return; }
-    if (t.dataset.color) { const c = catOf(t.dataset.color); c.color = CAT_COLORS[(CAT_COLORS.indexOf(c.color) + 1) % CAT_COLORS.length]; changed(); render(); paint(); return; }
+    if (t.dataset.pick) { picking = picking === t.dataset.pick ? null : t.dataset.pick; armed = null; paint(); return; }
+    if (t.dataset.setcolor) { catOf(picking).color = t.dataset.setcolor; picking = null; changed(); render(); paint(); return; }
     if (t.dataset.del) {
       const id = t.dataset.del;
-      if (armed !== id) { armed = id; paint(); return; }
+      if (armed !== id) { armed = id; picking = null; paint(); return; }
       cats = cats.filter((c) => c.id !== id);
       notes.forEach((n) => { if (n.cat === id) n.cat = null; });
       if (opts.selected === id) { opts.selected = null; opts.onSelect && opts.onSelect(null); }
@@ -460,6 +496,7 @@ function catEditor(host, opts) {
     }
   });
   host.addEventListener("input", (e) => {
+    if (e.target.id === "cat-new") { newName = e.target.value; return; }
     const id = e.target.dataset.name; if (!id) return;
     const v = e.target.value.trim(); if (v) { catOf(id).name = v; changed(); render(); }
   });

@@ -6,9 +6,10 @@ const K = {
   cream: "#FFFCEF", white: "#FFFFFF", ink: "#262261", body: "#5A5788", muted: "#8B88B2",
   tealText: "#3C7D74", tealCheck: "#17705F",
   yellow100: "#FFF0AF", blue100: "#CFDDF8", orange100: "#FFE2BA", pink100: "#FBD3D0", green100: "#D5F5D0", teal100: "#C9F0E9",
+  purple100: "#E3DAFA", rose100: "#FFD8E8",
 };
-const CAT_BG = { yellow: K.yellow100, orange: K.orange100, green: K.green100, blue: K.blue100, pink: K.pink100, teal: K.teal100 };
-const CHIP_BG = [K.yellow100, K.blue100, K.orange100, K.pink100, K.green100, K.teal100];
+const CAT_BG = { yellow: K.yellow100, orange: K.orange100, green: K.green100, blue: K.blue100, pink: K.pink100, teal: K.teal100, purple: K.purple100, rose: K.rose100 };
+const CHIP_BG = [K.yellow100, K.blue100, K.orange100, K.pink100, K.green100, K.teal100, K.purple100, K.rose100];
 const col = (hex, a = 1) => new Color(hex, a);
 
 // ---- 存檔位置
