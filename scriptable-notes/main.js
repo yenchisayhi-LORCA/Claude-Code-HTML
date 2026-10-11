@@ -38,7 +38,8 @@ function cloudPlaceholder(path) {
 async function fetchFromCloud(path) {
   try {
     if (!store.fileExists(path) && !store.fileExists(cloudPlaceholder(path))) return false;
-    try { await store.downloadFileFromiCloud(path); } catch (e) {}
+    // 最多等 3 秒：iCloud 卡住時不要讓存檔一直等，先用手上這份
+    try { await Promise.race([store.downloadFileFromiCloud(path), new Promise(r => Timer.schedule(3000, false, r))]); } catch (e) {}
     return store.fileExists(path);
   } catch (e) { return false; }
 }
@@ -538,7 +539,8 @@ async function openApp(openNoteId, filter) {
   };
   wv.shouldAllowRequest = req => {
     if ((req.url || "").startsWith("kidsnotes://")) {
-      queue = queue.then(drain).catch(e => console.error(e));
+      // 存檔出錯時在畫面上顯示原因，不要默默失敗
+      queue = queue.then(drain).catch(e => wv.evaluateJavaScript(`toast(${js("存檔失敗：" + e)}); 0;`).catch(() => {}));
       return false;
     }
     return true;
