@@ -298,7 +298,11 @@ function changed() {
   }, 300);
 }
 // 關掉畫面前 Scriptable 會直接呼叫這個，確保最後的改動有存到
-window.__finalState = () => JSON.stringify({ cats, notes });
+window.__finalState = () => { commitEditor(); return JSON.stringify({ cats, notes }); };
+
+// 編輯中的筆記：不管是按完成、按返回、點面板外面，還是直接按 Scriptable 的 Close，都會先存起來（跟 iPhone 備忘錄一樣）
+let editorCommit = null;
+function commitEditor() { const c = editorCommit; editorCommit = null; if (c) c(); }
 
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.hidden = false;
@@ -387,13 +391,14 @@ function renderGrid() {
 function render() { renderChips(); renderGrid(); }
 
 function openSheet(html, onMount) {
+  commitEditor();
   const s = $("#scrim");
   s.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
   s.hidden = false;
   onMount && onMount(s.firstElementChild);
 }
 let onPhotoPicked = null; // 編輯器打開時，Scriptable 選好的照片交給它
-function closeSheet() { $("#scrim").hidden = true; $("#scrim").innerHTML = ""; onPhotoPicked = null; }
+function closeSheet() { commitEditor(); $("#scrim").hidden = true; $("#scrim").innerHTML = ""; onPhotoPicked = null; }
 
 /* ---------- 照片放大：先顯示縮圖，Scriptable 送來原圖再換掉 ---------- */
 let fullWanted = null;
@@ -705,7 +710,7 @@ function openEditor(n) {
         const p = el.querySelector("#icon-panel"); p.hidden = !p.hidden;
         e.target.closest("[data-act]").setAttribute("aria-expanded", String(!p.hidden));
       }
-      if (act === "close") { n ? openNote(n.id) : closeSheet(); }
+      if (act === "close") { n ? openNote(n.id) : closeSheet(); } // 兩種都會先存檔
       if (act === "pin") {
         draft.pinned = !draft.pinned;
         e.target.closest("[data-act]").setAttribute("aria-pressed", String(draft.pinned));
@@ -714,20 +719,26 @@ function openEditor(n) {
       if (act === "delnote") {
         const b = e.target.closest("[data-act]");
         if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "再按一次，確定刪除"; return; }
+        editorCommit = null; // 要刪掉的筆記不用再存
         notes = notes.filter((x) => x.id !== n.id);
         changed(); closeSheet(); render(); toast("已刪除");
         return;
       }
-      if (act === "save") {
-        const lines = draft.lines.filter((l) => l.text.trim());
-        const title = el.querySelector("#ed-title").value.trim();
-        if (!title && !lines.length && !draft.photos.length) { closeSheet(); return; }
-        const data = { icon: draft.icon, cat: draft.cat, title: title || "未命名筆記",
-          lines, photos: draft.photos, pinned: draft.pinned, updated: Date.now() };
-        if (n) Object.assign(n, data); else notes.unshift({ id: uid("n"), ...data });
-        changed(); closeSheet(); render();
-      }
+      if (act === "save") closeSheet(); // closeSheet 會存檔
     });
+
+    // 存檔：內容跟打開時一樣就不動（不改修改時間）；新筆記什麼都沒寫就不建立
+    const pick = (o) => JSON.stringify([o.icon, o.cat || null, o.title, o.lines.filter((l) => l.text.trim()), o.photos || [], !!o.pinned]);
+    const before = n ? pick(n) : null;
+    editorCommit = () => {
+      const lines = draft.lines.filter((l) => l.text.trim());
+      const title = el.querySelector("#ed-title").value.trim();
+      if (!title && !lines.length && !draft.photos.length) return;
+      const data = { icon: draft.icon, cat: draft.cat, title: title || "未命名筆記", lines, photos: draft.photos, pinned: draft.pinned };
+      if (n && pick(data) === before) return;
+      if (n) Object.assign(n, data, { updated: Date.now() }); else notes.unshift({ id: uid("n"), ...data, updated: Date.now() });
+      changed(); render();
+    };
 
     paintIcon(); paintPhotos();
     paintLines(n ? null : [0, 0]);
