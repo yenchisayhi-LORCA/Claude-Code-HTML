@@ -602,7 +602,7 @@ async function buildWidget(family) {
 
   // 小工具的 Parameter（長按 →「編輯小工具」）：填分類名稱只顯示那個分類，填「未完成」只顯示還沒打勾完的清單
   const param = (args.widgetParameter || "").trim();
-  let title = "筆記", filterKey = null, missing = false;
+  let title = "", filterKey = null, missing = false; // 顯示全部時不放標題，只有「彥」圖示
   if (param === "未完成") {
     notes = notes.filter(n => n.lines.some(l => l.type === "c" && !l.done));
     title = "未完成"; filterKey = "未完成";
@@ -625,10 +625,12 @@ async function buildWidget(family) {
     const li = head.addImage(logo);
     li.imageSize = new Size(LOGO, LOGO);
   }
-  const h = head.addText(title);
-  h.lineLimit = 1;
-  h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
-  h.textColor = col(K.ink);
+  if (title) { // 有設定分類時才顯示分類名稱
+    const h = head.addText(title);
+    h.lineLimit = 1;
+    h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
+    h.textColor = col(K.ink);
+  }
   head.addSpacer();
   // 這台裝置還沒在 App 內執行過（圖示、底圖、貼紙都是在 App 內畫好存在這台裝置的）：提醒一下
   if (!logo) {
