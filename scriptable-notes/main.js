@@ -495,6 +495,13 @@ function addIcon(stack, n, size, onColor) {
   im.imageSize = new Size(size * 0.56, size * 0.56);
 }
 
+// 點小工具時執行這個腳本的網址，例如 scriptable:///run?scriptName=My%20note&note=n123
+// （腳本名稱有空白時，直接在 URLScheme.forRunningScript() 後面接 ? 會失效，只會打開 Scriptable）
+function runURL(params) {
+  const q = { scriptName: Script.name(), ...params };
+  return "scriptable:///run?" + Object.keys(q).map(k => k + "=" + encodeURIComponent(q[k])).join("&");
+}
+
 // 卡片原本的底色：清單全部打勾是淡青色，有分類用分類的顏色，沒分類依筆記輪流配色
 function cardColor(n, cats) {
   const checks = n.lines.filter(l => l.type === "c");
@@ -527,7 +534,7 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
   card.cornerRadius = 16;
   card.setPadding(9, 10, 8, 10);
   card.spacing = 4;
-  card.url = URLScheme.forRunningScript() + "?note=" + encodeURIComponent(n.id);
+  card.url = runURL({ note: n.id });
 
   const head = card.addStack();
   head.centerAlignContent();
@@ -608,7 +615,7 @@ async function buildWidget(family) {
     else { notes = []; title = param; missing = true; }
   }
   // 點卡片以外的地方：打開筆記，並篩選成這個小工具的分類
-  if (filterKey) w.url = URLScheme.forRunningScript() + "?filter=" + encodeURIComponent(filterKey);
+  w.url = runURL(filterKey ? { filter: filterKey } : {});
 
   // 標題列：左上角「彥」圖示 + 筆記（或分類名稱）
   const head = w.addStack();
@@ -636,7 +643,7 @@ async function buildWidget(family) {
   }
   if (family === "small") {
     // 小尺寸只能整個小工具一個連結
-    w.url = URLScheme.forRunningScript() + "?note=" + encodeURIComponent(notes[0].id);
+    w.url = runURL({ note: notes[0].id });
     addCard(w, notes[0], data.cats, 3, true, widgetSizes().small[0] - 24);
     return w;
   }

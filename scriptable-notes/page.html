@@ -736,7 +736,8 @@ if (boot.filter) filter = boot.filter;
 // 左上角換成跟月曆一樣的「彥」圖示
 if (boot.logo) { const lg = $("#logo"); lg.classList.add("img"); lg.innerHTML = `<img src="${boot.logo}" alt="">`; }
 render();
-if (boot.openNote) openNote(boot.openNote);
+// 從主畫面小工具點卡片進來：直接打開那則筆記的編輯畫面
+if (boot.openNote) { const n = notes.find((x) => x.id === boot.openNote); if (n) openEditor(n); }
 if (boot.warn) toast(boot.warn);
 </script>
 </body>
