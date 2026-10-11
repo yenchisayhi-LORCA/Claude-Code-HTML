@@ -34,12 +34,13 @@ function cloudPlaceholder(path) {
   const name = path.split("/").pop();
   return store.joinPath(path.slice(0, path.length - name.length), "." + name + ".icloud");
 }
+// 每次都叫 iCloud 拿最新版：另一台裝置改過時，這台已經下載過的舊檔不會自己更新（沒網路時就用手上這份）
 async function fetchFromCloud(path) {
   try {
-    if (store.fileExists(path)) { await ensureLocal(path); return true; }
-    if (store.fileExists(cloudPlaceholder(path))) { await store.downloadFileFromiCloud(path); return store.fileExists(path); }
-  } catch (e) {}
-  return false;
+    if (!store.fileExists(path) && !store.fileExists(cloudPlaceholder(path))) return false;
+    try { await store.downloadFileFromiCloud(path); } catch (e) {}
+    return store.fileExists(path);
+  } catch (e) { return false; }
 }
 
 // 第一次使用時的分類和一則說明筆記
@@ -78,7 +79,7 @@ async function loadData() {
   }
   try {
     const d = JSON.parse(store.readString(DATA_PATH));
-    return { cats: d.cats || [], notes: d.notes || [], settings: d.settings || {} };
+    return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes || [], deleted: d.deleted || {}, settings: d.settings || {} };
   } catch (e) {
     // 檔案壞掉時改讀備份，不要把原本的蓋掉
     if (store.fileExists(BACKUP_PATH)) {
@@ -89,14 +90,51 @@ async function loadData() {
   }
 }
 
-function saveData(d) {
+// 兩台裝置都可能改到同一份筆記檔：存檔前先拿 iCloud 上最新的版本，一則一則比，留下比較晚改的那個
+// modified：這則筆記最後改動的時間（打勾、釘選也算）；deleted：刪掉的筆記 id 和時間，免得另一台的舊資料又把它加回來
+const stamp = n => n.modified || n.updated || 0;
+// view：筆記畫面上一次的內容（只跟它比，才分得出是這台改的，還是別台後來改的）
+function markChanges(view, next) {
+  const now = Date.now(), plain = n => JSON.stringify({ ...n, modified: undefined });
+  const old = new Map((view.notes || []).map(n => [n.id, plain(n)]));
+  for (const n of next.notes) if (old.get(n.id) !== plain(n)) n.modified = now;
+  const ids = new Set(next.notes.map(n => n.id));
+  next.deleted = {};
+  for (const id of old.keys()) if (!ids.has(id)) next.deleted[id] = now;
+  // 分類沒改就不要蓋掉別台改過的分類
+  next.catsModified = JSON.stringify(view.cats) !== JSON.stringify(next.cats) ? now : 0;
+  return next;
+}
+function mergeData(mine, disk) {
+  if (!disk) return mine;
+  const deleted = { ...(disk.deleted || {}) };
+  for (const [id, t] of Object.entries(mine.deleted || {})) deleted[id] = Math.max(t, deleted[id] || 0);
+  const byId = new Map();
+  for (const n of disk.notes || []) byId.set(n.id, n);
+  for (const n of mine.notes) { const o = byId.get(n.id); if (!o || stamp(n) >= stamp(o)) byId.set(n.id, n); }
+  // 刪除紀錄留 60 天就夠了
+  for (const id in deleted) if (Date.now() - deleted[id] > 60 * 86400000) delete deleted[id];
+  const mineCats = (mine.catsModified || 0) >= (disk.catsModified || 0);
+  return {
+    cats: mineCats ? mine.cats : disk.cats || [], catsModified: Math.max(mine.catsModified || 0, disk.catsModified || 0),
+    notes: [...byId.values()].filter(n => !(deleted[n.id] >= stamp(n))), deleted,
+    settings: { ...(disk.settings || {}), ...(mine.settings || {}) },
+  };
+}
+
+// 存檔：合併 iCloud 上最新的內容後寫回去，回傳合併後的資料
+async function saveData(d) {
   mkdir(DIR);
+  let disk = null;
+  if (await fetchFromCloud(DATA_PATH)) { try { disk = JSON.parse(store.readString(DATA_PATH)); } catch (e) {} }
+  d = mergeData(d, disk);
   // 每天留一份備份（notes-backup.json），萬一存壞了還有前一天的
   if (store.fileExists(DATA_PATH)) {
     const old = store.fileExists(BACKUP_PATH) ? store.modificationDate(BACKUP_PATH) : null;
     if (!old || Date.now() - old.getTime() > 86400000) store.writeString(BACKUP_PATH, store.readString(DATA_PATH));
   }
-  store.writeString(DATA_PATH, JSON.stringify({ version: 1, cats: d.cats, notes: d.notes, settings: d.settings || {} }));
+  store.writeString(DATA_PATH, JSON.stringify({ version: 2, cats: d.cats, catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {} }));
+  return d;
 }
 
 // ---- 圖片縮放：長邊縮到 max 像素
@@ -451,7 +489,7 @@ async function openApp(openNoteId, filter) {
     const a = new Alert(); a.title = "讀不到筆記"; a.message = String(e); a.addAction("好"); await a.present();
     return;
   }
-  if (!store.fileExists(DATA_PATH)) saveData(data);
+  if (!store.fileExists(DATA_PATH)) data = await saveData(data);
   const iconFailed = await ensureAnimalIcons();
   const artFailed = await ensureArt(await logoText(data.settings));
   const thumbs = {};
@@ -466,15 +504,21 @@ async function openApp(openNoteId, filter) {
   };
   const html = pageHTML().replace("/*BOOT*/null", () => js(boot));
 
+  let view = JSON.parse(JSON.stringify({ cats: data.cats, notes: data.notes })); // 筆記畫面目前的內容
+  const fromPage = (cats, notes) => {
+    const next = markChanges(view, { cats, notes, settings: data.settings });
+    view = JSON.parse(JSON.stringify({ cats, notes: next.notes }));
+    return next;
+  };
   const wv = new WebView();
   let queue = Promise.resolve();
   const run = async cmds => {
     for (const c of cmds) {
-      if (c.type === "save") { data = { cats: c.cats, notes: c.notes, settings: data.settings }; saveData(data); }
+      if (c.type === "save") data = await saveData(fromPage(c.cats, c.notes));
       else if (c.type === "logo") {
         // 改左上角的字：存起來，重畫圖示，再把新圖示交給畫面
         data.settings = { ...(data.settings || {}), logoText: logoChars(c.text).join("") };
-        saveData(data);
+        data = await saveData(data);
         const err = await ensureArt(data.settings.logoText);
         await wv.evaluateJavaScript(`window.__logoUpdated(${js({ logos: logoDataURLs(), error: err })}); 0;`);
       }
@@ -506,7 +550,7 @@ async function openApp(openNoteId, filter) {
   try {
     await queue;
     const raw = await wv.evaluateJavaScript("window.__finalState ? window.__finalState() : ''");
-    if (raw) { data = { ...JSON.parse(raw), settings: data.settings }; saveData(data); }
+    if (raw) { const f = JSON.parse(raw); data = await saveData(fromPage(f.cats, f.notes)); }
   } catch (e) { console.error(e); }
   try { cleanupPhotos(data); } catch (e) {}
 }
