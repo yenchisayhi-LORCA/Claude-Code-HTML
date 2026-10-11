@@ -1,4 +1,4 @@
-// 靈感筆記・童趣風備忘錄（Scriptable）
+// 筆記・童趣風備忘錄（Scriptable）
 // 在 App 內執行：打開筆記畫面（兩欄卡片預覽、勾選清單、分類、照片）
 // 放在主畫面當小工具：顯示最近的筆記，點一下打開那則筆記
 // 筆記、分類、照片都存在 iCloud 雲碟的 Scriptable/kids-notes/（沒開 iCloud 時存在本機），同一個 Apple 帳號的裝置共用
@@ -40,13 +40,14 @@ function starterData() {
       { id: "k5", name: "靈感", color: "yellow" },
     ],
     notes: [{
-      id: "n-welcome", icon: "bee", cat: "k5", title: "歡迎使用靈感筆記", photos: [], updated: now,
+      id: "n-welcome", icon: "bee", cat: "k5", title: "歡迎使用筆記", photos: [], updated: now,
       lines: [
         { type: "t", text: "按下面紅色的「寫筆記」新增一則。" },
         { type: "c", text: "寫筆記時按工具列左邊的鍵，這一行就變成勾選項目", done: true },
         { type: "c", text: "按工具列右邊的鍵，可以從相簿加照片", done: false },
         { type: "c", text: "點左上角的圖示，換成日常記帳的小動物", done: false },
         { type: "c", text: "篩選列最後的「編輯分類」可以新增、改名、換顏色", done: false },
+        { type: "c", text: "要刪除筆記：點卡片打開，按右上角的垃圾桶", done: false },
       ],
     }],
   };
@@ -383,7 +384,7 @@ async function buildWidget(family) {
 
   const head = w.addStack();
   head.centerAlignContent();
-  const h = head.addText("靈感筆記");
+  const h = head.addText("筆記");
   h.font = Font.heavyRoundedSystemFont(family === "small" ? 14 : 16);
   h.textColor = col(K.ink);
   head.addSpacer();

@@ -168,9 +168,15 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 .busy { font-size: 13px; font-weight: 700; color: var(--text-body); }
 
 /* Scriptable 版：避開瀏海、提示訊息 */
-.app { padding-top: max(18px, env(safe-area-inset-top, 0px)); }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(16px + env(safe-area-inset-top, 0px)); z-index: 30; background: var(--ink-navy); color: var(--white); border-radius: var(--radius-pill); padding: 10px 18px; font-weight: 900; font-size: 14px; max-width: calc(100% - 32px); }
-.sheet { padding-top: max(22px, calc(env(safe-area-inset-top, 0px) * .4)); }
+/* Scriptable 在畫面最上面疊了自己的「Close」和分享鍵，內容和面板都往下讓出這一條 */
+:root { --top-bar: max(100px, calc(env(safe-area-inset-top, 0px) + 56px)); }
+.app { padding-top: var(--top-bar); }
+.scrim { padding-top: var(--top-bar); }
+.sheet { max-height: 100%; }
+.lightbox { padding-top: var(--top-bar); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); top: var(--top-bar); z-index: 30; background: var(--ink-navy); color: var(--white); border-radius: var(--radius-pill); padding: 10px 18px; font-weight: 900; font-size: 14px; max-width: calc(100% - 32px); }
+.del-note { align-self: center; border: 0; background: transparent; font: inherit; font-weight: 900; font-size: 15px; color: var(--tomato-deep); padding: 10px 16px; border-radius: var(--radius-pill); cursor: pointer; }
+.del-note.armed { background: var(--tomato-deep); color: var(--white); }
 </style>
 
 </head>
@@ -198,7 +204,7 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
     <div class="logo" aria-hidden="true"><svg class="ic"><use href="#ic-note"/></svg></div>
     <div class="titles">
       <div class="eyebrow">My Notes</div>
-      <h1>靈感筆記</h1>
+      <h1>筆記</h1>
     </div>
     <button class="icon-btn" id="searchToggle" aria-label="搜尋"><svg class="ic"><use href="#ic-search"/></svg></button>
   </header>
@@ -535,6 +541,7 @@ function openEditor(n) {
     <div class="cat-box" id="ed-cats"></div>
     <div class="ed-lines" id="ed-lines"></div>
     <div class="ed-photos" id="ed-photos"></div>
+    ${n ? `<button class="del-note" data-act="delnote">刪除這則筆記</button>` : ""}
     <div class="toolbar"><div class="toolbar-inner">
       <button class="tool" data-tool="check" aria-label="勾選清單">${icon("checklist")}</button>
       <span class="tool-sep"></span>
@@ -640,6 +647,13 @@ function openEditor(n) {
         e.target.closest("[data-act]").setAttribute("aria-expanded", String(!p.hidden));
       }
       if (act === "close") { n ? openNote(n.id) : closeSheet(); }
+      if (act === "delnote") {
+        const b = e.target.closest("[data-act]");
+        if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "再按一次，確定刪除"; return; }
+        notes = notes.filter((x) => x.id !== n.id);
+        changed(); closeSheet(); render(); toast("已刪除");
+        return;
+      }
       if (act === "save") {
         const lines = draft.lines.filter((l) => l.text.trim());
         const title = el.querySelector("#ed-title").value.trim();
