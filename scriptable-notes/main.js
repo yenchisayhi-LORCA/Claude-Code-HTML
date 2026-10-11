@@ -59,7 +59,7 @@ async function loadData() {
   await ensureLocal(DATA_PATH);
   try {
     const d = JSON.parse(store.readString(DATA_PATH));
-    return { cats: d.cats || [], notes: d.notes || [] };
+    return { cats: d.cats || [], notes: d.notes || [], settings: d.settings || {} };
   } catch (e) {
     // 檔案壞掉時改讀備份，不要把原本的蓋掉
     if (store.fileExists(BACKUP_PATH)) {
@@ -77,7 +77,7 @@ function saveData(d) {
     const old = store.fileExists(BACKUP_PATH) ? store.modificationDate(BACKUP_PATH) : null;
     if (!old || Date.now() - old.getTime() > 86400000) store.writeString(BACKUP_PATH, store.readString(DATA_PATH));
   }
-  store.writeString(DATA_PATH, JSON.stringify({ version: 1, cats: d.cats, notes: d.notes }));
+  store.writeString(DATA_PATH, JSON.stringify({ version: 1, cats: d.cats, notes: d.notes, settings: d.settings || {} }));
 }
 
 // ---- 圖片縮放：長邊縮到 max 像素
@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 4; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色）
+const ART_VERSION = 5; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -226,12 +226,16 @@ function widgetSizes() {
   return { small: [t[0], t[0]], medium: [t[1], t[0]], large: [t[1], t[2]] };
 }
 
-async function logoChar() {
+// 左上角圖示的字：筆記自己的設定（1～3 個字，在筆記畫面點左上角修改，存在 notes.json，兩台裝置共用）；
+// 還沒設定過時，沿用童趣風月曆「圖示文字」的字
+const logoChars = text => [...String(text || "")].filter(c => c.trim()).slice(0, 3);
+async function logoText(settings) {
+  if (settings && logoChars(settings.logoText).length) return logoChars(settings.logoText).join("");
   const p = store.joinPath(store.documentsDirectory(), "calendar-widget-birthdays", "settings.json");
   try {
     if (!store.fileExists(p)) return DEFAULT_LOGO;
     await ensureLocal(p);
-    return JSON.parse(store.readString(p)).logoChar || DEFAULT_LOGO;
+    return logoChars(JSON.parse(store.readString(p)).logoChar).join("") || DEFAULT_LOGO;
   } catch (e) { return DEFAULT_LOGO; }
 }
 
@@ -292,8 +296,8 @@ const LOAD_FONTS_JS = faces => `
   }`;
 
 // 圖還沒畫、字改過、或畫法改過時重畫；成功回傳 null，失敗回傳原因
-async function ensureArt() {
-  const ch = await logoChar(), sizes = widgetSizes();
+async function ensureArt(ch) {
+  const sizes = widgetSizes();
   const meta = artMeta();
   if (meta && meta.version === ART_VERSION && meta.logoChar === ch && JSON.stringify(meta.sizes) === JSON.stringify(sizes)) return null;
   try {
@@ -307,7 +311,8 @@ async function ensureArt() {
         try {
           await 0; // 先讓下面的 png、canvas 等定義跑完
           ${LOAD_FONTS_JS(faces)}
-          const sizes = ${JSON.stringify(sizes)}, out = { logo: drawLogo(${JSON.stringify(ch)}) };
+          const sizes = ${JSON.stringify(sizes)}, chars = ${JSON.stringify(logoChars(ch))}, out = {};
+          chars.forEach((c, i) => { out["logo-" + i] = drawLogo(c, i, chars.length); });
           // 圖示貼紙：把 SVG 畫成 96×96 的 PNG，小工具用
           for (const [k, svg] of Object.entries(${JSON.stringify(stickerSvgs)})) {
             const im = new Image();
@@ -330,20 +335,24 @@ async function ensureArt() {
         return [cv, g];
       }
 
-      // 左上角圖示（256×256 設計稿）：深藍不規則色塊、紅花、黃色不規則圓、黃枝 + 藍枝，中間是設定的字
-    function drawLogo(ch) {
+      // 左上角圖示（256×256 設計稿）：不規則色塊外框、紅花、黃色不規則圓、黃枝 + 藍枝，中間是設定的字
+      // 有好幾個字時每個字一個圖示：外框輪流用深藍、藍、粉紅，形狀角度各不同；紅花和黃枝放第一個、藍枝放最後一個
+      function drawLogo(ch, i = 0, n = 1) {
       const [cv, g] = canvas(256, 256, 3);
-      blob(g, 128, 129, 246, 240, [46, 54, 40, 60, 52, 44, 58, 42], -4, "#232058");
-      blob(g, 128, 128, 176, 168, [44, 56, 62, 38, 46, 54, 46, 54], 0, "#F7D44C");
+      const OUTER = ["#232058", "#4A6FC4", "#E0679A"][i % 3];
+      const SHAPE = [[46, 54, 40, 60, 52, 44, 58, 42], [56, 44, 52, 48, 44, 58, 42, 56], [42, 58, 56, 44, 60, 40, 50, 50]][i % 3];
+      const INNER = [[44, 56, 62, 38, 46, 54, 46, 54], [58, 42, 46, 54, 52, 48, 60, 40], [50, 50, 40, 60, 56, 44, 44, 56]][i % 3];
+      blob(g, 128, 129, 246, 240, SHAPE, [-4, 5, -2][i % 3], OUTER);
+      blob(g, 128, 128, 176, 168, INNER, [0, -3, 4][i % 3], "#F7D44C");
       const twig = (color, width, paths) => {
         g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
         for (const d of paths) g.stroke(new Path2D(d));
       };
-      twig("#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
-      twig("#F2CF4A", 6.5, ["M60 236 C 61 222, 61 208, 60 194", "M61 218 C 54 216, 51 210, 51 202", "M60 206 C 66 204, 69 198, 69 190"]);
-      g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
+      if (i === n - 1) twig(i === 1 ? "#F2CF4A" : "#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
+      if (i === 0) twig("#F2CF4A", 6.5, ["M60 236 C 61 222, 61 208, 60 194", "M61 218 C 54 216, 51 210, 51 202", "M60 206 C 66 204, 69 198, 69 190"]);
+      if (i === 0) { g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
       for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * Math.PI / 4); g.beginPath(); g.ellipse(0, -23, 8.5, 20, 0, 0, 7); g.fill(); g.restore(); }
-      g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore();
+      g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore(); }
       // 字：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中（比較寬的字會縮小放進黃圓）
       g.font = '90px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
       let m = g.measureText(ch);
@@ -380,11 +389,20 @@ async function ensureArt() {
     if (!res || res.error) return res ? res.error : "WebView 沒有回應";
     if (!local.fileExists(ART_DIR)) local.createDirectory(ART_DIR, true);
     for (const name in res) local.write(artPath(name), Data.fromBase64String(res[name]));
+    // 字變少了：把多出來的舊圖示刪掉
+    for (let i = logoChars(ch).length; i < 3; i++) if (local.fileExists(artPath("logo-" + i))) local.remove(artPath("logo-" + i));
     local.writeString(ART_META, JSON.stringify({ version: ART_VERSION, logoChar: ch, sizes }));
     return null;
   } catch (e) { return String(e); }
 }
 const artImage = name => local.fileExists(artPath(name)) ? Image.fromFile(artPath(name)) : null;
+// 左上角的圖示（每個字一張）
+function logoImages() {
+  const meta = artMeta(), n = meta ? logoChars(meta.logoChar).length : 0, out = [];
+  for (let i = 0; i < n; i++) { const im = artImage("logo-" + i); if (im) out.push(im); }
+  return out;
+}
+const logoDataURLs = () => logoImages().map(im => "data:image/png;base64," + Data.fromPNG(im).toBase64String());
 
 // ---- 筆記畫面
 // 線條圖示（跟日常記帳同一套）和貼紙樣式，由 build.py 塞進來
@@ -403,15 +421,14 @@ async function openApp(openNoteId, filter) {
   }
   if (!store.fileExists(DATA_PATH)) saveData(data);
   const iconFailed = await ensureAnimalIcons();
-  const artFailed = await ensureArt();
-  const logo = artImage("logo");
+  const artFailed = await ensureArt(await logoText(data.settings));
   const thumbs = {};
   for (const n of data.notes) for (const id of n.photos || []) {
     if (!(id in thumbs)) thumbs[id] = await photoDataURL(id, true) || "";
   }
   const boot = {
     cats: data.cats, notes: data.notes, thumbs, iconImages: await animalDataURLs(), openNote: openNoteId || null, filter: filter || null,
-    logo: logo ? "data:image/png;base64," + Data.fromPNG(logo).toBase64String() : null,
+    logos: logoDataURLs(), logoText: await logoText(data.settings),
     warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。"
       : artFailed ? "左上角圖示畫不出來，連上網路後再打開一次就會補上。" : "",
   };
@@ -421,7 +438,14 @@ async function openApp(openNoteId, filter) {
   let queue = Promise.resolve();
   const run = async cmds => {
     for (const c of cmds) {
-      if (c.type === "save") { data = { cats: c.cats, notes: c.notes }; saveData(data); }
+      if (c.type === "save") { data = { cats: c.cats, notes: c.notes, settings: data.settings }; saveData(data); }
+      else if (c.type === "logo") {
+        // 改左上角的字：存起來，重畫圖示，再把新圖示交給畫面
+        data.settings = { ...(data.settings || {}), logoText: logoChars(c.text).join("") };
+        saveData(data);
+        const err = await ensureArt(data.settings.logoText);
+        await wv.evaluateJavaScript(`window.__logoUpdated(${js({ logos: logoDataURLs(), error: err })}); 0;`);
+      }
       else if (c.type === "photo") {
         const r = await pickPhoto();
         await wv.evaluateJavaScript(`window.__photoAdded(${js(r)}); 0;`);
@@ -450,7 +474,7 @@ async function openApp(openNoteId, filter) {
   try {
     await queue;
     const raw = await wv.evaluateJavaScript("window.__finalState ? window.__finalState() : ''");
-    if (raw) { data = JSON.parse(raw); saveData(data); }
+    if (raw) { data = { ...JSON.parse(raw), settings: data.settings }; saveData(data); }
   } catch (e) { console.error(e); }
   try { cleanupPhotos(data); } catch (e) {}
 }
@@ -617,12 +641,12 @@ async function buildWidget(family) {
   // 標題列：左上角「彥」圖示 + 筆記（或分類名稱）
   const head = w.addStack();
   head.centerAlignContent();
-  head.spacing = 6;
-  const logo = artImage("logo");
-  // 大尺寸 50、中和小尺寸 41（拿掉卡片底部的日期和進度後，再放大 1.2 倍）
+  head.spacing = 2; // 圖示之間靠近一點，像一組
+  const logos = logoImages(), logo = logos.length > 0;
+  // 大尺寸 50、中和小尺寸 41；有好幾個字時一字一個圖示並排
   const LOGO = family === "large" ? 50 : 41;
-  if (logo) {
-    const li = head.addImage(logo);
+  for (const im of logos) {
+    const li = head.addImage(im);
     li.imageSize = new Size(LOGO, LOGO);
   }
   if (title) { // 有設定分類時才顯示分類名稱
