@@ -4,7 +4,7 @@
 // 筆記、分類、照片都存在 iCloud 雲碟的 Scriptable/kids-notes/（沒開 iCloud 時存在本機），同一個 Apple 帳號的裝置共用
 const K = {
   cream: "#FFFCEF", white: "#FFFFFF", ink: "#262261", body: "#5A5788", muted: "#8B88B2",
-  tealText: "#3C7D74", tealCheck: "#17705F",
+  tealText: "#3C7D74", tealCheck: "#17705F", pinRed: "#D93A2F",
   yellow100: "#FFF0AF", blue100: "#CFDDF8", orange100: "#FFE2BA", pink100: "#FBD3D0", green100: "#D5F5D0", teal100: "#C9F0E9",
   purple100: "#E3DAFA", rose100: "#FFD8E8",
 };
@@ -521,15 +521,15 @@ function distinctColors(list, cats) {
   });
 }
 
-function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
+function addCard(parent, n, cats, maxLines, compact, width, bgColor, height) {
   const checks = n.lines.filter(l => l.type === "c");
   const allDone = checks.length && checks.every(l => l.done);
   // 卡片用分類的顏色（沒分類就依筆記輪流配色）；清單全部打勾時變淡青色
   const bg = bgColor || cardColor(n, cats);
   const card = parent.addStack();
   card.layoutVertically();
-  // 寬度寫死，左右邊距才會一樣（高度 0 = 依內容）
-  if (width) card.size = new Size(width, 0);
+  // 寬高都寫死：左右邊距一樣，每張卡片一樣高，日期固定在底部不會被切到
+  if (width) card.size = new Size(width, height || 0);
   card.backgroundColor = col(bg);
   card.cornerRadius = 16;
   card.setPadding(9, 10, 8, 10);
@@ -545,10 +545,19 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
   t.textColor = col(K.ink);
   t.lineLimit = 1;
   head.addSpacer();
+  if (n.pinned) {
+    const pin = SFSymbol.named("pin.fill");
+    pin.applyFont(Font.boldSystemFont(10));
+    const pi = head.addImage(pin.image);
+    pi.imageSize = new Size(11, 11);
+    pi.tintColor = col(K.pinRed);
+  }
 
   // 主畫面的卡片不顯示分類標籤（卡片底色已經看得出來）
 
-  for (const l of n.lines.filter(l => l.text.trim()).slice(0, maxLines)) {
+  const photos = (n.photos || []).length;
+  // 照片那一行也佔一行的位置
+  for (const l of n.lines.filter(l => l.text.trim()).slice(0, Math.max(0, maxLines - (photos ? 1 : 0)))) {
     const row = card.addStack();
     row.spacing = 4;
     row.centerAlignContent();
@@ -564,7 +573,6 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor) {
     tx.textColor = col(l.type === "c" && l.done ? K.tealText : l.type === "c" ? K.ink : K.body);
     tx.lineLimit = 1;
   }
-  const photos = (n.photos || []).length;
   if (photos) {
     const row = card.addStack();
     row.spacing = 4;
@@ -601,7 +609,8 @@ async function buildWidget(family) {
   w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
   let data;
   try { data = await loadData(); } catch (e) { data = { cats: [], notes: [] }; }
-  let notes = [...data.notes].sort((a, b) => b.updated - a.updated);
+  // 釘選的筆記排最前面，其他依最後修改時間
+  let notes = [...data.notes].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.updated - a.updated);
 
   // 小工具的 Parameter（長按 →「編輯小工具」）：填分類名稱只顯示那個分類，填「未完成」只顯示還沒打勾完的清單
   const param = (args.widgetParameter || "").trim();
@@ -622,16 +631,26 @@ async function buildWidget(family) {
   head.centerAlignContent();
   head.spacing = 6;
   const logo = artImage("logo");
+  // 大尺寸 42、小尺寸 34（原本 32／26，放大 1.3 倍）；中尺寸高度不夠，用 34
+  const LOGO = family === "large" ? 42 : 34;
   if (logo) {
     const li = head.addImage(logo);
-    li.imageSize = family === "small" ? new Size(34, 34) : new Size(42, 42); // 原本 26／32，放大 1.3 倍
+    li.imageSize = new Size(LOGO, LOGO);
   }
   const h = head.addText(title);
   h.lineLimit = 1;
   h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
   h.textColor = col(K.ink);
   head.addSpacer();
-  w.addSpacer(family === "small" ? 6 : 8);
+  const HEAD_GAP = family === "small" ? 6 : 8;
+  w.addSpacer(HEAD_GAP);
+
+  // 卡片高度：小工具高度扣掉上下邊距（10+12）、標題列、標題下的間距；大尺寸再分成兩排
+  // 每張卡片能放幾行：扣掉卡片內距、標題、日期等固定高度約 58，每行約 17
+  const GAP = 8, [WW, WH] = widgetSizes()[family];
+  const area = WH - 22 - Math.max(LOGO, 24) - HEAD_GAP;
+  const cardH = Math.floor(family === "large" ? (area - GAP) / 2 : area);
+  const maxLines = Math.max(1, Math.floor((cardH - 58) / 17));
 
   if (!notes.length) {
     const e = w.addText(missing ? `找不到「${param}」這個分類。長按小工具 →「編輯小工具」，把 Parameter 改成分類名稱，或清空顯示全部。`
@@ -644,11 +663,11 @@ async function buildWidget(family) {
   if (family === "small") {
     // 小尺寸只能整個小工具一個連結
     w.url = runURL({ note: notes[0].id });
-    addCard(w, notes[0], data.cats, 3, true, widgetSizes().small[0] - 24);
+    addCard(w, notes[0], data.cats, maxLines, true, WW - 24, null, cardH);
     return w;
   }
   // 卡片寬度：小工具寬度扣掉左右各 12 的邊距，兩張之間隔 8；只有一則筆記時佔滿整排
-  const inner = widgetSizes()[family][0] - 24, GAP = 8;
+  const inner = WW - 24;
   const colors = distinctColors(notes.slice(0, family === "large" ? 4 : 2), data.cats);
   const rows = family === "large" ? 2 : 1;
   const grid = w.addStack();
@@ -660,8 +679,7 @@ async function buildWidget(family) {
     const row = grid.addStack();
     row.spacing = GAP;
     const cw = notes.length === 1 ? inner : (inner - GAP) / 2;
-    // 中尺寸圖示變大，內容少一行才放得下
-    pair.forEach((n, i) => addCard(row, n, data.cats, family === "large" ? 5 : 2, false, cw, colors[r * 2 + i]));
+    pair.forEach((n, i) => addCard(row, n, data.cats, maxLines, false, cw, colors[r * 2 + i], cardH));
     if (pair.length === 1 && notes.length > 1) row.addSpacer(); // 落單的卡片靠左，保持半寬
   }
   return w;
