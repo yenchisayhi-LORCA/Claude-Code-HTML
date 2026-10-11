@@ -124,6 +124,10 @@ h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.25; }
 .ed-line.done textarea { color: var(--teal-text); text-decoration: line-through; }
 .ed-line textarea::placeholder { color: var(--text-body); opacity: .6; }
 
+/* 編輯畫面：上面的按鈕列和下面的工具列固定，中間的內容自己捲動（鍵盤打開時也一樣） */
+.sheet.editor { overflow: hidden; gap: 10px; }
+.sheet.editor .ed-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 14px; margin-inline: -20px; padding: 2px 20px 16px; }
+.sheet.editor > .toolbar { position: static; flex: none; margin-bottom: 0; }
 .toolbar { position: sticky; bottom: 0; margin-inline: -20px; padding: 10px 20px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--cream-paper); display: flex; justify-content: center; }
 .toolbar-inner { display: flex; gap: 6px; align-items: center; background: var(--white); border-radius: var(--radius-pill); padding: 6px 10px; box-shadow: 0 4px 14px rgba(38,34,97,.08); }
 .tool { border: 0; background: transparent; color: var(--ink-navy); border-radius: var(--radius-pill); height: 44px; min-width: 52px; padding: 0 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; font: inherit; font-weight: 900; font-size: 14px; }
@@ -388,10 +392,10 @@ function renderGrid() {
 
 function render() { renderChips(); renderGrid(); }
 
-function openSheet(html, onMount) {
+function openSheet(html, onMount, cls) {
   commitEditor();
   const s = $("#scrim");
-  s.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  s.innerHTML = `<div class="sheet ${cls || ""}" role="dialog" aria-modal="true">${html}</div>`;
   s.hidden = false;
   onMount && onMount(s.firstElementChild);
 }
@@ -585,6 +589,7 @@ function openEditor(n) {
       <button class="icon-btn pin-btn" data-act="pin" aria-pressed="${draft.pinned}" aria-label="釘選">${icon("pin")}</button>
       <button class="btn-save" data-act="save" aria-label="完成">${icon("check")}</button>
     </div>
+    <div class="ed-body" id="ed-body">
     <div class="c-head">
       <button class="pick-btn" data-act="pick" aria-label="換圖示" aria-expanded="false"><span id="ed-icon"></span><span class="edit-dot">${icon("pencil")}</span></button>
       <input class="ed-title" id="ed-title" placeholder="標題" value="${esc(draft.title)}">
@@ -597,6 +602,7 @@ function openEditor(n) {
     <div class="cat-box" id="ed-cats"></div>
     <div class="ed-lines" id="ed-lines"></div>
     <div class="ed-photos" id="ed-photos"></div>
+    </div>
     <div class="toolbar"><div class="toolbar-inner">
       <button class="tool" data-tool="check" aria-label="勾選清單">${icon("checklist")}</button>
       <span class="tool-sep"></span>
@@ -620,7 +626,7 @@ function openEditor(n) {
       linesEl.querySelectorAll("textarea").forEach(autosize);
       if (focusAt) {
         const ta = linesEl.querySelector(`textarea[data-i="${focusAt[0]}"]`);
-        if (ta) { ta.focus(); ta.setSelectionRange(focusAt[1], focusAt[1]); }
+        if (ta) { ta.focus(); ta.setSelectionRange(focusAt[1], focusAt[1]); keepInView(ta); }
       }
       syncTool();
     }
@@ -742,7 +748,7 @@ function openEditor(n) {
     paintIcon(); paintPhotos();
     paintLines(n ? null : [0, 0]);
     if (!n) el.querySelector("#ed-title").focus();
-  });
+  }, "editor");
 }
 
 $("#grid").addEventListener("click", (e) => { const c = e.target.closest(".card"); if (c) openNote(c.dataset.id); });
@@ -752,6 +758,34 @@ $("#chips").addEventListener("click", (e) => {
 });
 $("#fab").addEventListener("click", () => openEditor(null));
 $("#scrim").addEventListener("click", (e) => { if (e.target.id === "scrim") closeSheet(); });
+/* ---------- 鍵盤打開時：面板縮到鍵盤上方，正在打字的那一行捲到看得到的地方 ---------- */
+// iPhone 的鍵盤會蓋住畫面下半部，但網頁本身不會變矮；用 visualViewport 算出鍵盤上方還看得到的範圍
+function fitToKeyboard() {
+  const vv = window.visualViewport, s = $("#scrim");
+  if (!vv) return;
+  const open = window.innerHeight - vv.height > 80;
+  s.style.top = open ? vv.offsetTop + "px" : "";
+  s.style.height = open ? vv.height + "px" : "";
+  s.style.bottom = open ? "auto" : "";
+  const ta = document.activeElement;
+  if (open && ta && ta.tagName === "TEXTAREA") keepInView(ta);
+}
+function keepInView(el) {
+  setTimeout(() => {
+    const box = el.closest(".ed-body") || el.closest(".sheet");
+    if (!box) return;
+    const r = el.getBoundingClientRect(), br = box.getBoundingClientRect();
+    if (r.bottom > br.bottom - 12) box.scrollTop += r.bottom - (br.bottom - 12);
+    else if (r.top < br.top + 12) box.scrollTop -= br.top + 12 - r.top;
+  }, 60);
+}
+if (window.visualViewport) {
+  visualViewport.addEventListener("resize", fitToKeyboard);
+  visualViewport.addEventListener("scroll", fitToKeyboard);
+}
+document.addEventListener("focusin", (e) => { if (e.target.tagName === "TEXTAREA") setTimeout(() => keepInView(e.target), 300); });
+document.addEventListener("input", (e) => { if (e.target.tagName === "TEXTAREA") keepInView(e.target); });
+
 $("#searchToggle").addEventListener("click", () => { const b = $("#searchBar"); b.hidden = !b.hidden; if (!b.hidden) $("#q").focus(); else { query = ""; $("#q").value = ""; render(); } });
 $("#q").addEventListener("input", (e) => { query = e.target.value.trim(); render(); });
 // 從分類小工具點進來時，先篩選成那個分類
