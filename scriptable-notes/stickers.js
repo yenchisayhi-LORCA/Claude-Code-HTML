@@ -8,7 +8,7 @@ const STICKER_CHIP = {
 };
 const STICKER_COLORS = {
   yellow: "#FFD426", red: "#EE3E33", orange: "#FF9500", green: "#6BD861", sky: "#8CC4EE", blue: "#3F6FD1",
-  teal: "#4FD2C2", pink: "#FF9EC4", lilac: "#B9A3F0", white: "#FFFFFF", mist: "#E4E2F2", balloon: "#7DCB6E",
+  teal: "#4FD2C2", pink: "#FF9EC4", lilac: "#B9A3F0", white: "#FFFFFF", mist: "#E4E2F2", balloon: "#7DCB6E", milkTea: "#D9B48F",
 };
 const STICKERS = {
   star: { chip: "yellow", fill: { 0: STICKER_COLORS.yellow } },
@@ -32,7 +32,7 @@ const STICKERS = {
   gift: { chip: "blue", fill: { 0: STICKER_COLORS.sky, 3: STICKER_COLORS.red } },
   balloon: { chip: "teal", fill: { 0: STICKER_COLORS.balloon, 1: STICKER_COLORS.balloon } },
   fork: { chip: "orange", fill: { 0: STICKER_COLORS.white, 2: STICKER_COLORS.white } },
-  drink: { chip: "teal", fill: { 0: STICKER_COLORS.pink, 1: STICKER_COLORS.white } },
+  drink: { chip: "teal", fill: { 0: STICKER_COLORS.milkTea, 1: STICKER_COLORS.white } },
   idea: { chip: "yellow", fill: { 1: STICKER_COLORS.yellow } },
   shoppingbag: { chip: "orange", fill: { 0: STICKER_COLORS.orange } },
   travel: { chip: "teal", fill: { 0: STICKER_COLORS.sky } },
