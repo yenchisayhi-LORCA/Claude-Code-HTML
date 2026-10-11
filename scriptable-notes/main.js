@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 7; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花）
+const ART_VERSION = 8; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -336,7 +336,7 @@ async function ensureArt(ch) {
       }
 
       // 左上角圖示（256×256 設計稿）：不規則色塊外框、紅花、黃色不規則圓、黃枝 + 藍枝，中間是設定的字
-      // 有好幾個字時每個字一個圖示：外框依序深藍、綠（右上角紫色小花）、藍（右上角粉紅小花），形狀角度各不同；紅花和黃枝放第一個、樹枝放最後一個
+      // 有好幾個字時每個字一個圖示：外框依序深藍、綠（左下角紫色小花）、藍（右上角粉紅小花），形狀角度各不同；紅花和黃枝放第一個、樹枝放最後一個
       function drawLogo(ch, i = 0, n = 1) {
       const [cv, g] = canvas(256, 256, 3);
       const OUTER = ["#232058", "#4FA85E", "#4A6FC4"][i % 3];
@@ -357,7 +357,7 @@ async function ensureArt(ch) {
         g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore();
       };
       if (i === 0) flower(50, 48, 1, -12, "#E0412F");      // 第一個：左上角紅花
-      if (i === 1) flower(204, 50, 0.72, 10, "#9B7BE0");  // 綠色那個：右上角紫色小花
+      if (i === 1) flower(54, 204, 0.72, 10, "#9B7BE0");  // 綠色那個：左下角紫色小花
       if (i === 2) flower(204, 50, 0.72, -8, "#F28DB2");  // 藍色那個：右上角粉紅小花
       // 字：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中（比較寬的字會縮小放進黃圓）
       g.font = '90px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
