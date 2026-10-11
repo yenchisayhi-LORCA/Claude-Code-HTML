@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 5; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字）
+const ART_VERSION = 6; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -336,10 +336,10 @@ async function ensureArt(ch) {
       }
 
       // 左上角圖示（256×256 設計稿）：不規則色塊外框、紅花、黃色不規則圓、黃枝 + 藍枝，中間是設定的字
-      // 有好幾個字時每個字一個圖示：外框輪流用深藍、藍、粉紅，形狀角度各不同；紅花和黃枝放第一個、藍枝放最後一個
+      // 有好幾個字時每個字一個圖示：外框依序深藍、綠（右上角粉紅小花）、藍，形狀角度各不同；紅花和黃枝放第一個、樹枝放最後一個
       function drawLogo(ch, i = 0, n = 1) {
       const [cv, g] = canvas(256, 256, 3);
-      const OUTER = ["#232058", "#4A6FC4", "#E0679A"][i % 3];
+      const OUTER = ["#232058", "#4FA85E", "#4A6FC4"][i % 3];
       const SHAPE = [[46, 54, 40, 60, 52, 44, 58, 42], [56, 44, 52, 48, 44, 58, 42, 56], [42, 58, 56, 44, 60, 40, 50, 50]][i % 3];
       const INNER = [[44, 56, 62, 38, 46, 54, 46, 54], [58, 42, 46, 54, 52, 48, 60, 40], [50, 50, 40, 60, 56, 44, 44, 56]][i % 3];
       blob(g, 128, 129, 246, 240, SHAPE, [-4, 5, -2][i % 3], OUTER);
@@ -348,11 +348,16 @@ async function ensureArt(ch) {
         g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
         for (const d of paths) g.stroke(new Path2D(d));
       };
-      if (i === n - 1) twig(i === 1 ? "#F2CF4A" : "#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
+      if (i === n - 1) twig(OUTER === "#4A6FC4" ? "#F2CF4A" : "#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
       if (i === 0) twig("#F2CF4A", 6.5, ["M60 236 C 61 222, 61 208, 60 194", "M61 218 C 54 216, 51 210, 51 202", "M60 206 C 66 204, 69 198, 69 190"]);
-      if (i === 0) { g.save(); g.translate(50, 48); g.rotate(-12 * Math.PI / 180); g.fillStyle = "#E0412F";
-      for (let i = 0; i < 8; i++) { g.save(); g.rotate(i * Math.PI / 4); g.beginPath(); g.ellipse(0, -23, 8.5, 20, 0, 0, 7); g.fill(); g.restore(); }
-      g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore(); }
+      // 小花：(x, y) 中心、s 縮放、deg 旋轉、color 花瓣顏色
+      const flower = (x, y, s, deg, color) => {
+        g.save(); g.translate(x, y); g.scale(s, s); g.rotate(deg * Math.PI / 180); g.fillStyle = color;
+        for (let k = 0; k < 8; k++) { g.save(); g.rotate(k * Math.PI / 4); g.beginPath(); g.ellipse(0, -23, 8.5, 20, 0, 0, 7); g.fill(); g.restore(); }
+        g.fillStyle = "#FFFCEA"; g.beginPath(); g.arc(0, 0, 11.5, 0, 7); g.fill(); g.restore();
+      };
+      if (i === 0) flower(50, 48, 1, -12, "#E0412F");      // 第一個：左上角紅花
+      if (i === 1) flower(204, 50, 0.72, 10, "#F28DB2");  // 綠色那個：右上角粉紅小花
       // 字：Huninn 90px，同色 2px 描邊稍微加粗；以字的實際外框置中（比較寬的字會縮小放進黃圓）
       g.font = '90px "Huninn"'; g.textAlign = "center"; g.textBaseline = "alphabetic";
       let m = g.measureText(ch);
