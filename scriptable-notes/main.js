@@ -21,6 +21,7 @@ const DATA_PATH = store.joinPath(DIR, "notes.json");
 const BACKUP_PATH = store.joinPath(DIR, "notes-backup.json");
 const PHOTO_DIR = store.joinPath(DIR, "photos");
 const ICON_DIR = store.joinPath(DIR, "icons");
+const CORNER_PATH = store.joinPath(DIR, "corner.jpg"); // 小工具右上角色塊裡的照片（兩台裝置共用）
 const photoPath = (id, small) => store.joinPath(PHOTO_DIR, id + (small ? "-s" : "") + ".jpg");
 const iconPath = key => store.joinPath(ICON_DIR, key + ".png");
 const mkdir = p => { if (!store.fileExists(p)) store.createDirectory(p, true); };
@@ -119,7 +120,8 @@ function mergeData(mine, disk) {
   return {
     cats: mineCats ? mine.cats : disk.cats || [], catsModified: Math.max(mine.catsModified || 0, disk.catsModified || 0),
     notes: [...byId.values()].filter(n => !(deleted[n.id] >= stamp(n))), deleted,
-    settings: { ...(disk.settings || {}), ...(mine.settings || {}) },
+    // 設定（左上角的字、右上角的照片）整份比修改時間，留比較晚改的
+    settings: ((mine.settings || {}).modified || 0) >= ((disk.settings || {}).modified || 0) ? mine.settings || {} : disk.settings,
   };
 }
 
@@ -170,6 +172,24 @@ async function pickPhoto() {
   } catch (e) {
     return { error: "照片存不起來：" + e };
   }
+}
+
+// 小工具右上角的照片：從相簿選一張（長邊 900），或拿掉改回黃色色塊；取消回傳 null
+const cornerOf = settings => (settings && settings.cornerPhoto) || 0;
+async function pickCornerPhoto() {
+  const a = new Alert();
+  a.title = "右上角的照片";
+  a.addAction("從相簿選");
+  a.addDestructiveAction("拿掉照片，改回黃色色塊");
+  a.addCancelAction("取消");
+  const i = await a.presentSheet();
+  if (i < 0) return null;
+  if (i === 1) { try { if (store.fileExists(CORNER_PATH)) store.remove(CORNER_PATH); } catch (e) {} return { removed: true }; }
+  let img;
+  try { img = await Photos.fromLibrary(); } catch (e) { return null; }
+  mkdir(DIR);
+  store.write(CORNER_PATH, Data.fromJPEG(resize(img, 900)));
+  return { removed: false };
 }
 
 async function photoDataURL(id, small) {
@@ -353,11 +373,15 @@ const LOAD_FONTS_JS = faces => `
     await face.load(); document.fonts.add(face);
   }`;
 
-// 圖還沒畫、字改過、或畫法改過時重畫；成功回傳 null，失敗回傳原因
-async function ensureArt(ch) {
+// 圖還沒畫、字改過、右上角照片換過、或畫法改過時重畫；成功回傳 null，失敗回傳原因
+// corner：右上角照片的版本（settings.cornerPhoto，換照片時記下時間；0 = 沒有照片，用黃色色塊加手繪菱形）
+async function ensureArt(ch, corner = 0) {
   const sizes = widgetSizes();
   const meta = artMeta();
-  if (meta && meta.version === ART_VERSION && meta.logoChar === ch && JSON.stringify(meta.sizes) === JSON.stringify(sizes)) return null;
+  if (meta && meta.version === ART_VERSION && meta.logoChar === ch && (meta.corner || 0) === corner && JSON.stringify(meta.sizes) === JSON.stringify(sizes)) return null;
+  let photo = null;
+  if (corner && await fetchFromCloud(CORNER_PATH)) { try { photo = store.read(CORNER_PATH).toBase64String(); } catch (e) {} }
+  if (!photo) corner = 0; // 照片還沒同步到這台：先畫黃色色塊，下次打開再試
   try {
     const faces = await fetchFont("Huninn", null, ch);
     const stickerSvgs = {};
@@ -369,6 +393,8 @@ async function ensureArt(ch) {
         try {
           await 0; // 先讓下面的 png、canvas 等定義跑完
           ${LOAD_FONTS_JS(faces)}
+          let photo = null;
+          if (${JSON.stringify(!!photo)}) { photo = new Image(); photo.src = "data:image/jpeg;base64," + ${JSON.stringify(photo || "")}; await photo.decode(); }
           const sizes = ${JSON.stringify(sizes)}, chars = ${JSON.stringify(logoChars(ch))}, out = {};
           chars.forEach((c, i) => { out["logo-" + i] = drawLogo(c, i, chars.length); });
           // 圖示貼紙：把 SVG 畫成 96×96 的 PNG，小工具用
@@ -380,9 +406,9 @@ async function ensureArt(ch) {
             g.drawImage(im, 0, 0, 32, 32);
             out["icon-" + k] = png(cv);
           }
-          // 底圖畫兩種：筆記用的（右上有手繪菱形），和行事曆小工具用的沒有菱形版本（-plain）
+          // 底圖畫兩種：筆記用的（右上有手繪菱形，或換成照片），和行事曆小工具用的黃色色塊、沒有菱形版本（-plain）
           for (const f in sizes) {
-            out["bg-" + f] = drawBackground(sizes[f][0], sizes[f][1], f, true);
+            out["bg-" + f] = drawBackground(sizes[f][0], sizes[f][1], f, !photo, photo);
             out["bg-" + f + "-plain"] = drawBackground(sizes[f][0], sizes[f][1], f, false);
           }
           completion(out);
@@ -434,10 +460,20 @@ async function ensureArt(ch) {
     }
 
       // 底圖：米白紙，四周放童趣風的彩色色塊（黃、粉、青、綠、橘、藍）和幾顆小圓點
-      function drawBackground(W, H, family, sparkle) {
+      function drawBackground(W, H, family, sparkle, photo) {
         const [cv, g] = canvas(W, H, 3), u = Math.min(W, H) / 170;
         g.fillStyle = "#FFFCEF"; g.fillRect(0, 0, W, H);
-        blob(g, W - 4 * u, 2 * u, 92 * u, 80 * u, R1, -8, "#FFD426");
+        const bx = W - 4 * u, by = 2 * u, bw = 92 * u, bh = 80 * u;
+        if (photo) {
+          // 右上角：照片裝在黃色色塊的形狀裡；放滿色塊在小工具裡看得到的那一塊（左下四分之一），照片中間對齊
+          const [pc, pg] = canvas(W, H, 3);
+          blob(pg, bx, by, bw, bh, R1, -8, "#000");
+          pg.globalCompositeOperation = "source-in";
+          const vx = bx - bw / 2 - 2, vw = W - vx, vh = by + bh / 2 + 2;
+          const k = Math.max(vw / photo.width, vh / photo.height);
+          pg.drawImage(photo, vx + (vw - photo.width * k) / 2, (vh - photo.height * k) / 2, photo.width * k, photo.height * k);
+          g.drawImage(pc, 0, 0, W, H);
+        } else blob(g, bx, by, bw, bh, R1, -8, "#FFD426");
         if (sparkle) {
           g.save(); g.translate(W - 34 * u, 8 * u); g.scale(20 * u / 48, 20 * u / 48);
           g.strokeStyle = "#262261"; g.lineWidth = 3.4; g.lineCap = g.lineJoin = "round";
@@ -462,7 +498,7 @@ async function ensureArt(ch) {
     for (const name in res) local.write(artPath(name), Data.fromBase64String(res[name]));
     // 字變少了：把多出來的舊圖示刪掉
     for (let i = logoChars(ch).length; i < 3; i++) if (local.fileExists(artPath("logo-" + i))) local.remove(artPath("logo-" + i));
-    local.writeString(ART_META, JSON.stringify({ version: ART_VERSION, logoChar: ch, sizes }));
+    local.writeString(ART_META, JSON.stringify({ version: ART_VERSION, logoChar: ch, corner, sizes }));
     return null;
   } catch (e) { return String(e); }
 }
@@ -492,7 +528,7 @@ async function openApp(openNoteId, filter) {
   }
   if (!store.fileExists(DATA_PATH)) data = await saveData(data);
   const iconFailed = await ensureAnimalIcons();
-  const artFailed = await ensureArt(await logoText(data.settings));
+  const artFailed = await ensureArt(await logoText(data.settings), cornerOf(data.settings));
   const thumbs = {};
   for (const n of data.notes) for (const id of n.photos || []) {
     if (!(id in thumbs)) thumbs[id] = await photoDataURL(id, true) || "";
@@ -518,10 +554,20 @@ async function openApp(openNoteId, filter) {
       if (c.type === "save") data = await saveData(fromPage(c.cats, c.notes));
       else if (c.type === "logo") {
         // 改左上角的字：存起來，重畫圖示，再把新圖示交給畫面
-        data.settings = { ...(data.settings || {}), logoText: logoChars(c.text).join("") };
+        data.settings = { ...(data.settings || {}), logoText: logoChars(c.text).join(""), modified: Date.now() };
         data = await saveData(data);
-        const err = await ensureArt(data.settings.logoText);
+        const err = await ensureArt(await logoText(data.settings), cornerOf(data.settings));
         await wv.evaluateJavaScript(`window.__logoUpdated(${js({ logos: logoDataURLs(), error: err })}); 0;`);
+      }
+      else if (c.type === "corner") {
+        // 換右上角的照片：選好後存到 iCloud，重畫底圖
+        const r = await pickCornerPhoto();
+        if (r) {
+          data.settings = { ...(data.settings || {}), cornerPhoto: r.removed ? 0 : Date.now(), modified: Date.now() };
+          data = await saveData(data);
+          r.error = await ensureArt(await logoText(data.settings), cornerOf(data.settings));
+        }
+        await wv.evaluateJavaScript(`window.__cornerUpdated(${js(r)}); 0;`);
       }
       else if (c.type === "photo") {
         const r = await pickPhoto();
