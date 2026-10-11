@@ -561,7 +561,8 @@ function openEditor(n) {
     icon: n ? n.icon : "star",
     cat: n ? n.cat : (filter.startsWith("cat:") ? filter.slice(4) : null),
     title: n ? n.title : "",
-    lines: n ? n.lines.map((l) => ({ ...l })) : [T("")],
+    // 沒有內容的筆記（只有標題）也要留一行空白可以寫
+    lines: n && n.lines.length ? n.lines.map((l) => ({ ...l })) : [T("")],
     photos: n && n.photos ? [...n.photos] : [],
   };
   let focusIdx = 0, caret = 0;
@@ -603,7 +604,7 @@ function openEditor(n) {
       linesEl.innerHTML = draft.lines.map((l, i) => `
         <div class="ed-line ${l.type === "c" && l.done ? "done" : ""}" data-i="${i}">
           ${l.type === "c" ? `<button class="box" data-box="${i}" aria-label="打勾">${l.done ? icon("check") : ""}</button>` : ""}
-          <textarea rows="1" data-i="${i}" placeholder="${i === 0 && draft.lines.length === 1 ? "寫點什麼…" : ""}">${esc(l.text)}</textarea>
+          <textarea rows="1" data-i="${i}" placeholder="${draft.lines.length === 1 && !l.text ? "寫點什麼…" : ""}">${esc(l.text)}</textarea>
         </div>`).join("");
       linesEl.querySelectorAll("textarea").forEach(autosize);
       if (focusAt) {
@@ -645,6 +646,13 @@ function openEditor(n) {
       }
     });
     linesEl.addEventListener("click", (e) => {
+      // 點到文字下面的空白處：跳到最後一行，最後一行有字就再開一行
+      if (e.target === linesEl) {
+        const last = draft.lines.length - 1;
+        if (draft.lines[last].text) { draft.lines.push(draft.lines[last].type === "c" ? C("") : T("")); paintLines([last + 1, 0]); }
+        else paintLines([last, 0]);
+        return;
+      }
       const b = e.target.closest("[data-box]");
       if (b) { const l = draft.lines[+b.dataset.box]; l.done = !l.done; paintLines(); }
     });
