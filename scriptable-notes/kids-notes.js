@@ -21,7 +21,18 @@ const DATA_PATH = store.joinPath(DIR, "notes.json");
 const BACKUP_PATH = store.joinPath(DIR, "notes-backup.json");
 const PHOTO_DIR = store.joinPath(DIR, "photos");
 const ICON_DIR = store.joinPath(DIR, "icons");
-const CORNER_PATH = store.joinPath(DIR, "corner.jpg"); // 小工具右上角色塊裡的照片（兩台裝置共用）
+const CORNER_PATH = store.joinPath(DIR, "corner.jpg");
+// 這台裝置上最後一次成功讀到（或存好）的筆記：主畫面小工具有時候看不到 iCloud 的檔案，就先用這份，不會變成「還沒有筆記」
+const localFM = FileManager.local();
+const CACHE_PATH = localFM.joinPath(localFM.documentsDirectory(), "kids-notes-cache.json");
+function writeCache(text) { try { localFM.writeString(CACHE_PATH, text); } catch (e) {} }
+function readCache() {
+  try {
+    const d = JSON.parse(localFM.readString(CACHE_PATH));
+    if (d && Array.isArray(d.notes)) return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {}, fromCache: true };
+  } catch (e) {}
+  return null;
+} // 小工具右上角色塊裡的照片（兩台裝置共用）
 const photoPath = (id, small) => store.joinPath(PHOTO_DIR, id + (small ? "-s" : "") + ".jpg");
 const iconPath = key => store.joinPath(ICON_DIR, key + ".png");
 const mkdir = p => { if (!store.fileExists(p)) store.createDirectory(p, true); };
@@ -73,6 +84,8 @@ function starterData() {
 // 只有真的從來沒存過筆記才用說明筆記；iCloud 還沒同步好時丟錯誤，免得說明筆記蓋掉真正的筆記
 async function loadData() {
   if (!await fetchFromCloud(DATA_PATH)) {
+    const cached = readCache();
+    if (cached) return cached;
     if (await fetchFromCloud(BACKUP_PATH)) {
       try { return JSON.parse(store.readString(BACKUP_PATH)); } catch (e) {}
     }
@@ -80,7 +93,9 @@ async function loadData() {
     return starterData();
   }
   try {
-    const d = JSON.parse(store.readString(DATA_PATH));
+    const raw = store.readString(DATA_PATH);
+    const d = JSON.parse(raw);
+    writeCache(raw);
     return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes || [], deleted: d.deleted || {}, settings: d.settings || {} };
   } catch (e) {
     // 檔案壞掉時改讀備份，不要把原本的蓋掉
@@ -88,6 +103,8 @@ async function loadData() {
       await ensureLocal(BACKUP_PATH);
       try { return JSON.parse(store.readString(BACKUP_PATH)); } catch (e2) {}
     }
+    const cached = readCache();
+    if (cached) return cached;
     throw new Error("筆記檔讀不到：" + e);
   }
 }
@@ -136,7 +153,9 @@ async function saveData(d) {
     const old = store.fileExists(BACKUP_PATH) ? store.modificationDate(BACKUP_PATH) : null;
     if (!old || Date.now() - old.getTime() > 86400000) store.writeString(BACKUP_PATH, store.readString(DATA_PATH));
   }
-  store.writeString(DATA_PATH, JSON.stringify({ version: 2, cats: d.cats, catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {} }));
+  const text = JSON.stringify({ version: 2, cats: d.cats, catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {} });
+  store.writeString(DATA_PATH, text);
+  writeCache(text);
   return d;
 }
 
@@ -642,6 +661,12 @@ async function openApp(openNoteId, filter) {
     const a = new Alert(); a.title = "讀不到筆記"; a.message = String(e); a.addAction("好"); await a.present();
     return;
   }
+  // iCloud 的筆記檔讀不到、只有這台的備份：先不要打開，免得在這裡改的內容跟 iCloud 上的版本互相蓋掉
+  if (data.fromCache) {
+    const a = new Alert(); a.title = "讀不到 iCloud 上的筆記";
+    a.message = "請確認網路和 iCloud 雲碟都有開，等一下再打開一次。"; a.addAction("好"); await a.present();
+    return;
+  }
   if (!store.fileExists(DATA_PATH)) data = await saveData(data);
   const iconFailed = await ensureAnimalIcons();
   const artFailed = await ensureArt(await logoText(data.settings), cornerOf(data.settings));
@@ -869,6 +894,8 @@ async function buildWidget(family) {
     w.addSpacer();
     return w;
   }
+  // 用的是這台的備份（iCloud 這次讀不到）：5 分鐘後再試一次
+  if (data.fromCache) w.refreshAfterDate = new Date(Date.now() + 5 * 60000);
   // 小工具不顯示第一次使用的說明筆記（還沒存過筆記時就顯示「點一下開始寫」）
   if (!store.fileExists(DATA_PATH)) data.notes = data.notes.filter(n => n.id !== "n-welcome");
   // 釘選的筆記排最前面，其他依最後修改時間
