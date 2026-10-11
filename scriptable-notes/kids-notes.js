@@ -212,7 +212,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 9; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色）
+const ART_VERSION = 10; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -348,7 +348,8 @@ async function ensureArt(ch) {
         g.strokeStyle = color; g.lineWidth = width; g.lineCap = "round";
         for (const d of paths) g.stroke(new Path2D(d));
       };
-      if (i === n - 1) twig(OUTER === "#4A6FC4" ? "#F2CF4A" : "#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
+      // 右下樹枝：第一個字一定有（跟月曆的「彥」一模一樣），最後一個字也有；藍框上改用黃枝
+      if (i === 0 || i === n - 1) twig(OUTER === "#4A6FC4" ? "#F2CF4A" : "#4A6FC4", 7, ["M178 228 C 190 210, 202 194, 218 180", "M190 212 C 186 200, 186 190, 190 180", "M202 198 C 210 196, 218 192, 226 186"]);
       if (i === 0) twig("#F2CF4A", 6.5, ["M60 236 C 61 222, 61 208, 60 194", "M61 218 C 54 216, 51 210, 51 202", "M60 206 C 66 204, 69 198, 69 190"]);
       // 小花：(x, y) 中心、s 縮放、deg 旋轉、color 花瓣顏色
       const flower = (x, y, s, deg, color) => {
