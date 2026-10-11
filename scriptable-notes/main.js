@@ -595,7 +595,7 @@ async function buildWidget(family) {
   // 點卡片以外的地方：打開筆記，並篩選成這個小工具的分類
   if (filterKey) w.url = URLScheme.forRunningScript() + "?filter=" + encodeURIComponent(filterKey);
 
-  // 標題列：左上角「彥」圖示 + 筆記 + 則數（白色膠囊，疊在右上角的黃色色塊上）
+  // 標題列：左上角「彥」圖示 + 筆記（或分類名稱）
   const head = w.addStack();
   head.centerAlignContent();
   head.spacing = 6;
@@ -609,13 +609,6 @@ async function buildWidget(family) {
   h.font = Font.heavyRoundedSystemFont(family === "small" ? 15 : 18);
   h.textColor = col(K.ink);
   head.addSpacer();
-  const pill = head.addStack();
-  pill.backgroundColor = col(K.white);
-  pill.cornerRadius = 9;
-  pill.setPadding(2, 8, 2, 8);
-  const cnt = pill.addText(`${notes.length} 則`);
-  cnt.font = Font.heavyRoundedSystemFont(11);
-  cnt.textColor = col(K.ink);
   w.addSpacer(family === "small" ? 6 : 8);
 
   if (!notes.length) {
