@@ -587,11 +587,8 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor, height) {
     ph.textColor = col(K.body);
   }
   card.addSpacer();
+  // 底部只放清單進度（例如 0/5），靠右；主畫面不顯示修改日期
   const foot = card.addStack();
-  const d = new Date(n.updated), p = x => String(x).padStart(2, "0");
-  const dt = foot.addText(`${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`);
-  dt.font = Font.semiboldRoundedSystemFont(9);
-  dt.textColor = col(K.body);
   foot.addSpacer();
   if (checks.length) {
     const pr = foot.addText(`${checks.filter(l => l.done).length}/${checks.length}`);
