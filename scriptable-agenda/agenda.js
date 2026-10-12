@@ -210,7 +210,8 @@ async function loadAgenda(days = 30) {
     // 今天的提醒事項時間已經過了（例如 12:00 的事現在 12:34）：時間照樣顯示，但圓圈和時間變紅色
     const late = !overdue && r.dueDateIncludesTime && r.dueDate < now;
     items.push({ ...item, day: d, start: r.dueDate, hasTime: r.dueDateIncludesTime, overdue, late,
-      sort: overdue ? -2 : r.dueDateIncludesTime ? r.dueDate.getTime() : -1 });
+      // 過期的（前幾天的、今天時間已過的）排在最前面，越早到期的越前面；過期再久都會一直留著，直到在提醒事項打勾
+      sort: overdue || late ? r.dueDate.getTime() - 1e13 : r.dueDateIncludesTime ? r.dueDate.getTime() : -1 });
   }
   const map = new Map();
   map.set(key(today), []); // 今天一定要有（沒行程時顯示「好好休息」）
@@ -281,7 +282,7 @@ function addCard(parent, it, color, width, height, opts = {}) {
   const t = text.addText(it.title);
   // 大尺寸的卡片標題放大 1.2 倍（13 → 15.6）；時間不變
   t.font = Font.heavyRoundedSystemFont(opts.small ? 12 : opts.withDay ? 13 : 15.6);
-  t.textColor = col(K.ink);
+  t.textColor = col(it.overdue || it.late ? K.red : K.ink); // 過期的提醒事項，標題也變紅色
   t.lineLimit = 1;
   const sub = timeText(it, opts.withDay);
   // 提醒事項（和中、小尺寸）的時間放第二行；大尺寸的活動時間放右邊，上開始、下結束
