@@ -70,7 +70,7 @@ function logoImages() {
   const calLogo = local.joinPath(local.joinPath(local.documentsDirectory(), "calendar-widget-kids"), "logo.png");
   if (local.fileExists(calLogo)) return [Image.fromFile(calLogo)];
   let n = 0;
-  try { n = [...String(JSON.parse(local.readString(local.joinPath(ART_DIR, "meta.json"))).logoChar || "")].filter(c => c.trim()).slice(0, 3).length; } catch (e) {}
+  try { n = [...String((readJSON(local, local.joinPath(ART_DIR, "meta.json")) || {}).logoChar || "")].filter(c => c.trim()).slice(0, 3).length; } catch (e) {}
   const out = [];
   for (let i = 0; i < n; i++) { const im = artImage("logo-" + i); if (im) out.push(im); }
   return out;
@@ -86,9 +86,11 @@ const SETTINGS_PATH = cloud.joinPath(AG_DIR, "settings.json");
 const AG_ART = local.joinPath(local.documentsDirectory(), "kids-agenda-art");
 const agArt = name => local.joinPath(AG_ART, name + ".png");
 const AG_META = local.joinPath(AG_ART, "meta.json");
-const readJSON = (fm, p) => { try { return JSON.parse(fm.readString(p)); } catch (e) { return null; } };
-async function download(p) {
-  try { if (cloud.fileExists(p)) await Promise.race([cloud.downloadFileFromiCloud(p), new Promise(r => Timer.schedule(3000, false, r))]); } catch (e) {}
+// 檔案不在（或 iCloud 還沒下載到這台）就回傳 null，不去讀，免得 Scriptable 跳警告
+const readJSON = (fm, p) => { try { return fm.fileExists(p) && fm.isFileDownloaded(p) ? JSON.parse(fm.readString(p)) : null; } catch (e) { return null; } };
+// 叫 iCloud 下載，最多等 wait 毫秒（舊 iPhone 下載照片比較慢，照片等 30 秒）
+async function download(p, wait = 3000) {
+  try { if (cloud.fileExists(p)) await Promise.race([cloud.downloadFileFromiCloud(p), new Promise(r => Timer.schedule(wait, false, r))]); } catch (e) {}
 }
 async function cornerVersion() {
   await download(SETTINGS_PATH);
@@ -106,8 +108,9 @@ async function ensureCornerArt() {
   const corner = await cornerVersion();
   const meta = readJSON(local, AG_META);
   if (!corner || (meta && meta.corner === corner && meta.base === baseStamp())) return;
-  await download(CORNER_PATH);
-  if (!cloud.fileExists(CORNER_PATH)) return;
+  await download(CORNER_PATH, 30000);
+  if (!cloud.fileExists(CORNER_PATH) || !cloud.isFileDownloaded(CORNER_PATH)) return; // 還沒下載好：下次執行再畫
+  const photoB64 = cloud.read(CORNER_PATH).toBase64String();
   const bases = {};
   for (const f of ["small", "medium", "large"]) if (local.fileExists(artPath("bg-" + f + "-plain"))) bases[f] = local.read(artPath("bg-" + f + "-plain")).toBase64String();
   if (!Object.keys(bases).length) return;
@@ -117,7 +120,7 @@ async function ensureCornerArt() {
     (async () => {
       try {
         const load = b64 => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = "data:image/png;base64," + b64; });
-        const photo = await load(${JSON.stringify(cloud.read(CORNER_PATH).toBase64String())});
+        const photo = await load(${JSON.stringify(photoB64)});
         const out = {};
         for (const [f, b64] of Object.entries(${JSON.stringify(bases)})) {
           const base = await load(b64), S = 3, W = base.width / S, H = base.height / S, u = Math.min(W, H) / 170;
