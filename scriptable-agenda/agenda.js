@@ -317,9 +317,10 @@ function addCard(parent, it, color, width, height, opts = {}) {
   }
 }
 
-function addDayHeader(parent, g) {
+function addDayHeader(parent, g, indent = 0) {
   const row = parent.addStack();
   row.centerAlignContent();
+  if (indent) row.addSpacer(indent);
   row.spacing = 6;
   const pill = row.addStack();
   pill.backgroundColor = col(g.label === "今天" ? K.sun : K.white);
@@ -377,9 +378,10 @@ async function buildWidget(family) {
 
   if (family === "large") {
     const LOGO = 44;
-    // 行程最多放 4 項左右：整組往下 10，第一張卡片就在右上角照片（色塊）下面，卡片可以用全寬
-    const cardW = inner;
-    const leftRow = () => { const r = w.addStack(); r.layoutHorizontally(); return r; };
+    // 行程最多放 4 項左右：整組往下 10，第一張卡片就在右上角照片（色塊）下面
+    // 卡片和日期左右各縮 12，露出底圖左邊的綠色、右邊的橘色色塊（色塊停在離卡片約 4 的地方）
+    const INSET = 12, cardW = inner - INSET * 2;
+    const leftRow = () => { const r = w.addStack(); r.layoutHorizontally(); r.addSpacer(INSET); return r; };
     addTopHeader(w, LOGO, false);
     w.addSpacer(18);
     let room = H - 22 - LOGO - 18;
@@ -389,7 +391,7 @@ async function buildWidget(family) {
       const empty = g.label === "今天" && !g.items.length;
       const first = empty ? 30 : CARD_H;
       if (room < DAY_H + GAP + first) break; // 連一張卡片都放不下就不放這一天
-      addDayHeader(w, g);
+      addDayHeader(w, g, INSET);
       w.addSpacer(GAP);
       room -= DAY_H + GAP;
       if (empty) {
