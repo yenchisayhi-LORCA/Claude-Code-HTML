@@ -277,7 +277,8 @@ function addCard(parent, it, color, width, height, opts = {}) {
   text.layoutVertically();
   text.spacing = 1;
   const t = text.addText(it.title);
-  t.font = Font.heavyRoundedSystemFont(opts.small ? 12 : 13);
+  // 大尺寸的卡片標題放大 1.2 倍（13 → 15.6）；時間不變
+  t.font = Font.heavyRoundedSystemFont(opts.small ? 12 : opts.withDay ? 13 : 15.6);
   t.textColor = col(K.ink);
   t.lineLimit = 1;
   const sub = timeText(it, opts.withDay);
@@ -349,7 +350,7 @@ function addTopHeader(w, size, compact) {
   box.spacing = 5;
   box.setPadding(0, 0, Math.round(size * 0.2), 0); // 往上墊一點，對齊圖示裡字的底部
   const d = box.addText(compact ? `${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEK[now.getDay()]}`);
-  d.font = Font.heavyRoundedSystemFont(compact ? 11 : 13); // 原本 13／16，縮小成 0.8 倍
+  d.font = Font.heavyRoundedSystemFont(compact ? 11 : 15.6); // 大尺寸 13 再放大 1.2 倍；農曆不變
   d.textColor = col(K.ink); // 日期和星期都用深藍色（不用行事曆的紅色）
   d.lineLimit = 1;
   const l = lunar(now);
@@ -377,7 +378,7 @@ async function buildWidget(family) {
   const inner = W - 24, pick = makePicker();
 
   if (family === "large") {
-    const LOGO = 44;
+    const LOGO = 48; // 「彥」44 放大 1.1 倍
     // 行程最多放 4 項左右：整組往下 10，第一張卡片就在右上角照片（色塊）下面
     // 卡片和日期左右各縮 12，露出底圖左邊的綠色、右邊的橘色色塊（色塊停在離卡片約 4 的地方）
     const INSET = 12, cardW = inner - INSET * 2;
