@@ -354,20 +354,14 @@ function addTopHeader(w, size, compact) {
     box.layoutVertically();
     box.spacing = 1;
   }
-  const ds = compact ? `${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEK[now.getDay()]}`;
-  const d = box.addText(ds);
+  const d = box.addText(compact ? `${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEK[now.getDay()]}`);
   d.font = Font.heavyRoundedSystemFont(compact ? 11 : 15.6); // 大尺寸 13 再放大 1.2 倍；農曆不變
   d.textColor = col(K.ink); // 日期和星期都用深藍色（不用行事曆的紅色）
   d.lineLimit = 1;
   const l = lunar(now);
   if (l && !compact) {
-    // 農曆放在下一行，靠右對齊在「星期幾」下面：這一行的寬度用日期字數估（中文字約 1 個字高、數字約 0.6、空白約 0.3），
-    // 不用彈性空白，免得這一行被撐到整個小工具那麼寬、跑到右上角的照片下面
-    const dateW = [...ds].reduce((s, c) => s + (/\d/.test(c) ? 0.6 : c === " " ? 0.3 : 1) * 15.6, 0);
-    const lr = box.addStack();
-    lr.size = new Size(Math.round(dateW), 0);
-    lr.addSpacer();
-    const lt = lr.addText(l);
+    // 農曆放在下一行，靠左對齊在「10月12日」下面
+    const lt = box.addText(l);
     lt.font = Font.semiboldRoundedSystemFont(10);
     lt.textColor = col(K.body);
     lt.lineLimit = 1;
