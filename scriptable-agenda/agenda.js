@@ -11,6 +11,8 @@ const PALETTE = [
   { bg: "#CFDDF8", dot: "#3F6FD1" }, { bg: "#FBD3D0", dot: "#E0412F" }, { bg: "#C9F0E9", dot: "#17A08F" },
   { bg: "#E3DAFA", dot: "#8E6FD8" }, { bg: "#FFD8E8", dot: "#F2649E" },
 ];
+// 卡片不用粉紅、青色、桃紅：底圖左下是粉紅、右下是青色色塊，卡片壓在上面會混在一起
+const CARD_PALETTE = PALETTE.filter(c => !["#FBD3D0", "#C9F0E9", "#FFD8E8"].includes(c.bg));
 const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
 const col = (hex, a = 1) => new Color(hex, a);
 const hash = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
@@ -224,11 +226,11 @@ async function loadAgenda(days = 30) {
 function makePicker() {
   const used = new Set();
   return it => {
-    if (used.size >= PALETTE.length) used.clear();
-    let i = hash(it.id + it.title) % PALETTE.length;
-    while (used.has(i)) i = (i + 1) % PALETTE.length;
+    if (used.size >= CARD_PALETTE.length) used.clear();
+    let i = hash(it.id + it.title) % CARD_PALETTE.length;
+    while (used.has(i)) i = (i + 1) % CARD_PALETTE.length;
     used.add(i);
-    return PALETTE[i];
+    return CARD_PALETTE[i];
   };
 }
 
@@ -375,12 +377,12 @@ async function buildWidget(family) {
 
   if (family === "large") {
     const LOGO = 44;
-    // 卡片右邊縮 40，不要壓到右上角的照片（色塊）；左邊對齊不變
-    const cardW = inner - 40;
+    // 行程最多放 4 項左右：整組往下 10，第一張卡片就在右上角照片（色塊）下面，卡片可以用全寬
+    const cardW = inner;
     const leftRow = () => { const r = w.addStack(); r.layoutHorizontally(); return r; };
     addTopHeader(w, LOGO, false);
-    w.addSpacer(8);
-    let room = H - 22 - LOGO - 8;
+    w.addSpacer(18);
+    let room = H - 22 - LOGO - 18;
     const all = [...groups];
     if (undated.length) all.push({ label: "待辦", lunar: "", items: undated });
     for (const g of all) {
