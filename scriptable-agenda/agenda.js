@@ -341,21 +341,33 @@ function addDayHeader(parent, g, indent = 0) {
 function addTopHeader(w, size, compact) {
   const now = new Date();
   const head = w.addStack();
-  head.bottomAlignContent();
+  // 大尺寸：日期和農曆分兩行，整組跟圖示上下置中；小尺寸只有一行日期，對齊圖示裡字的底部
+  if (compact) head.bottomAlignContent(); else head.centerAlignContent();
   head.spacing = 2;
   for (const im of logoImages()) { const li = head.addImage(im); li.imageSize = new Size(size, size); }
   head.addSpacer(6);
   const box = head.addStack();
-  box.bottomAlignContent();
-  box.spacing = 5;
-  box.setPadding(0, 0, Math.round(size * 0.2), 0); // 往上墊一點，對齊圖示裡字的底部
-  const d = box.addText(compact ? `${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEK[now.getDay()]}`);
+  if (compact) {
+    box.bottomAlignContent();
+    box.setPadding(0, 0, Math.round(size * 0.2), 0); // 往上墊一點，對齊圖示裡字的底部
+  } else {
+    box.layoutVertically();
+    box.spacing = 1;
+  }
+  const ds = compact ? `${now.getMonth() + 1}/${now.getDate()} 週${WEEK[now.getDay()]}` : `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEK[now.getDay()]}`;
+  const d = box.addText(ds);
   d.font = Font.heavyRoundedSystemFont(compact ? 11 : 15.6); // 大尺寸 13 再放大 1.2 倍；農曆不變
   d.textColor = col(K.ink); // 日期和星期都用深藍色（不用行事曆的紅色）
   d.lineLimit = 1;
   const l = lunar(now);
   if (l && !compact) {
-    const lt = box.addText(l);
+    // 農曆放在下一行，靠右對齊在「星期幾」下面：這一行的寬度用日期字數估（中文字約 1 個字高、數字約 0.6、空白約 0.3），
+    // 不用彈性空白，免得這一行被撐到整個小工具那麼寬、跑到右上角的照片下面
+    const dateW = [...ds].reduce((s, c) => s + (/\d/.test(c) ? 0.6 : c === " " ? 0.3 : 1) * 15.6, 0);
+    const lr = box.addStack();
+    lr.size = new Size(Math.round(dateW), 0);
+    lr.addSpacer();
+    const lt = lr.addText(l);
     lt.font = Font.semiboldRoundedSystemFont(10);
     lt.textColor = col(K.body);
     lt.lineLimit = 1;
