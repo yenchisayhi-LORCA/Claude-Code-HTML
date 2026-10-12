@@ -28,6 +28,7 @@ const CACHE_PATH = localFM.joinPath(localFM.documentsDirectory(), "kids-notes-ca
 function writeCache(text) { try { localFM.writeString(CACHE_PATH, text); } catch (e) {} }
 function readCache() {
   try {
+    if (!localFM.fileExists(CACHE_PATH)) return null;
     const d = JSON.parse(localFM.readString(CACHE_PATH));
     if (d && Array.isArray(d.notes)) return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {}, fromCache: true };
   } catch (e) {}
@@ -47,11 +48,11 @@ function cloudPlaceholder(path) {
   return store.joinPath(path.slice(0, path.length - name.length), "." + name + ".icloud");
 }
 // 每次都叫 iCloud 拿最新版：另一台裝置改過時，這台已經下載過的舊檔不會自己更新（沒網路時就用手上這份）
-async function fetchFromCloud(path) {
+async function fetchFromCloud(path, wait = 3000) {
   try {
     if (!store.fileExists(path) && !store.fileExists(cloudPlaceholder(path))) return false;
-    // 最多等 3 秒：iCloud 卡住時不要讓存檔一直等，先用手上這份
-    try { await Promise.race([store.downloadFileFromiCloud(path), new Promise(r => Timer.schedule(3000, false, r))]); } catch (e) {}
+    // 預設最多等 3 秒：iCloud 卡住時不要讓存檔一直等，先用手上這份（右上角照片等比較久，舊 iPhone 下載比較慢）
+    try { await Promise.race([store.downloadFileFromiCloud(path), new Promise(r => Timer.schedule(wait, false, r))]); } catch (e) {}
     return store.fileExists(path);
   } catch (e) { return false; }
 }
@@ -337,7 +338,7 @@ async function logoText(settings) {
 }
 
 function artMeta() {
-  try { return JSON.parse(local.readString(ART_META)); } catch (e) { return null; }
+  try { return local.fileExists(ART_META) ? JSON.parse(local.readString(ART_META)) : null; } catch (e) { return null; }
 }
 
 // 舊版 iOS 的 WebView 沒有 canvas 的 roundRect，先補上
@@ -399,7 +400,8 @@ async function ensureArt(ch, corner = 0) {
   const meta = artMeta();
   if (meta && meta.version === ART_VERSION && meta.logoChar === ch && (meta.corner || 0) === corner && JSON.stringify(meta.sizes) === JSON.stringify(sizes)) return null;
   let photo = null;
-  if (corner && await fetchFromCloud(CORNER_PATH)) { try { photo = store.read(CORNER_PATH).toBase64String(); } catch (e) {} }
+  // 照片要真的下載到這台才讀（沒下載完就讀會失敗），最多等 30 秒
+  if (corner && await fetchFromCloud(CORNER_PATH, 30000) && store.isFileDownloaded(CORNER_PATH)) { try { photo = store.read(CORNER_PATH).toBase64String(); } catch (e) {} }
   if (!photo) corner = 0; // 照片還沒同步到這台：先畫黃色色塊，下次打開再試
   try {
     const faces = await fetchFont("Huninn", null, ch);
