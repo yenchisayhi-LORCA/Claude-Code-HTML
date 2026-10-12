@@ -375,6 +375,9 @@ async function buildWidget(family) {
 
   if (family === "large") {
     const LOGO = 44;
+    // 卡片右邊縮 40，不要壓到右上角的照片（色塊）；左邊對齊不變
+    const cardW = inner - 40;
+    const leftRow = () => { const r = w.addStack(); r.layoutHorizontally(); return r; };
     addTopHeader(w, LOGO, false);
     w.addSpacer(8);
     let room = H - 22 - LOGO - 8;
@@ -388,8 +391,10 @@ async function buildWidget(family) {
       w.addSpacer(GAP);
       room -= DAY_H + GAP;
       if (empty) {
-        const box = w.addStack();
-        box.size = new Size(inner, 30);
+        const boxRow = leftRow();
+        const box = boxRow.addStack();
+        boxRow.addSpacer();
+        box.size = new Size(cardW, 30);
         box.backgroundColor = col(K.white, 0.75);
         box.cornerRadius = 12;
         box.setPadding(0, 10, 0, 10);
@@ -404,7 +409,9 @@ async function buildWidget(family) {
       }
       for (const it of g.items) {
         if (room < CARD_H) break;
-        addCard(w, it, pick(it), inner, CARD_H);
+        const row = leftRow();
+        addCard(row, it, pick(it), cardW, CARD_H);
+        row.addSpacer();
         w.addSpacer(GAP);
         room -= CARD_H + GAP;
       }
