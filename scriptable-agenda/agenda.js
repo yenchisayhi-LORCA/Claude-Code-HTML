@@ -207,7 +207,9 @@ async function loadAgenda(days = 30) {
     const overdue = r.dueDate < today;
     const d = overdue ? today : day0(r.dueDate);
     if (d >= end) continue;
-    items.push({ ...item, day: d, start: r.dueDate, hasTime: r.dueDateIncludesTime, overdue,
+    // 今天的提醒事項時間已經過了（例如 12:00 的事現在 12:34）：時間照樣顯示，但圓圈和時間變紅色
+    const late = !overdue && r.dueDateIncludesTime && r.dueDate < now;
+    items.push({ ...item, day: d, start: r.dueDate, hasTime: r.dueDateIncludesTime, overdue, late,
       sort: overdue ? -2 : r.dueDateIncludesTime ? r.dueDate.getTime() : -1 });
   }
   const map = new Map();
@@ -260,7 +262,7 @@ function addCard(parent, it, color, width, height, opts = {}) {
     sym.applyFont(Font.boldSystemFont(14));
     const im = card.addImage(sym.image);
     im.imageSize = new Size(15, 15);
-    im.tintColor = col(it.overdue ? K.red : K.ink);
+    im.tintColor = col(it.overdue || it.late ? K.red : K.ink);
   } else {
     const ring = card.addStack();
     ring.size = new Size(13, 13);
@@ -292,11 +294,11 @@ function addCard(parent, it, color, width, height, opts = {}) {
       c.applyFont(Font.semiboldSystemFont(10));
       const ci = row.addImage(c.image);
       ci.imageSize = new Size(10, 10);
-      ci.tintColor = col(K.body);
+      ci.tintColor = col(it.late ? K.red : K.body);
     }
     const s = row.addText(sub);
     s.font = Font.semiboldRoundedSystemFont(10);
-    s.textColor = col(it.overdue ? K.red : K.body);
+    s.textColor = col(it.overdue || it.late ? K.red : K.body);
     s.lineLimit = 1;
   }
   card.addSpacer();
