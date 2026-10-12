@@ -309,7 +309,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 12; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（12：行事曆用的底圖右邊橘色、下面藍色色塊放大；2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝；11：多畫一張沒有菱形的底圖給行事曆小工具）
+const ART_VERSION = 13; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（13：行事曆底圖下面的藍色改窄，不壓到左右的粉紅、青色；12：行事曆用的底圖右邊橘色、下面藍色色塊放大；2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝；11：多畫一張沒有菱形的底圖給行事曆小工具）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -508,7 +508,7 @@ async function ensureArt(ch, corner = 0) {
             blob(g, W * 0.52, H + 10 * u, 70 * u, 34 * u, R1, 3, "#CFDDF8");
           } else {
             blob(g, W + 6 * u, H * 0.5, 46 * u, 66 * u, R2, -6, "#FFE2BA");
-            blob(g, W * 0.54, H + 12 * u, 108 * u, 58 * u, R1, 3, "#CFDDF8");
+            blob(g, W * 0.49, H + 12 * u, 72 * u, 54 * u, R1, 3, "#CFDDF8"); // 夾在左下粉紅和右下青色中間
           }
         }
         const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r * u, 0, 7); g.fill(); };
