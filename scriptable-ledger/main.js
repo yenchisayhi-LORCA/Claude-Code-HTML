@@ -146,6 +146,94 @@ function logoImages() {
 }
 const logoDataURLs = () => logoImages().map(im => "data:image/png;base64," + Data.fromPNG(im).toBase64String());
 
+// ---- 小工具右上角的照片：黃色色塊可以換成一張照片（外框跟色塊同一個形狀，跟筆記、行事曆一樣）
+// 照片也只放在這台：kids-ledger/corner.jpg；疊好照片的底圖畫在 kids-ledger/art/bg-*.png
+const CORNER_PATH = local.joinPath(DIR, "corner.jpg");
+const CORNER_META = local.joinPath(ART_DIR, "bg-meta.json");
+const readJSON = p => { try { return local.fileExists(p) ? JSON.parse(local.readString(p)) : null; } catch (e) { return null; } };
+// 底圖的版本：照片換的時間 + 筆記畫的底圖（-plain）的修改時間，任何一個變了就要重畫
+const cornerStamp = () => local.fileExists(CORNER_PATH) ? local.modificationDate(CORNER_PATH).getTime() : 0;
+const baseStamp = () => ["small", "medium", "large"].map(f => { try { return local.modificationDate(local.joinPath(NOTES_ART, "bg-" + f + "-plain.png")).getTime(); } catch (e) { return 0; } }).join(",");
+function cornerBg(family) {
+  const meta = readJSON(CORNER_META), p = local.joinPath(ART_DIR, "bg-" + family + ".png");
+  if (!cornerStamp() || !meta || meta.corner !== cornerStamp() || meta.base !== baseStamp() || !local.fileExists(p)) return null;
+  return Image.fromFile(p);
+}
+// 在 App 內執行時：照片換過、或筆記的底圖重畫過，就重畫疊好照片的底圖
+async function ensureCornerArt() {
+  const corner = cornerStamp(), meta = readJSON(CORNER_META);
+  if (!corner || (meta && meta.corner === corner && meta.base === baseStamp())) return;
+  const bases = {};
+  for (const f of ["small", "medium", "large"]) {
+    const p = local.joinPath(NOTES_ART, "bg-" + f + "-plain.png");
+    if (local.fileExists(p)) bases[f] = local.read(p).toBase64String();
+  }
+  if (!Object.keys(bases).length) return;
+  const wv = new WebView();
+  await wv.loadHTML("<html><body></body></html>");
+  const res = await wv.evaluateJavaScript(`
+    (async () => {
+      try {
+        const load = (b64, type) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = "data:image/" + type + ";base64," + b64; });
+        const photo = await load(${js(local.read(CORNER_PATH).toBase64String())}, "jpeg");
+        const out = {};
+        for (const [f, b64] of Object.entries(${js(bases)})) {
+          const base = await load(b64, "png"), S = 3, W = base.width / S, H = base.height / S, u = Math.min(W, H) / 170;
+          const cv = document.createElement("canvas"); cv.width = base.width; cv.height = base.height;
+          const g = cv.getContext("2d"); g.drawImage(base, 0, 0);
+          // 跟筆記的底圖同一個黃色色塊：中心 (W-4u, 2u)、92u×80u、轉 -8 度
+          const pc = document.createElement("canvas"); pc.width = cv.width; pc.height = cv.height;
+          const pg = pc.getContext("2d"); pg.scale(S, S);
+          const bx = W - 4 * u, by = 2 * u, bw = 92 * u, bh = 80 * u;
+          pg.save(); pg.translate(bx, by); pg.rotate(-8 * Math.PI / 180); pg.translate(-bw / 2, -bh / 2);
+          const [a, b, c, d, e, ff, gg, hh] = [52, 48, 61, 39, 58, 43, 57, 42].map(v => v / 100), w = bw, h = bh;
+          pg.beginPath(); pg.moveTo(a * w, 0); pg.lineTo(w - b * w, 0);
+          pg.ellipse(w - b * w, ff * h, b * w, ff * h, 0, -Math.PI / 2, 0); pg.lineTo(w, h - gg * h);
+          pg.ellipse(w - c * w, h - gg * h, c * w, gg * h, 0, 0, Math.PI / 2); pg.lineTo(d * w, h);
+          pg.ellipse(d * w, h - hh * h, d * w, hh * h, 0, Math.PI / 2, Math.PI); pg.lineTo(0, e * h);
+          pg.ellipse(a * w, e * h, a * w, e * h, 0, Math.PI, Math.PI * 1.5);
+          pg.closePath(); pg.fillStyle = "#000"; pg.fill(); pg.restore();
+          pg.globalCompositeOperation = "source-in";
+          // 照片放滿色塊在小工具裡看得到的那一塊（左下四分之一），照片中間對齊
+          const vx = bx - bw / 2 - 2, vw = W - vx, vh = by + bh / 2 + 2, k = Math.max(vw / photo.width, vh / photo.height);
+          pg.drawImage(photo, vx + (vw - photo.width * k) / 2, (vh - photo.height * k) / 2, photo.width * k, photo.height * k);
+          g.drawImage(pc, 0, 0);
+          out[f] = cv.toDataURL("image/png").split(",")[1];
+        }
+        completion(out);
+      } catch (e) { completion({ error: String(e) }); }
+    })();
+    0;`, true);
+  if (!res || res.error) return;
+  mkdir(ART_DIR);
+  for (const f in res) local.write(local.joinPath(ART_DIR, "bg-" + f + ".png"), Data.fromBase64String(res[f]));
+  local.writeString(CORNER_META, JSON.stringify({ corner, base: baseStamp() }));
+}
+// 從相簿選照片（長邊縮到 900），或拿掉改回黃色色塊；回傳要顯示的訊息，取消回傳 null
+async function changeCorner() {
+  const a = new Alert();
+  a.title = "小工具右上角的照片";
+  a.addAction("從相簿選");
+  a.addDestructiveAction("拿掉照片，改回黃色色塊");
+  a.addCancelAction("取消");
+  const i = await a.presentSheet();
+  if (i < 0) return null;
+  if (i === 1) { if (local.fileExists(CORNER_PATH)) local.remove(CORNER_PATH); return "已改回黃色色塊，主畫面小工具稍後會跟著換"; }
+  let img;
+  try { img = await Photos.fromLibrary(); } catch (e) { return null; }
+  const k = Math.min(1, 900 / Math.max(img.size.width, img.size.height));
+  const dc = new DrawContext();
+  dc.size = new Size(Math.round(img.size.width * k), Math.round(img.size.height * k));
+  dc.respectScreenScale = false; dc.opaque = true;
+  dc.drawImageInRect(img, new Rect(0, 0, dc.size.width, dc.size.height));
+  mkdir(DIR);
+  local.write(CORNER_PATH, Data.fromJPEG(dc.getImage()));
+  await ensureCornerArt();
+  return local.fileExists(local.joinPath(NOTES_ART, "bg-large-plain.png"))
+    ? "照片換好了，主畫面小工具稍後會跟著換"
+    : "照片存好了；要先在這台裝好「筆記」並按 ▶︎ 一次，小工具才有彩色底圖可以疊照片";
+}
+
 // 點小工具時執行這個腳本的網址，例如 scriptable:///run?scriptName=記帳&add=b1
 function runURL(params) {
   const q = { scriptName: Script.name(), ...params };
@@ -162,6 +250,7 @@ async function openApp(params) {
   const data = loadData();
   const iconFailed = await ensureAnimalIcons();
   await ensureStickerArt();
+  await ensureCornerArt(); // 筆記的底圖重畫過：疊照片的底圖也跟著重畫
   const boot = {
     data, iconImages: await animalDataURLs(), logos: logoDataURLs(),
     add: params.add || null, openBook: params.book || null,
@@ -179,6 +268,9 @@ async function openApp(params) {
         const p = local.joinPath(local.temporaryDirectory(), c.name.replace(/[\/\\:*?"<>|]/g, "-"));
         local.write(p, Data.fromBase64String(c.b64));
         await ShareSheet.present([p]);
+      } else if (c.type === "corner") {
+        const msg = await changeCorner();
+        if (msg) await wv.evaluateJavaScript(`window.__exported(${js(msg)}); 0;`);
       } else if (c.type === "image") {
         // 圖卡：用分享選單「儲存影像」到照片，或用 LINE 傳出去
         await ShareSheet.present([Image.fromData(Data.fromBase64String(c.b64))]);
@@ -254,14 +346,15 @@ function addHeader(parent, book, withPill, withName = true) {
   }
   if (withPill) { head.addSpacer(); addPill(head, book); }
 }
-function addPill(parent, book) {
+function addPill(parent, book, plusOnly = false) {
   const pill = parent.addStack();
   pill.backgroundColor = col(K.tomato);
   pill.cornerRadius = 12;
-  pill.setPadding(5, 11, 5, 11);
   pill.url = runURL({ add: book.id });
-  const pt = pill.addText("＋ 記一筆");
-  pt.font = Font.heavyRoundedSystemFont(13); pt.textColor = col(K.white);
+  // 大尺寸只放一個「＋」（紅色底），小、中尺寸寫「＋ 記一筆」
+  pill.setPadding(plusOnly ? 2 : 5, plusOnly ? 12 : 11, plusOnly ? 2 : 5, plusOnly ? 12 : 11);
+  const pt = pill.addText(plusOnly ? "＋" : "＋ 記一筆");
+  pt.font = Font.heavyRoundedSystemFont(plusOnly ? 18 : 13); pt.textColor = col(K.white);
 }
 // 一筆記錄：分類圖示、備註（沒有就寫分類）、金額
 function addChip(parent, e, cats, width, inset = 0) {
@@ -288,7 +381,7 @@ function addChip(parent, e, cats, width, inset = 0) {
 function buildWidget(family) {
   const w = new ListWidget();
   w.backgroundColor = col(K.cream);
-  const bgImg = notesArt("bg-" + family + "-plain") || notesArt("bg-" + family);
+  const bgImg = cornerBg(family) || notesArt("bg-" + family + "-plain") || notesArt("bg-" + family);
   if (bgImg) w.backgroundImage = bgImg;
   w.setPadding(12, 14, 12, 14);
   w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
@@ -359,8 +452,8 @@ function buildWidget(family) {
     return w;
   }
 
-  // 大尺寸：標題（左「彥」、中間帳本圖示和名稱、右＋記一筆）、今天和全部，下面依日期列出，每天一行小計；放得下幾筆就放幾筆
-  // 左右兩邊用一樣寬的欄位，中間的帳本圖示和名稱才會在正中間
+  // 大尺寸：標題（左「彥」、中間帳本圖示和名稱）、今天、＋、全部，下面依日期列出，每天一行小計；放得下幾筆就放幾筆
+  // 左右兩邊用一樣寬的欄位，中間的帳本圖示和名稱才會在正中間（右邊空著，讓右上角的色塊或照片露出來）
   const SIDE = 96;
   const head = w.addStack();
   head.centerAlignContent();
@@ -379,9 +472,6 @@ function buildWidget(family) {
   head.addSpacer();
   const hr = head.addStack();
   hr.size = new Size(SIDE, LOGO);
-  hr.centerAlignContent();
-  hr.addSpacer();
-  addPill(hr, book);
   w.addSpacer(6);
   const sums = w.addStack();
   sums.bottomAlignContent();
@@ -389,11 +479,12 @@ function buildWidget(family) {
   const tl = sums.addText("今天"); tl.font = Font.boldRoundedSystemFont(12); tl.textColor = col(K.body);
   const tv = sums.addText(money(todaySum)); tv.font = Font.heavyRoundedSystemFont(26); tv.textColor = col(K.ink);
   sums.addSpacer();
+  addPill(sums, book, true); // 「＋」放在全部金額前面
   const al = sums.addText(`全部 ${money(total(entries))}`); al.font = Font.boldRoundedSystemFont(12); al.textColor = col(K.body);
   w.addSpacer(8);
   const inner = W - 28, INSET = 8, chipW = inner - INSET * 2; // 記錄卡片左右各縮 8
   let room = H - 24 - LOGO - 6 - 32 - 8;
-  if (!entries.length) { const t = w.addText("還沒有記錄，點右上角的「＋ 記一筆」開始"); t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.body); }
+  if (!entries.length) { const t = w.addText("還沒有記錄，點「＋」開始記一筆"); t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.body); }
   let day = null;
   for (const e of entries) {
     const k = dayKey(e.ts);
