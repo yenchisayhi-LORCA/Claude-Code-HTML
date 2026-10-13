@@ -1,0 +1,451 @@
+// 記帳・童趣風快速記帳（Scriptable）
+// 在 App 內執行：打開帳本（多本帳本、記一筆、分類、匯出到 Excel）
+// 放在主畫面當小工具：顯示最近記帳那本帳本的今天花費，點「＋記一筆」直接記帳
+// 記錄只存在這台 iPhone（Scriptable 的本機資料夾），不上 iCloud；記得定期匯出貼到 Excel 帳冊
+const K = {
+  cream: "#FFFCEF", white: "#FFFFFF", ink: "#262261", body: "#5A5788", tomato: "#D93A2F",
+};
+const CAT_BG = {
+  yellow: "#FFF0AF", orange: "#FFE2BA", green: "#D5F5D0", blue: "#CFDDF8",
+  pink: "#FBD3D0", teal: "#C9F0E9", purple: "#E3DAFA", rose: "#FFD8E8",
+};
+const col = (hex, a = 1) => new Color(hex, a);
+const js = v => JSON.stringify(v).replace(/</g, "\\u003c");
+
+// ---- 存檔位置：只放在這台 iPhone
+const local = FileManager.local();
+const DIR = local.joinPath(local.documentsDirectory(), "kids-ledger");
+const DATA_PATH = local.joinPath(DIR, "ledger.json");
+const BACKUP_PATH = local.joinPath(DIR, "ledger-backup.json");
+const ICON_DIR = local.joinPath(DIR, "icons");
+const ART_DIR = local.joinPath(DIR, "art");
+const mkdir = p => { if (!local.fileExists(p)) local.createDirectory(p, true); };
+
+function loadData() {
+  for (const p of [DATA_PATH, BACKUP_PATH]) {
+    try { if (local.fileExists(p)) { const d = JSON.parse(local.readString(p)); if (d && Array.isArray(d.books)) return d; } } catch (e) {}
+  }
+  return null; // 第一次使用：畫面那邊會建一本「日常」和 7 個分類
+}
+function saveData(d) {
+  if (!d || !Array.isArray(d.books)) return;
+  mkdir(DIR);
+  // 存之前把上一版留一份，萬一存壞了還有前一次的
+  if (local.fileExists(DATA_PATH)) local.writeString(BACKUP_PATH, local.readString(DATA_PATH));
+  local.writeString(DATA_PATH, JSON.stringify(d));
+}
+
+// ---- 圖示：跟筆記同一套（線條圖示 + 貼紙樣式，由 build.py 塞進來）
+const ICONS = ["lion","pig","giraffe","bear","monkey","bee","owl","fox","sheep","penguin","koala","frog","rabbit","star","heart","diamond","music","clothes","pencil","pets","sun","moon","cloud","partlycloudy","cloudynight","overcast","rain","thunderstorm","lightning","snow","rainbow","gift","balloon","fork","drink","idea","shoppingbag","travel","train","bus","car","bicycle","camera","location"];
+const ICON_SVGS = {
+    star: '<path d="M12 3l2.4 5.5 6 .6-4.5 4 1.3 5.9L12 16l-5.2 3 1.3-5.9-4.5-4 6-.6Z"/>',
+    heart: '<path d="M12 20s-7-4.4-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.6-9.5 9-9.5 9Z"/>',
+    diamond: '<path d="M12 4L15 12L12 20L9 12Z"/>',
+    music: '<path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>',
+    pencil: '<path d="M4 20l1-4L16 5l3 3L8 19l-4 1Z"/><path d="M14 7l3 3"/>',
+    pets: '<circle cx="12" cy="15" r="3.4"/><circle cx="6.5" cy="10" r="1.6"/><circle cx="10" cy="7" r="1.6"/><circle cx="14" cy="7" r="1.6"/><circle cx="17.5" cy="10" r="1.6"/>',
+    clothes: '<path d="M8 4 4 7l2 3 2-1.3V20h8V8.7L18 10l2-3-4-3-2 1.5h-4Z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+    moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>',
+    cloud: '<path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 10.1 4 4 0 0 0 7 18Z"/>',
+    partlycloudy: '<circle cx="8" cy="8" r="3"/><path d="M8 3v1.2M8 12.8V14M3 8h1.2M12.8 8H14M4.5 4.5l.9.9M11.5 4.5l-.9.9"/><path d="M10 20h7a3.5 3.5 0 0 0 .4-6.98A4.5 4.5 0 0 0 9.2 12.4 3.2 3.2 0 0 0 10 20Z"/>',
+    cloudynight: '<path d="M15 8.2A4 4 0 1 1 10.9 4a3.2 3.2 0 0 0 4.1 4.2Z"/><path d="M9 20h7a3.5 3.5 0 0 0 .4-6.98A4.5 4.5 0 0 0 8.2 12.4 3.2 3.2 0 0 0 9 20Z"/>',
+    overcast: '<path d="M7 14h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 6.1 4 4 0 0 0 7 14Z"/><line x1="5" y1="18" x2="19" y2="18"/>',
+    rain: '<path d="M7 13h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 5.1 4 4 0 0 0 7 13Z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/>',
+    thunderstorm: '<path d="M7 12h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 4.1 4 4 0 0 0 7 12Z"/><path d="M13 13l-3 5h3l-2 4"/>',
+    lightning: '<path d="M13 2 4 14h6l-1 8 9-12h-6Z"/>',
+    snow: '<path d="M7 11h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 3.1 4 4 0 0 0 7 11Z"/><circle cx="8" cy="18" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="18" r=".6" fill="currentColor" stroke="none"/>',
+    rainbow: '<path d="M3 18a9 9 0 0 1 18 0"/><path d="M6.5 18a5.5 5.5 0 0 1 11 0"/>',
+    gift: '<rect x="4" y="10" width="16" height="10" rx="1.5"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="12" y1="10" x2="12" y2="20"/><path d="M12 10c-2-4-6-3-6-1s3 1 6 1Zm0 0c2-4 6-3 6-1s-3 1-6 1Z"/>',
+    idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5a2.6 2.6 0 0 1 1.1-2.2A6 6 0 0 0 12 3Z"/>',
+    shoppingbag: '<path d="M6 8h12l-1 12H7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+    travel: '<path d="M21 4 3 11l6 2 2 6 3-4 5 3Z"/>',
+    train: '<rect x="6" y="4" width="12" height="12" rx="4"/><line x1="6" y1="11" x2="18" y2="11"/><circle cx="9" cy="15.5" r=".8" fill="currentColor" stroke="none"/><circle cx="15" cy="15.5" r=".8" fill="currentColor" stroke="none"/><path d="M8 19l-2 2M16 19l2 2"/>',
+    bus: '<rect x="3" y="6" width="18" height="10" rx="2"/><line x1="3" y1="11" x2="21" y2="11"/><circle cx="7.5" cy="18.5" r="1.4"/><circle cx="16.5" cy="18.5" r="1.4"/>',
+    car: '<path d="M4 16V12l2-4h12l2 4v4"/><path d="M4 16h16"/><circle cx="7.5" cy="16.5" r="1.6"/><circle cx="16.5" cy="16.5" r="1.6"/>',
+    bicycle: '<circle cx="6" cy="17" r="3.2"/><circle cx="18" cy="17" r="3.2"/><path d="M6 17l4-9h4l-3 6h7l-3-5"/>',
+    camera: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l1.5-3h5L16 7"/><circle cx="12" cy="13.5" r="4"/>',
+    location: '<path d="M12 21s7-7.2 7-12a7 7 0 0 0-14 0c0 4.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.3"/>',
+    pig: '<path d="M7.5 8.5 9 6 10.5 8.3M13.5 8.3 15 6 16.5 8.5"/><circle cx="12" cy="13.5" r="6.5"/><ellipse cx="12" cy="15.3" rx="2.3" ry="1.6"/><circle cx="11.1" cy="15.3" r=".35" fill="currentColor" stroke="none"/><circle cx="12.9" cy="15.3" r=".35" fill="currentColor" stroke="none"/><circle cx="9.6" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="14.4" cy="12" r=".5" fill="currentColor" stroke="none"/>',
+    giraffe: '<line x1="9.5" y1="7.8" x2="9" y2="5"/><circle cx="9" cy="4.5" r=".7" fill="currentColor" stroke="none"/><line x1="14.5" y1="7.8" x2="15" y2="5"/><circle cx="15" cy="4.5" r=".7" fill="currentColor" stroke="none"/><circle cx="12" cy="13.5" r="6.5"/><ellipse cx="12" cy="16.8" rx="2" ry="1.3"/><circle cx="9.4" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="14.6" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="8" cy="14.5" r=".9" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r=".9" fill="currentColor" stroke="none"/>',
+    bear: '<circle cx="7.3" cy="8.2" r="2.3"/><circle cx="16.7" cy="8.2" r="2.3"/><circle cx="12" cy="13.8" r="6.5"/><ellipse cx="12" cy="16" rx="2.2" ry="1.5"/><circle cx="9.5" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="14.5" cy="12" r=".5" fill="currentColor" stroke="none"/>',
+    monkey: '<circle cx="6.3" cy="12.5" r="2.6"/><circle cx="17.7" cy="12.5" r="2.6"/><circle cx="12" cy="13" r="6.5"/><ellipse cx="12" cy="14.7" rx="3.6" ry="3.1"/><circle cx="10" cy="12.8" r=".5" fill="currentColor" stroke="none"/><circle cx="14" cy="12.8" r=".5" fill="currentColor" stroke="none"/><path d="M10.3 16.5q1.7 1.1 3.4 0"/>',
+    lion: '<line x1="17.5" y1="13" x2="19.7" y2="13"/><line x1="15.9" y1="9.1" x2="17.4" y2="7.6"/><line x1="12" y1="7.5" x2="12" y2="5.3"/><line x1="8.1" y1="9.1" x2="6.6" y2="7.6"/><line x1="6.5" y1="13" x2="4.3" y2="13"/><line x1="8.1" y1="16.9" x2="6.6" y2="18.4"/><line x1="12" y1="18.5" x2="12" y2="20.7"/><line x1="15.9" y1="16.9" x2="17.4" y2="18.4"/><circle cx="12" cy="13" r="5.5"/><ellipse cx="12" cy="15.2" rx="2" ry="1.4"/><circle cx="9.9" cy="11.7" r=".5" fill="currentColor" stroke="none"/><circle cx="14.1" cy="11.7" r=".5" fill="currentColor" stroke="none"/>'
+  };
+// 筆記圖示的貼紙樣式：線條圖示（跟日常記帳同一套）加上塗色和不規則底色，畫法跟童趣風月曆的生日貼紙一樣。
+// App 畫面和主畫面小工具共用這一份；build.py 會把它塞進 page.html 和 kids-notes.js。
+// fill：第幾個圖形要塗什麼顏色（依 ICON_SVGS 裡元素的順序，從 0 開始）；stroke：改線條顏色；chip：底色
+const STICKER_INK = "#262261";
+const STICKER_CHIP = {
+  yellow: "#FFF0AF", orange: "#FFE2BA", green: "#D5F5D0", blue: "#CFDDF8",
+  pink: "#FBD3D0", teal: "#C9F0E9", purple: "#E3DAFA", rose: "#FFD8E8",
+};
+const STICKER_COLORS = {
+  yellow: "#FFD426", red: "#EE3E33", orange: "#FF9500", green: "#6BD861", sky: "#8CC4EE", blue: "#3F6FD1",
+  teal: "#4FD2C2", pink: "#FF9EC4", lilac: "#B9A3F0", white: "#FFFFFF", mist: "#E4E2F2", balloon: "#7DCB6E", milkTea: "#D9B48F",
+};
+const STICKERS = {
+  star: { chip: "yellow", fill: { 0: STICKER_COLORS.yellow } },
+  heart: { chip: "pink", fill: { 0: STICKER_COLORS.red } },
+  diamond: { chip: "blue", fill: { 0: STICKER_COLORS.sky } },
+  music: { chip: "purple", fill: { 1: STICKER_COLORS.lilac, 2: STICKER_COLORS.lilac } },
+  pencil: { chip: "orange", fill: { 0: STICKER_COLORS.yellow } },
+  pets: { chip: "rose", fill: { 0: STICKER_COLORS.pink, 1: STICKER_COLORS.pink, 2: STICKER_COLORS.pink, 3: STICKER_COLORS.pink, 4: STICKER_COLORS.pink } },
+  clothes: { chip: "green", fill: { 0: STICKER_COLORS.green } },
+  sun: { chip: "orange", fill: { 0: STICKER_COLORS.yellow } },
+  moon: { chip: "purple", fill: { 0: STICKER_COLORS.yellow } },
+  cloud: { chip: "blue", fill: { 0: STICKER_COLORS.white } },
+  partlycloudy: { chip: "blue", fill: { 0: STICKER_COLORS.yellow, 2: STICKER_COLORS.white } },
+  cloudynight: { chip: "purple", fill: { 0: STICKER_COLORS.yellow, 1: STICKER_COLORS.white } },
+  overcast: { chip: "blue", fill: { 0: STICKER_COLORS.mist } },
+  rain: { chip: "blue", fill: { 0: STICKER_COLORS.white }, stroke: { 1: STICKER_COLORS.blue } },
+  thunderstorm: { chip: "purple", fill: { 0: STICKER_COLORS.mist }, stroke: { 1: STICKER_COLORS.orange } },
+  lightning: { chip: "yellow", fill: { 0: STICKER_COLORS.yellow } },
+  snow: { chip: "teal", fill: { 0: STICKER_COLORS.white } },
+  rainbow: { chip: "yellow", stroke: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.blue } },
+  gift: { chip: "blue", fill: { 0: STICKER_COLORS.sky, 3: STICKER_COLORS.red } },
+  balloon: { chip: "teal", fill: { 0: STICKER_COLORS.balloon, 1: STICKER_COLORS.balloon } },
+  fork: { chip: "orange", fill: { 0: STICKER_COLORS.white, 2: STICKER_COLORS.white } },
+  drink: { chip: "teal", fill: { 0: STICKER_COLORS.milkTea, 1: STICKER_COLORS.white } },
+  idea: { chip: "yellow", fill: { 1: STICKER_COLORS.yellow } },
+  shoppingbag: { chip: "orange", fill: { 0: STICKER_COLORS.orange } },
+  travel: { chip: "teal", fill: { 0: STICKER_COLORS.sky } },
+  train: { chip: "yellow", fill: { 0: STICKER_COLORS.red, 2: STICKER_COLORS.yellow, 3: STICKER_COLORS.yellow } },
+  bus: { chip: "teal", fill: { 0: STICKER_COLORS.green, 2: STICKER_COLORS.white, 3: STICKER_COLORS.white } },
+  car: { chip: "blue", fill: { 0: STICKER_COLORS.yellow, 2: STICKER_COLORS.white, 3: STICKER_COLORS.white } },
+  bicycle: { chip: "green", fill: { 0: STICKER_COLORS.white, 1: STICKER_COLORS.white } },
+  camera: { chip: "purple", fill: { 0: STICKER_COLORS.lilac, 2: STICKER_COLORS.white } },
+  location: { chip: "rose", fill: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.white } },
+};
+// 新增的圖示（24×24，跟其他線條圖示同一個格子）
+// 氣球：球、綁口、線、反光；叉子：叉頭、中間的齒、叉柄；飲料杯：杯身、杯蓋、吸管、珍珠
+const EXTRA_ICON_SVGS = {
+  balloon: '<path d="M12 2.8c3.9 0 6.6 2.9 6.6 6.6s-3.2 6.3-6.6 7.3c-3.4-1-6.6-3.6-6.6-7.3S8.1 2.8 12 2.8Z"/><path d="M10.8 18.4 12 16.7l1.2 1.7Z"/><path d="M12 18.4c-1.6 1.4 1.6 2.4 0 4.2"/><path d="M8.6 8.4c.3-1.5 1.3-2.5 2.6-2.8"/>',
+  fork: '<path d="M8.5 2.8v5.4a3.5 3.5 0 0 0 7 0V2.8"/><path d="M12 2.8v5.4"/><path d="M10.8 11.6h2.4l-.3 8.9a.9.9 0 0 1-1.8 0Z"/>',
+  drink: '<path d="M6.8 9.4h10.4l-1.3 10.9a1.6 1.6 0 0 1-1.6 1.4H9.7a1.6 1.6 0 0 1-1.6-1.4Z"/><path d="M5.8 9.4h12.4V8a1.8 1.8 0 0 0-1.8-1.8H7.6A1.8 1.8 0 0 0 5.8 8Z"/><path d="M12.8 6.2 14.6 2.4h2.6"/><circle cx="10" cy="18.2" r=".9" fill="currentColor"/><circle cx="12.3" cy="19.2" r=".9" fill="currentColor"/><circle cx="14.4" cy="17.8" r=".9" fill="currentColor"/>',
+};
+
+// 不規則色塊的 8 個圓角百分比（同童趣風月曆的 R1–R4），依圖示名稱挑一組、旋轉 ±4 度
+const STICKER_BLOBS = [[52, 48, 61, 39, 58, 43, 57, 42], [60, 40, 44, 56, 46, 55, 45, 54], [45, 55, 52, 48, 62, 40, 60, 38], [55, 45, 48, 52, 44, 58, 42, 56]];
+function stickerHash(s) { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); }
+
+// 不規則色塊的 SVG 路徑（寬 w、高 h，左上角在 0,0）
+function blobPathD(w, h, r) {
+  const [a, b, c, d, e, f, g, k] = r.map((v) => v / 100);
+  return `M${a * w} 0H${w - b * w}A${b * w} ${f * h} 0 0 1 ${w} ${f * h}V${h - g * h}A${c * w} ${g * h} 0 0 1 ${w - c * w} ${h}`
+    + `H${d * w}A${d * w} ${k * h} 0 0 1 0 ${h - k * h}V${e * h}A${a * w} ${e * h} 0 0 1 ${a * w} 0Z`;
+}
+
+// 一個圖示的完整貼紙 SVG（viewBox 24×24）：底下不規則色塊，上面是塗好色的線條圖示
+function stickerSVG(key, svgs) {
+  const spec = STICKERS[key] || { chip: "yellow", fill: {} };
+  const inner = svgs[key] || svgs.star;
+  let i = 0;
+  const body = inner.replace(/<(\w+)([^>]*?)\/>/g, (m, tag, attrs) => {
+    const idx = i++;
+    if (/fill="currentColor"/.test(attrs)) return `<${tag}${attrs.replace('fill="currentColor"', `fill="${STICKER_INK}"`)}/>`;
+    const fill = spec.fill && spec.fill[idx] ? spec.fill[idx] : "none";
+    const stroke = spec.stroke && spec.stroke[idx] ? ` stroke="${spec.stroke[idx]}" stroke-width="2.8"` : "";
+    return `<${tag}${attrs} fill="${fill}"${stroke}/>`;
+  });
+  const h = stickerHash(key), deg = (h % 9) - 4;
+  // 寫明寬高，畫成 PNG 時才不會被當成 300×150 而變形
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">`
+    + `<path d="${blobPathD(22, 22, STICKER_BLOBS[h % 4])}" transform="translate(1 1) rotate(${deg} 11 11)" fill="${STICKER_CHIP[spec.chip]}"/>`
+    + `<g transform="translate(4.4 4.4) scale(.633)" stroke="${STICKER_INK}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${body}</g>`
+    + `</svg>`;
+}
+Object.assign(ICON_SVGS, EXTRA_ICON_SVGS);
+
+// 小動物圖示：第一次在 App 內執行時從 GitHub 下載（SVG 先在 WebView 轉成 PNG），存在這台
+const ANIMALS = {
+  lion: "animal-lion.png", pig: "animal-pig.png", giraffe: "animal-giraffe.png", bear: "animal-bear.png",
+  monkey: "animal-monkey.png", bee: "animal-bee.svg", owl: "animal-owl.svg", fox: "animal-fox.svg",
+  sheep: "animal-sheep.svg", penguin: "animal-penguin.svg", koala: "animal-koala.svg", frog: "animal-frog.svg",
+  rabbit: "animal-rabbit.svg",
+};
+const ICON_BASES = [
+  "https://raw.githubusercontent.com/yenchisayhi-LORCA/Claude-Code-HTML/main/daily-expense-tracker/icons/",
+  "https://yenchisayhi-lorca.github.io/Claude-Code-HTML/daily-expense-tracker/icons/",
+];
+const iconPath = key => local.joinPath(ICON_DIR, key + ".png");
+const artPath = key => local.joinPath(ART_DIR, "icon-" + key + ".png");
+
+async function download(file) {
+  for (const base of ICON_BASES) {
+    try {
+      const req = new Request(base + file);
+      const data = await req.load();
+      if (req.response.statusCode === 200) return data;
+    } catch (e) {}
+  }
+  return null;
+}
+
+// 把 SVG 字串（base64 或原文）在 WebView 裡畫成 PNG；回傳 { key: base64 }
+async function svgToPNG(svgs, size) {
+  if (!Object.keys(svgs).length) return {};
+  const wv = new WebView();
+  await wv.loadHTML("<html><body></body></html>");
+  return await wv.evaluateJavaScript(`
+    (async () => {
+      const out = {};
+      for (const [k, src] of Object.entries(${js(svgs)})) {
+        try {
+          const im = new Image();
+          im.src = src;
+          await im.decode();
+          const cv = document.createElement("canvas"); cv.width = cv.height = ${size};
+          cv.getContext("2d").drawImage(im, 0, 0, ${size}, ${size});
+          out[k] = cv.toDataURL("image/png").split(",")[1];
+        } catch (e) {}
+      }
+      completion(out);
+    })();
+    0;`, true) || {};
+}
+
+// 回傳下載失敗的數量
+async function ensureAnimalIcons() {
+  const missing = Object.keys(ANIMALS).filter(k => !local.fileExists(iconPath(k)));
+  if (!missing.length) return 0;
+  mkdir(ICON_DIR);
+  const svgs = {};
+  let failed = 0;
+  for (const k of missing) {
+    const data = await download(ANIMALS[k]);
+    if (!data) { failed++; continue; }
+    if (ANIMALS[k].endsWith(".png")) local.write(iconPath(k), data);
+    else svgs[k] = "data:image/svg+xml;base64," + data.toBase64String();
+  }
+  try {
+    const res = await svgToPNG(svgs, 160);
+    for (const k of Object.keys(svgs)) {
+      if (res[k]) local.write(iconPath(k), Data.fromBase64String(res[k]));
+      else failed++;
+    }
+  } catch (e) { failed += Object.keys(svgs).length; }
+  return failed;
+}
+
+// 貼紙圖示畫成 PNG，給主畫面小工具用（小工具裡不能畫 SVG）；樣式改過就把 STICKER_ART 加 1
+const STICKER_ART = 1;
+async function ensureStickerArt() {
+  const meta = local.joinPath(ART_DIR, "meta.json");
+  try { if (local.fileExists(meta) && JSON.parse(local.readString(meta)).version === STICKER_ART) return; } catch (e) {}
+  const svgs = {};
+  for (const k of ICONS) if (!ANIMALS[k]) svgs[k] = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(k, ICON_SVGS));
+  try {
+    const res = await svgToPNG(svgs, 96);
+    mkdir(ART_DIR);
+    for (const k in res) local.write(artPath(k), Data.fromBase64String(res[k]));
+    local.writeString(meta, JSON.stringify({ version: STICKER_ART }));
+  } catch (e) {}
+}
+
+async function animalDataURLs() {
+  const out = {};
+  for (const k of Object.keys(ANIMALS)) {
+    if (local.fileExists(iconPath(k))) out[k] = "data:image/png;base64," + local.read(iconPath(k)).toBase64String();
+  }
+  return out;
+}
+
+// ---- 左上角的「彥」和彩色底圖：沿用童趣風月曆、筆記在這台畫好的圖（沒有就只顯示米白底）
+const NOTES_ART = local.joinPath(local.documentsDirectory(), "kids-notes-art");
+const notesArt = name => { const p = local.joinPath(NOTES_ART, name + ".png"); return local.fileExists(p) ? Image.fromFile(p) : null; };
+function logoImages() {
+  const cal = local.joinPath(local.joinPath(local.documentsDirectory(), "calendar-widget-kids"), "logo.png");
+  if (local.fileExists(cal)) return [Image.fromFile(cal)];
+  const first = notesArt("logo-0");
+  return first ? [first] : [];
+}
+const logoDataURLs = () => logoImages().map(im => "data:image/png;base64," + Data.fromPNG(im).toBase64String());
+
+// 點小工具時執行這個腳本的網址，例如 scriptable:///run?scriptName=記帳&add=b1
+function runURL(params) {
+  const q = { scriptName: Script.name(), ...params };
+  return "scriptable:///run?" + Object.keys(q).map(k => k + "=" + encodeURIComponent(q[k])).join("&");
+}
+
+// 筆記畫面的 HTML（由 build.py 從 page.html 產生，不要直接改這裡）
+function pageHTML() {
+  return "<!doctype html>\n<html lang=\"zh-Hant\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>童趣風記帳</title>\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Gluten:wght@700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap\">\n<style>\n/* 版面：手機寬的一欄。首頁是帳本卡片，點進去是帳本內頁（依日期列出），記一筆、編輯分類、編輯帳本都是從下面升上來的面板 */\n:root {\n  --cream: #FFFCEF; --ink: #262261; --body: #5A5788; --white: #FFFFFF; --dis: #F0EEE4; --line: #ECE7D2;\n  --sun: #FFD426; --blue: #3F6FD1; --tomato: #D93A2F; --teal-check: #17705F;\n  --yellow-100: #FFF0AF; --orange-100: #FFE2BA; --green-100: #D5F5D0; --blue-100: #CFDDF8;\n  --pink-100: #FBD3D0; --teal-100: #C9F0E9; --purple-100: #E3DAFA; --rose-100: #FFD8E8;\n  --display: Gluten, \"Noto Sans TC\", sans-serif;\n  --sans: \"Noto Sans TC\", -apple-system, \"PingFang TC\", system-ui, sans-serif;\n  /* Scriptable 在畫面最上面疊了自己的「Close」鍵，內容和面板都往下讓出這一條 */\n  --top-bar: max(58px, calc(env(safe-area-inset-top, 0px) + 48px));\n  color-scheme: light;\n}\n* { box-sizing: border-box; }\n[hidden] { display: none !important; }\nhtml, body { margin: 0; background: var(--cream); color: var(--ink); font-family: var(--sans); font-weight: 500; }\nbutton { font: inherit; color: inherit; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }\nbutton:focus-visible, input:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }\n.money { font-family: var(--display); font-variant-numeric: tabular-nums; }\n\n/* 背景的彩色色塊（跟筆記、小工具同一套） */\n.deco { position: fixed; z-index: 0; border-radius: 52% 48% 61% 39% / 58% 43% 57% 42%; pointer-events: none; }\n.app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: var(--top-bar) 16px calc(150px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }\n.top { display: flex; align-items: center; gap: 10px; min-height: 44px; }\n.top h1 { margin: 0; font-size: 24px; font-weight: 900; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.logo { display: flex; gap: 2px; flex: none; }\n.logo img { width: 44px; height: 44px; display: block; }\n.ibtn { width: 40px; height: 40px; border-radius: 12px; background: var(--white); display: grid; place-items: center; font-weight: 900; font-size: 18px; flex: none; }\n.ibtn.on { background: var(--sun); }\n.ibtn.red { background: var(--tomato); color: var(--white); font-size: 24px; }\n\n/* 圖示（跟筆記同一套：小動物圖片、貼紙） */\n.ic { width: 40px; height: 40px; flex: none; display: block; }\n.ic svg, .ic img { width: 100%; height: 100%; display: block; }\n.ic img { border-radius: 50%; }\n\n/* 首頁：帳本卡片 */\n.books { display: flex; flex-direction: column; gap: 10px; }\n.book { display: flex; align-items: center; gap: 12px; border-radius: 24px; padding: 14px 16px; text-align: left; width: 100%; position: relative; }\n.book .ic { width: 46px; height: 46px; }\n.book .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }\n.book strong { font-size: 18px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.book small { font-size: 13px; color: var(--body); font-weight: 700; }\n.book .money { font-size: 22px; }\n.book .del { position: absolute; top: -6px; left: -6px; width: 28px; height: 28px; border-radius: 50%; background: var(--tomato); color: var(--white); font-weight: 900; display: grid; place-items: center; font-size: 14px; }\n.dashed { border: 2.5px dashed var(--body); background: transparent; border-radius: 24px; padding: 14px; font-weight: 900; color: var(--body); font-size: 16px; }\n.hint { font-size: 13px; color: var(--body); line-height: 1.6; margin: 0; }\n\n/* 帳本內頁 */\n.total { background: var(--yellow-100); border-radius: 22px; padding: 12px 16px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }\n.total span { font-size: 14px; font-weight: 700; color: var(--body); }\n.total .money { font-size: 32px; }\n.day { font-size: 14px; font-weight: 900; display: flex; justify-content: space-between; padding: 6px 4px 0; }\n.day em { font-style: normal; color: var(--body); }\n.items { display: flex; flex-direction: column; gap: 8px; }\n.item { display: flex; align-items: center; gap: 12px; border-radius: 18px; padding: 10px 12px; width: 100%; text-align: left; }\n.item .ic { width: 34px; height: 34px; }\n.item .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }\n.item strong { font-size: 16px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.item small { font-size: 12.5px; color: var(--body); font-weight: 700; }\n.item .money { font-size: 20px; }\n.empty { text-align: center; color: var(--body); font-weight: 700; padding: 40px 0; line-height: 1.8; }\n.bottom { z-index: 2; position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, var(--cream) 30%); display: flex; justify-content: center; }\n.bottom .in { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 8px; }\n.bottom .tools { display: flex; gap: 8px; }\n.bottom button { flex: 1; border-radius: 999px; padding: 12px 6px; font-weight: 900; font-size: 15px; background: var(--white); box-shadow: 0 4px 14px rgba(38,34,97,.08); }\n.bottom .go { background: var(--blue); color: var(--white); }\n.bottom .add { background: var(--tomato); color: var(--white); font-size: 18px; padding: 14px; }\n.bottom .warn { background: var(--tomato); color: var(--white); }\n\n/* 面板 */\n.scrim { position: fixed; inset: 0; background: rgba(38,34,97,.28); display: flex; align-items: flex-end; justify-content: center; z-index: 10; padding-top: var(--top-bar); }\n.sheet { background: var(--cream); width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; border-radius: 34px 34px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }\n.sheet-top { display: flex; align-items: center; gap: 10px; }\n.sheet-top h2 { margin: 0; font-size: 20px; font-weight: 900; flex: 1; min-width: 0; }\n.lbl { font-size: 13px; font-weight: 700; color: var(--body); }\n.lbl-row { display: flex; justify-content: space-between; align-items: center; }\n.link { background: transparent; color: var(--blue); font-weight: 900; font-size: 14px; padding: 4px 6px; border-radius: 8px; }\n\n/* 記一筆 */\n.amount { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }\n.when { border: 0; background: var(--white); border-radius: 12px; padding: 7px 10px; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); min-width: 0; max-width: 60%; }\n.amount .num { font-family: var(--sans); font-weight: 900; font-size: 42px; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }\n.amount .num small { font-size: 22px; margin-right: 4px; }\n.cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }\n.cat { background: transparent; padding: 6px 0 4px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; min-width: 0; }\n.cat span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-inline: 2px; }\n.cat[aria-pressed=\"true\"] { outline: 3px solid var(--ink); }\n.cat .plus { width: 40px; height: 40px; border-radius: 50%; border: 2px dashed var(--body); display: grid; place-items: center; font-size: 20px; font-weight: 900; color: var(--body); }\n.note { background: var(--white); border-radius: 14px; padding: 10px 12px; font-size: 15px; color: var(--body); display: flex; gap: 8px; align-items: center; }\n.note input { border: 0; outline: 0; font: inherit; font-size: 16px; color: var(--ink); background: transparent; flex: 1; min-width: 0; }\n.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }\n.key { height: 50px; border-radius: 16px; background: var(--white); font-family: var(--display); font-size: 25px; font-weight: 800; }\n.key:active { background: var(--yellow-100); }\n.row2 { display: flex; gap: 8px; }\n.row2 button { flex: 1; border-radius: 999px; padding: 13px; font-weight: 900; font-size: 16px; }\n.save { background: var(--tomato); color: var(--white); }\n.soft { background: var(--dis); }\n.danger { background: var(--tomato); color: var(--white); }\n\n/* 編輯分類、帳本 */\n.prev { display: flex; align-items: center; gap: 10px; }\n.chip { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 5px 16px 5px 6px; font-weight: 900; font-size: 16px; }\n.chip .ic { width: 32px; height: 32px; }\n.namein { border: 0; background: var(--white); border-radius: 14px; padding: 11px 14px; font: inherit; font-size: 17px; font-weight: 700; color: var(--ink); width: 100%; }\n.dots { display: flex; flex-wrap: wrap; gap: 8px; }\n.dot { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; padding: 0; }\n.dot[aria-pressed=\"true\"] { border-color: var(--ink); }\n.icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }\n.iopt { background: var(--white); border-radius: 14px; padding: 4px; aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; }\n.iopt .ic { width: 100%; height: 100%; }\n.iopt[aria-pressed=\"true\"] { background: var(--sun); }\n.catlist { display: flex; flex-wrap: wrap; gap: 8px; }\n\n.toast { position: fixed; left: 50%; transform: translateX(-50%); top: var(--top-bar); z-index: 30; background: var(--ink); color: var(--white); border-radius: 999px; padding: 10px 18px; font-weight: 900; font-size: 14px; max-width: calc(100% - 32px); display: flex; gap: 12px; align-items: center; }\n.toast button { background: var(--sun); color: var(--ink); border-radius: 999px; padding: 3px 12px; font-weight: 900; }\n</style>\n</head>\n<body>\n<div class=\"deco\" style=\"width:190px;height:160px;right:-60px;top:-50px;background:var(--sun)\"></div>\n<div class=\"deco\" style=\"width:120px;height:150px;left:-70px;top:45%;background:var(--green-100)\"></div>\n<div class=\"deco\" style=\"width:170px;height:120px;right:-50px;bottom:-40px;background:var(--teal-100)\"></div>\n<main class=\"app\" id=\"app\"></main>\n<div class=\"bottom\" id=\"bottom\"></div>\n<div class=\"scrim\" id=\"scrim\" hidden></div>\n<div class=\"toast\" id=\"toast\" role=\"status\" hidden></div>\n\n<script>\nconst ICONS = [\"lion\",\"pig\",\"giraffe\",\"bear\",\"monkey\",\"bee\",\"owl\",\"fox\",\"sheep\",\"penguin\",\"koala\",\"frog\",\"rabbit\",\"star\",\"heart\",\"diamond\",\"music\",\"clothes\",\"pencil\",\"pets\",\"sun\",\"moon\",\"cloud\",\"partlycloudy\",\"cloudynight\",\"overcast\",\"rain\",\"thunderstorm\",\"lightning\",\"snow\",\"rainbow\",\"gift\",\"balloon\",\"fork\",\"drink\",\"idea\",\"shoppingbag\",\"travel\",\"train\",\"bus\",\"car\",\"bicycle\",\"camera\",\"location\"];\nconst ICON_SVGS = {\n    star: '<path d=\"M12 3l2.4 5.5 6 .6-4.5 4 1.3 5.9L12 16l-5.2 3 1.3-5.9-4.5-4 6-.6Z\"/>',\n    heart: '<path d=\"M12 20s-7-4.4-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 5c-2.5 4.6-9.5 9-9.5 9Z\"/>',\n    diamond: '<path d=\"M12 4L15 12L12 20L9 12Z\"/>',\n    music: '<path d=\"M9 18V5l10-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"16\" cy=\"16\" r=\"3\"/>',\n    pencil: '<path d=\"M4 20l1-4L16 5l3 3L8 19l-4 1Z\"/><path d=\"M14 7l3 3\"/>',\n    pets: '<circle cx=\"12\" cy=\"15\" r=\"3.4\"/><circle cx=\"6.5\" cy=\"10\" r=\"1.6\"/><circle cx=\"10\" cy=\"7\" r=\"1.6\"/><circle cx=\"14\" cy=\"7\" r=\"1.6\"/><circle cx=\"17.5\" cy=\"10\" r=\"1.6\"/>',\n    clothes: '<path d=\"M8 4 4 7l2 3 2-1.3V20h8V8.7L18 10l2-3-4-3-2 1.5h-4Z\"/>',\n    sun: '<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1\"/>',\n    moon: '<path d=\"M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z\"/>',\n    cloud: '<path d=\"M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 10.1 4 4 0 0 0 7 18Z\"/>',\n    partlycloudy: '<circle cx=\"8\" cy=\"8\" r=\"3\"/><path d=\"M8 3v1.2M8 12.8V14M3 8h1.2M12.8 8H14M4.5 4.5l.9.9M11.5 4.5l-.9.9\"/><path d=\"M10 20h7a3.5 3.5 0 0 0 .4-6.98A4.5 4.5 0 0 0 9.2 12.4 3.2 3.2 0 0 0 10 20Z\"/>',\n    cloudynight: '<path d=\"M15 8.2A4 4 0 1 1 10.9 4a3.2 3.2 0 0 0 4.1 4.2Z\"/><path d=\"M9 20h7a3.5 3.5 0 0 0 .4-6.98A4.5 4.5 0 0 0 8.2 12.4 3.2 3.2 0 0 0 9 20Z\"/>',\n    overcast: '<path d=\"M7 14h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 6.1 4 4 0 0 0 7 14Z\"/><line x1=\"5\" y1=\"18\" x2=\"19\" y2=\"18\"/>',\n    rain: '<path d=\"M7 13h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 5.1 4 4 0 0 0 7 13Z\"/><path d=\"M8 17l-1 3M12 17l-1 3M16 17l-1 3\"/>',\n    thunderstorm: '<path d=\"M7 12h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 4.1 4 4 0 0 0 7 12Z\"/><path d=\"M13 13l-3 5h3l-2 4\"/>',\n    lightning: '<path d=\"M13 2 4 14h6l-1 8 9-12h-6Z\"/>',\n    snow: '<path d=\"M7 11h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 3.1 4 4 0 0 0 7 11Z\"/><circle cx=\"8\" cy=\"18\" r=\".6\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"19\" r=\".6\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"16\" cy=\"18\" r=\".6\" fill=\"currentColor\" stroke=\"none\"/>',\n    rainbow: '<path d=\"M3 18a9 9 0 0 1 18 0\"/><path d=\"M6.5 18a5.5 5.5 0 0 1 11 0\"/>',\n    gift: '<rect x=\"4\" y=\"10\" width=\"16\" height=\"10\" rx=\"1.5\"/><line x1=\"4\" y1=\"14\" x2=\"20\" y2=\"14\"/><line x1=\"12\" y1=\"10\" x2=\"12\" y2=\"20\"/><path d=\"M12 10c-2-4-6-3-6-1s3 1 6 1Zm0 0c2-4 6-3 6-1s-3 1-6 1Z\"/>',\n    idea: '<path d=\"M9 18h6M10 21h4\"/><path d=\"M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5a2.6 2.6 0 0 1 1.1-2.2A6 6 0 0 0 12 3Z\"/>',\n    shoppingbag: '<path d=\"M6 8h12l-1 12H7Z\"/><path d=\"M9 8V6a3 3 0 0 1 6 0v2\"/>',\n    travel: '<path d=\"M21 4 3 11l6 2 2 6 3-4 5 3Z\"/>',\n    train: '<rect x=\"6\" y=\"4\" width=\"12\" height=\"12\" rx=\"4\"/><line x1=\"6\" y1=\"11\" x2=\"18\" y2=\"11\"/><circle cx=\"9\" cy=\"15.5\" r=\".8\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"15\" cy=\"15.5\" r=\".8\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M8 19l-2 2M16 19l2 2\"/>',\n    bus: '<rect x=\"3\" y=\"6\" width=\"18\" height=\"10\" rx=\"2\"/><line x1=\"3\" y1=\"11\" x2=\"21\" y2=\"11\"/><circle cx=\"7.5\" cy=\"18.5\" r=\"1.4\"/><circle cx=\"16.5\" cy=\"18.5\" r=\"1.4\"/>',\n    car: '<path d=\"M4 16V12l2-4h12l2 4v4\"/><path d=\"M4 16h16\"/><circle cx=\"7.5\" cy=\"16.5\" r=\"1.6\"/><circle cx=\"16.5\" cy=\"16.5\" r=\"1.6\"/>',\n    bicycle: '<circle cx=\"6\" cy=\"17\" r=\"3.2\"/><circle cx=\"18\" cy=\"17\" r=\"3.2\"/><path d=\"M6 17l4-9h4l-3 6h7l-3-5\"/>',\n    camera: '<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M8 7l1.5-3h5L16 7\"/><circle cx=\"12\" cy=\"13.5\" r=\"4\"/>',\n    location: '<path d=\"M12 21s7-7.2 7-12a7 7 0 0 0-14 0c0 4.8 7 12 7 12Z\"/><circle cx=\"12\" cy=\"9\" r=\"2.3\"/>',\n    pig: '<path d=\"M7.5 8.5 9 6 10.5 8.3M13.5 8.3 15 6 16.5 8.5\"/><circle cx=\"12\" cy=\"13.5\" r=\"6.5\"/><ellipse cx=\"12\" cy=\"15.3\" rx=\"2.3\" ry=\"1.6\"/><circle cx=\"11.1\" cy=\"15.3\" r=\".35\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12.9\" cy=\"15.3\" r=\".35\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"9.6\" cy=\"12\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"14.4\" cy=\"12\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/>',\n    giraffe: '<line x1=\"9.5\" y1=\"7.8\" x2=\"9\" y2=\"5\"/><circle cx=\"9\" cy=\"4.5\" r=\".7\" fill=\"currentColor\" stroke=\"none\"/><line x1=\"14.5\" y1=\"7.8\" x2=\"15\" y2=\"5\"/><circle cx=\"15\" cy=\"4.5\" r=\".7\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"13.5\" r=\"6.5\"/><ellipse cx=\"12\" cy=\"16.8\" rx=\"2\" ry=\"1.3\"/><circle cx=\"9.4\" cy=\"12\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"14.6\" cy=\"12\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"8\" cy=\"14.5\" r=\".9\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"16\" cy=\"15\" r=\".9\" fill=\"currentColor\" stroke=\"none\"/>',\n    bear: '<circle cx=\"7.3\" cy=\"8.2\" r=\"2.3\"/><circle cx=\"16.7\" cy=\"8.2\" r=\"2.3\"/><circle cx=\"12\" cy=\"13.8\" r=\"6.5\"/><ellipse cx=\"12\" cy=\"16\" rx=\"2.2\" ry=\"1.5\"/><circle cx=\"9.5\" cy=\"12\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"14.5\" cy=\"12\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/>',\n    monkey: '<circle cx=\"6.3\" cy=\"12.5\" r=\"2.6\"/><circle cx=\"17.7\" cy=\"12.5\" r=\"2.6\"/><circle cx=\"12\" cy=\"13\" r=\"6.5\"/><ellipse cx=\"12\" cy=\"14.7\" rx=\"3.6\" ry=\"3.1\"/><circle cx=\"10\" cy=\"12.8\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"14\" cy=\"12.8\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><path d=\"M10.3 16.5q1.7 1.1 3.4 0\"/>',\n    lion: '<line x1=\"17.5\" y1=\"13\" x2=\"19.7\" y2=\"13\"/><line x1=\"15.9\" y1=\"9.1\" x2=\"17.4\" y2=\"7.6\"/><line x1=\"12\" y1=\"7.5\" x2=\"12\" y2=\"5.3\"/><line x1=\"8.1\" y1=\"9.1\" x2=\"6.6\" y2=\"7.6\"/><line x1=\"6.5\" y1=\"13\" x2=\"4.3\" y2=\"13\"/><line x1=\"8.1\" y1=\"16.9\" x2=\"6.6\" y2=\"18.4\"/><line x1=\"12\" y1=\"18.5\" x2=\"12\" y2=\"20.7\"/><line x1=\"15.9\" y1=\"16.9\" x2=\"17.4\" y2=\"18.4\"/><circle cx=\"12\" cy=\"13\" r=\"5.5\"/><ellipse cx=\"12\" cy=\"15.2\" rx=\"2\" ry=\"1.4\"/><circle cx=\"9.9\" cy=\"11.7\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"14.1\" cy=\"11.7\" r=\".5\" fill=\"currentColor\" stroke=\"none\"/>'\n  };\n// 筆記圖示的貼紙樣式：線條圖示（跟日常記帳同一套）加上塗色和不規則底色，畫法跟童趣風月曆的生日貼紙一樣。\n// App 畫面和主畫面小工具共用這一份；build.py 會把它塞進 page.html 和 kids-notes.js。\n// fill：第幾個圖形要塗什麼顏色（依 ICON_SVGS 裡元素的順序，從 0 開始）；stroke：改線條顏色；chip：底色\nconst STICKER_INK = \"#262261\";\nconst STICKER_CHIP = {\n  yellow: \"#FFF0AF\", orange: \"#FFE2BA\", green: \"#D5F5D0\", blue: \"#CFDDF8\",\n  pink: \"#FBD3D0\", teal: \"#C9F0E9\", purple: \"#E3DAFA\", rose: \"#FFD8E8\",\n};\nconst STICKER_COLORS = {\n  yellow: \"#FFD426\", red: \"#EE3E33\", orange: \"#FF9500\", green: \"#6BD861\", sky: \"#8CC4EE\", blue: \"#3F6FD1\",\n  teal: \"#4FD2C2\", pink: \"#FF9EC4\", lilac: \"#B9A3F0\", white: \"#FFFFFF\", mist: \"#E4E2F2\", balloon: \"#7DCB6E\", milkTea: \"#D9B48F\",\n};\nconst STICKERS = {\n  star: { chip: \"yellow\", fill: { 0: STICKER_COLORS.yellow } },\n  heart: { chip: \"pink\", fill: { 0: STICKER_COLORS.red } },\n  diamond: { chip: \"blue\", fill: { 0: STICKER_COLORS.sky } },\n  music: { chip: \"purple\", fill: { 1: STICKER_COLORS.lilac, 2: STICKER_COLORS.lilac } },\n  pencil: { chip: \"orange\", fill: { 0: STICKER_COLORS.yellow } },\n  pets: { chip: \"rose\", fill: { 0: STICKER_COLORS.pink, 1: STICKER_COLORS.pink, 2: STICKER_COLORS.pink, 3: STICKER_COLORS.pink, 4: STICKER_COLORS.pink } },\n  clothes: { chip: \"green\", fill: { 0: STICKER_COLORS.green } },\n  sun: { chip: \"orange\", fill: { 0: STICKER_COLORS.yellow } },\n  moon: { chip: \"purple\", fill: { 0: STICKER_COLORS.yellow } },\n  cloud: { chip: \"blue\", fill: { 0: STICKER_COLORS.white } },\n  partlycloudy: { chip: \"blue\", fill: { 0: STICKER_COLORS.yellow, 2: STICKER_COLORS.white } },\n  cloudynight: { chip: \"purple\", fill: { 0: STICKER_COLORS.yellow, 1: STICKER_COLORS.white } },\n  overcast: { chip: \"blue\", fill: { 0: STICKER_COLORS.mist } },\n  rain: { chip: \"blue\", fill: { 0: STICKER_COLORS.white }, stroke: { 1: STICKER_COLORS.blue } },\n  thunderstorm: { chip: \"purple\", fill: { 0: STICKER_COLORS.mist }, stroke: { 1: STICKER_COLORS.orange } },\n  lightning: { chip: \"yellow\", fill: { 0: STICKER_COLORS.yellow } },\n  snow: { chip: \"teal\", fill: { 0: STICKER_COLORS.white } },\n  rainbow: { chip: \"yellow\", stroke: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.blue } },\n  gift: { chip: \"blue\", fill: { 0: STICKER_COLORS.sky, 3: STICKER_COLORS.red } },\n  balloon: { chip: \"teal\", fill: { 0: STICKER_COLORS.balloon, 1: STICKER_COLORS.balloon } },\n  fork: { chip: \"orange\", fill: { 0: STICKER_COLORS.white, 2: STICKER_COLORS.white } },\n  drink: { chip: \"teal\", fill: { 0: STICKER_COLORS.milkTea, 1: STICKER_COLORS.white } },\n  idea: { chip: \"yellow\", fill: { 1: STICKER_COLORS.yellow } },\n  shoppingbag: { chip: \"orange\", fill: { 0: STICKER_COLORS.orange } },\n  travel: { chip: \"teal\", fill: { 0: STICKER_COLORS.sky } },\n  train: { chip: \"yellow\", fill: { 0: STICKER_COLORS.red, 2: STICKER_COLORS.yellow, 3: STICKER_COLORS.yellow } },\n  bus: { chip: \"teal\", fill: { 0: STICKER_COLORS.green, 2: STICKER_COLORS.white, 3: STICKER_COLORS.white } },\n  car: { chip: \"blue\", fill: { 0: STICKER_COLORS.yellow, 2: STICKER_COLORS.white, 3: STICKER_COLORS.white } },\n  bicycle: { chip: \"green\", fill: { 0: STICKER_COLORS.white, 1: STICKER_COLORS.white } },\n  camera: { chip: \"purple\", fill: { 0: STICKER_COLORS.lilac, 2: STICKER_COLORS.white } },\n  location: { chip: \"rose\", fill: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.white } },\n};\n// 新增的圖示（24×24，跟其他線條圖示同一個格子）\n// 氣球：球、綁口、線、反光；叉子：叉頭、中間的齒、叉柄；飲料杯：杯身、杯蓋、吸管、珍珠\nconst EXTRA_ICON_SVGS = {\n  balloon: '<path d=\"M12 2.8c3.9 0 6.6 2.9 6.6 6.6s-3.2 6.3-6.6 7.3c-3.4-1-6.6-3.6-6.6-7.3S8.1 2.8 12 2.8Z\"/><path d=\"M10.8 18.4 12 16.7l1.2 1.7Z\"/><path d=\"M12 18.4c-1.6 1.4 1.6 2.4 0 4.2\"/><path d=\"M8.6 8.4c.3-1.5 1.3-2.5 2.6-2.8\"/>',\n  fork: '<path d=\"M8.5 2.8v5.4a3.5 3.5 0 0 0 7 0V2.8\"/><path d=\"M12 2.8v5.4\"/><path d=\"M10.8 11.6h2.4l-.3 8.9a.9.9 0 0 1-1.8 0Z\"/>',\n  drink: '<path d=\"M6.8 9.4h10.4l-1.3 10.9a1.6 1.6 0 0 1-1.6 1.4H9.7a1.6 1.6 0 0 1-1.6-1.4Z\"/><path d=\"M5.8 9.4h12.4V8a1.8 1.8 0 0 0-1.8-1.8H7.6A1.8 1.8 0 0 0 5.8 8Z\"/><path d=\"M12.8 6.2 14.6 2.4h2.6\"/><circle cx=\"10\" cy=\"18.2\" r=\".9\" fill=\"currentColor\"/><circle cx=\"12.3\" cy=\"19.2\" r=\".9\" fill=\"currentColor\"/><circle cx=\"14.4\" cy=\"17.8\" r=\".9\" fill=\"currentColor\"/>',\n};\n\n// 不規則色塊的 8 個圓角百分比（同童趣風月曆的 R1–R4），依圖示名稱挑一組、旋轉 ±4 度\nconst STICKER_BLOBS = [[52, 48, 61, 39, 58, 43, 57, 42], [60, 40, 44, 56, 46, 55, 45, 54], [45, 55, 52, 48, 62, 40, 60, 38], [55, 45, 48, 52, 44, 58, 42, 56]];\nfunction stickerHash(s) { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); }\n\n// 不規則色塊的 SVG 路徑（寬 w、高 h，左上角在 0,0）\nfunction blobPathD(w, h, r) {\n  const [a, b, c, d, e, f, g, k] = r.map((v) => v / 100);\n  return `M${a * w} 0H${w - b * w}A${b * w} ${f * h} 0 0 1 ${w} ${f * h}V${h - g * h}A${c * w} ${g * h} 0 0 1 ${w - c * w} ${h}`\n    + `H${d * w}A${d * w} ${k * h} 0 0 1 0 ${h - k * h}V${e * h}A${a * w} ${e * h} 0 0 1 ${a * w} 0Z`;\n}\n\n// 一個圖示的完整貼紙 SVG（viewBox 24×24）：底下不規則色塊，上面是塗好色的線條圖示\nfunction stickerSVG(key, svgs) {\n  const spec = STICKERS[key] || { chip: \"yellow\", fill: {} };\n  const inner = svgs[key] || svgs.star;\n  let i = 0;\n  const body = inner.replace(/<(\\w+)([^>]*?)\\/>/g, (m, tag, attrs) => {\n    const idx = i++;\n    if (/fill=\"currentColor\"/.test(attrs)) return `<${tag}${attrs.replace('fill=\"currentColor\"', `fill=\"${STICKER_INK}\"`)}/>`;\n    const fill = spec.fill && spec.fill[idx] ? spec.fill[idx] : \"none\";\n    const stroke = spec.stroke && spec.stroke[idx] ? ` stroke=\"${spec.stroke[idx]}\" stroke-width=\"2.8\"` : \"\";\n    return `<${tag}${attrs} fill=\"${fill}\"${stroke}/>`;\n  });\n  const h = stickerHash(key), deg = (h % 9) - 4;\n  // 寫明寬高，畫成 PNG 時才不會被當成 300×150 而變形\n  return `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"96\" height=\"96\" viewBox=\"0 0 24 24\">`\n    + `<path d=\"${blobPathD(22, 22, STICKER_BLOBS[h % 4])}\" transform=\"translate(1 1) rotate(${deg} 11 11)\" fill=\"${STICKER_CHIP[spec.chip]}\"/>`\n    + `<g transform=\"translate(4.4 4.4) scale(.633)\" stroke=\"${STICKER_INK}\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">${body}</g>`\n    + `</svg>`;\n}\nObject.assign(ICON_SVGS, EXTRA_ICON_SVGS);\nconst BOOT = /*BOOT*/null;\n</script>\n<script>\n// Scriptable 打開這一頁時，BOOT 會帶入這台 iPhone 上的帳本、分類、小動物圖示和左上角圖示\nconst boot = BOOT || { data: null, iconImages: {}, logos: [] };\nconst ICON_IMAGES = boot.iconImages || {};\nconst COLORS = [\"yellow\", \"orange\", \"green\", \"blue\", \"pink\", \"teal\", \"purple\", \"rose\"];\nconst COLOR_NAMES = { yellow: \"黃\", orange: \"橘\", green: \"綠\", blue: \"藍\", pink: \"粉\", teal: \"青\", purple: \"紫\", rose: \"桃紅\" };\nconst STRONG = { yellow: \"#FFD426\", orange: \"#FF9500\", green: \"#6BD861\", blue: \"#3F6FD1\", pink: \"#FF9EC4\", teal: \"#4FD2C2\", purple: \"#8E6FD8\", rose: \"#F2649E\" };\nconst WEEK = \"日一二三四五六\";\nconst $ = (s) => document.querySelector(s);\nconst esc = (s) => String(s).replace(/[&<>\"]/g, (c) => ({ \"&\": \"&amp;\", \"<\": \"&lt;\", \">\": \"&gt;\", '\"': \"&quot;\" }[c]));\nconst uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);\nconst bg = (c) => `var(--${COLORS.includes(c) ? c : \"yellow\"}-100)`;\nconst fmt = (n) => \"$\" + Number(n).toLocaleString(\"en-US\", { maximumFractionDigits: 2 });\nconst p2 = (n) => String(n).padStart(2, \"0\");\nconst dayKey = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };\nconst dayLabel = (ts) => {\n  const d = new Date(ts), t = new Date();\n  const diff = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);\n  const base = `${d.getMonth() + 1}/${d.getDate()}（${WEEK[d.getDay()]}）`;\n  return diff === 0 ? \"今天 \" + base : diff === 1 ? \"昨天 \" + base : (d.getFullYear() !== t.getFullYear() ? d.getFullYear() + \"/\" : \"\") + base;\n};\nconst hm = (ts) => { const d = new Date(ts); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; };\n\n// 第一次打開：一本「日常」和 7 個分類\nfunction starter() {\n  return {\n    version: 1,\n    books: [{ id: \"b1\", name: \"日常\", icon: \"bear\", color: \"yellow\", entries: [] }],\n    cats: [\n      { id: \"c1\", name: \"餐飲\", color: \"orange\", icon: \"fork\" }, { id: \"c2\", name: \"交通\", color: \"blue\", icon: \"bus\" },\n      { id: \"c3\", name: \"購物\", color: \"pink\", icon: \"shoppingbag\" }, { id: \"c4\", name: \"日用\", color: \"green\", icon: \"idea\" },\n      { id: \"c5\", name: \"娛樂\", color: \"purple\", icon: \"music\" }, { id: \"c6\", name: \"醫療\", color: \"teal\", icon: \"heart\" },\n      { id: \"c7\", name: \"孩子\", color: \"yellow\", icon: \"balloon\" },\n    ],\n    lastBook: \"b1\",\n  };\n}\nlet data = boot.data || starter();\nconst bookOf = (id) => data.books.find((b) => b.id === id);\nconst catOf = (id) => data.cats.find((c) => c.id === id);\nconst sum = (list) => list.reduce((s, e) => s + Number(e.amt || 0), 0);\n\n// 小動物用圖片，其他是塗好色、有不規則底色的貼紙（跟筆記一樣）\nfunction icon(key) {\n  if (ICON_IMAGES[key]) return `<span class=\"ic\"><img src=\"${ICON_IMAGES[key]}\" alt=\"\"></span>`;\n  return `<span class=\"ic\">${stickerSVG(ICON_SVGS[key] ? key : \"star\", ICON_SVGS)}</span>`;\n}\n\n/* ---------- 跟 Scriptable 溝通：要做的事放進 outbox，再用 kidsledger:// 網址叫 Scriptable 來拿 ---------- */\nlet outbox = [], pingTimer = null, saveTimer = null;\nfunction ping() {\n  location.href = \"kidsledger://ping?\" + Date.now();\n  clearTimeout(pingTimer);\n  pingTimer = setTimeout(() => { if (outbox.length) ping(); }, 1500);\n}\nfunction send(cmd) { outbox.push(cmd); ping(); }\nwindow.__takeOutbox = () => { const out = outbox; outbox = []; return JSON.stringify(out); };\n// 有改動就在 0.3 秒後存一次\nfunction changed() {\n  clearTimeout(saveTimer);\n  saveTimer = setTimeout(() => { outbox = outbox.filter((c) => c.type !== \"save\"); send({ type: \"save\", data }); }, 300);\n}\n// 關掉畫面前 Scriptable 會直接呼叫這個，確保最後的改動有存到\nwindow.__finalState = () => JSON.stringify(data);\n\nfunction toast(msg, undo) {\n  const t = $(\"#toast\");\n  t.innerHTML = esc(msg) + (undo ? `<button id=\"undo\">復原</button>` : \"\");\n  t.hidden = false;\n  if (undo) $(\"#undo\").onclick = () => { undo(); t.hidden = true; };\n  clearTimeout(toast.timer); toast.timer = setTimeout(() => { t.hidden = true; }, undo ? 5000 : 2200);\n}\nwindow.__toast = toast;\n\n/* ---------- 畫面 ---------- */\nlet view = { page: \"home\", book: null }, managing = false;\n\nfunction render() {\n  if (view.page === \"book\" && !bookOf(view.book)) view = { page: \"home\" };\n  view.page === \"home\" ? renderHome() : renderBook();\n}\n\nfunction logoHTML() {\n  return (boot.logos || []).length ? `<span class=\"logo\">${boot.logos.map((u) => `<img src=\"${u}\" alt=\"\">`).join(\"\")}</span>` : \"\";\n}\n\nfunction renderHome() {\n  $(\"#app\").innerHTML = `\n    <header class=\"top\">${logoHTML()}<h1>我的帳本</h1>\n      <button class=\"ibtn ${managing ? \"on\" : \"\"}\" id=\"manage\" aria-label=\"管理帳本\">${managing ? \"✓\" : \"✎\"}</button></header>\n    ${managing ? `<p class=\"hint\">點帳本可以改名字、圖示和顏色；按左上角的 ✕ 刪除整本。</p>` : \"\"}\n    <div class=\"books\">${data.books.map((b) => `\n      <button class=\"book\" style=\"background:${bg(b.color)}\" data-book=\"${esc(b.id)}\">\n        ${managing ? `<span class=\"del\" data-del=\"${esc(b.id)}\" aria-label=\"刪除 ${esc(b.name)}\">✕</span>` : \"\"}\n        ${icon(b.icon)}<span class=\"t\"><strong>${esc(b.name)}</strong><small>${b.entries.length} 筆</small></span>\n        <span class=\"money\">${fmt(sum(b.entries))}</span></button>`).join(\"\")}\n    </div>\n    <button class=\"dashed\" id=\"newbook\">＋ 新帳本</button>`;\n  $(\"#bottom\").innerHTML = \"\";\n  $(\"#manage\").onclick = () => { managing = !managing; renderHome(); };\n  $(\"#newbook\").onclick = () => openBookEditor(null);\n  $(\"#app\").querySelector(\".books\").onclick = (e) => {\n    const del = e.target.closest(\"[data-del]\");\n    if (del) { deleteBook(del.dataset.del); return; }\n    const b = e.target.closest(\"[data-book]\"); if (!b) return;\n    if (managing) openBookEditor(bookOf(b.dataset.book));\n    else { view = { page: \"book\", book: b.dataset.book }; data.lastBook = b.dataset.book; changed(); render(); window.scrollTo(0, 0); }\n  };\n}\n\nlet armedDelete = null;\nfunction deleteBook(id) {\n  const b = bookOf(id);\n  if (armedDelete !== id) { armedDelete = id; toast(`再按一次 ✕ 刪除「${b.name}」（${b.entries.length} 筆）`); setTimeout(() => { if (armedDelete === id) armedDelete = null; }, 4000); return; }\n  armedDelete = null;\n  const idx = data.books.indexOf(b);\n  data.books.splice(idx, 1);\n  if (!data.books.length) data.books.push({ id: uid(\"b\"), name: \"日常\", icon: \"bear\", color: \"yellow\", entries: [] });\n  if (data.lastBook === id) data.lastBook = data.books[0].id;\n  changed(); renderHome();\n  toast(`已刪除「${b.name}」`, () => { data.books.splice(idx, 0, b); changed(); renderHome(); });\n}\n\nfunction renderBook() {\n  const b = bookOf(view.book);\n  const list = [...b.entries].sort((x, y) => y.ts - x.ts);\n  let html = \"\", day = \"\";\n  for (const e of list) {\n    const k = dayKey(e.ts);\n    if (k !== day) {\n      day = k;\n      html += `<div class=\"day\">${dayLabel(e.ts)}<em class=\"money\">${fmt(sum(list.filter((x) => dayKey(x.ts) === k)))}</em></div>`;\n    }\n    const c = catOf(e.cat) || { name: \"未分類\", color: \"yellow\", icon: \"star\" };\n    html += `<button class=\"item\" style=\"background:${bg(c.color)}\" data-e=\"${esc(e.id)}\">${icon(c.icon)}\n      <span class=\"t\"><strong>${esc(e.note || c.name)}</strong><small>${esc(c.name)}・${hm(e.ts)}</small></span>\n      <span class=\"money\">${Number(e.amt).toLocaleString(\"en-US\", { maximumFractionDigits: 2 })}</span></button>`;\n  }\n  $(\"#app\").innerHTML = `\n    <header class=\"top\"><button class=\"ibtn\" id=\"back\" aria-label=\"回到帳本列表\">‹</button>${icon(b.icon)}<h1>${esc(b.name)}</h1></header>\n    <div class=\"total\"><span>${b.entries.length} 筆，總共</span><span class=\"money\">${fmt(sum(b.entries))}</span></div>\n    ${list.length ? `<div class=\"items\">${html}</div>` : `<p class=\"empty\">還沒有記錄<br>按下面的「＋ 記一筆」開始</p>`}`;\n  $(\"#bottom\").innerHTML = `<div class=\"in\"><button class=\"add\" id=\"add\">＋ 記一筆</button>\n    <div class=\"tools\"><button class=\"go\" id=\"export\">匯出 CSV</button><button id=\"copy\">複製給 Excel</button><button id=\"clear\">清空</button></div></div>`;\n  $(\"#back\").onclick = () => { view = { page: \"home\" }; render(); };\n  $(\"#add\").onclick = () => openEntry(b, null);\n  $(\"#app\").querySelector(\".items\")?.addEventListener(\"click\", (e) => {\n    const it = e.target.closest(\"[data-e]\"); if (it) openEntry(b, b.entries.find((x) => x.id === it.dataset.e));\n  });\n  $(\"#export\").onclick = () => {\n    if (!b.entries.length) { toast(\"這本還沒有記錄\"); return; }\n    send({ type: \"share\", name: `${b.name}-${dayKey(Date.now())}.csv`, text: \"﻿\" + table(b, \",\") });\n  };\n  $(\"#copy\").onclick = () => {\n    if (!b.entries.length) { toast(\"這本還沒有記錄\"); return; }\n    send({ type: \"copy\", text: table(b, \"\\t\"), count: b.entries.length });\n  };\n  $(\"#clear\").onclick = () => clearBook(b);\n}\n\n// 匯出：日期、時間、帳本、分類、金額、備註，舊的在上面（跟 Excel 帳冊一樣由上往下）\nfunction table(b, sep) {\n  const cell = (v) => { v = String(v ?? \"\"); return sep === \",\" && /[\",\\n]/.test(v) ? `\"${v.replace(/\"/g, '\"\"')}\"` : v.replace(/[\\t\\n]/g, \" \"); };\n  const rows = [[\"日期\", \"時間\", \"帳本\", \"分類\", \"金額\", \"備註\"]];\n  for (const e of [...b.entries].sort((x, y) => x.ts - y.ts)) {\n    const d = new Date(e.ts);\n    rows.push([`${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())}`, hm(e.ts), b.name, (catOf(e.cat) || { name: \"未分類\" }).name, e.amt, e.note || \"\"]);\n  }\n  return rows.map((r) => r.map(cell).join(sep)).join(\"\\r\\n\");\n}\n\nlet armedClear = null;\nfunction clearBook(b) {\n  if (!b.entries.length) { toast(\"這本已經是空的\"); return; }\n  if (armedClear !== b.id) {\n    armedClear = b.id;\n    const btn = $(\"#clear\"); btn.textContent = \"確定清空\"; btn.classList.add(\"warn\");\n    setTimeout(() => { if (armedClear === b.id) { armedClear = null; if (btn.isConnected) { btn.textContent = \"清空\"; btn.classList.remove(\"warn\"); } } }, 4000);\n    return;\n  }\n  armedClear = null;\n  const old = b.entries; b.entries = [];\n  changed(); render();\n  toast(`已清空 ${old.length} 筆`, () => { b.entries = old.concat(b.entries); changed(); render(); });\n}\n\n/* ---------- 面板 ---------- */\nfunction openSheet(html, onMount) {\n  const s = $(\"#scrim\");\n  s.innerHTML = `<div class=\"sheet\" role=\"dialog\" aria-modal=\"true\">${html}</div>`;\n  s.hidden = false;\n  onMount(s.firstElementChild);\n}\nfunction closeSheet() { $(\"#scrim\").hidden = true; $(\"#scrim\").innerHTML = \"\"; }\n$(\"#scrim\").addEventListener(\"click\", (e) => { if (e.target.id === \"scrim\") closeSheet(); });\n\n// 記一筆／修改一筆\nconst toLocalInput = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${hm(ts)}`; };\nlet lastCat = null;\nfunction openEntry(b, entry) {\n  const draft = { amt: entry ? String(entry.amt) : \"\", cat: entry ? entry.cat : (catOf(lastCat) ? lastCat : data.cats[0]?.id), note: entry ? entry.note || \"\" : \"\", ts: entry ? entry.ts : Date.now() };\n  openSheet(`\n    <div class=\"sheet-top\"><h2>${esc(b.name)}・${entry ? \"修改\" : \"記一筆\"}</h2><button class=\"ibtn\" data-act=\"close\" aria-label=\"關閉\">✕</button></div>\n    <div class=\"amount\"><input class=\"when\" id=\"when\" type=\"datetime-local\" value=\"${toLocalInput(draft.ts)}\" aria-label=\"日期時間\"><span class=\"num\" id=\"amt\"></span></div>\n    <div class=\"lbl-row\"><span class=\"lbl\">分類</span><button class=\"link\" data-act=\"cats\">編輯分類</button></div>\n    <div class=\"cats\" id=\"cats\"></div>\n    <label class=\"note\" for=\"note\">備註<input id=\"note\" value=\"${esc(draft.note)}\" placeholder=\"可以不填\" autocomplete=\"off\"></label>\n    <div class=\"keys\" id=\"keys\">${[\"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \".\", \"0\", \"⌫\"].map((k) => `<button class=\"key\" data-k=\"${k}\" ${k === \"⌫\" ? 'aria-label=\"刪除\"' : \"\"}>${k}</button>`).join(\"\")}</div>\n    <div class=\"row2\">${entry ? `<button class=\"soft\" data-act=\"del\">刪除這筆</button>` : \"\"}<button class=\"save\" data-act=\"save\">${entry ? \"儲存\" : \"記下來\"}</button></div>`, (el) => {\n    const paintAmt = () => { el.querySelector(\"#amt\").innerHTML = `<small>$</small>${draft.amt ? esc(Number(draft.amt).toLocaleString(\"en-US\", { maximumFractionDigits: 2 }) + (draft.amt.endsWith(\".\") ? \".\" : \"\")) : \"0\"}`; };\n    const paintCats = () => {\n      el.querySelector(\"#cats\").innerHTML = data.cats.map((c) => `<button class=\"cat\" style=\"background:${bg(c.color)}\" aria-pressed=\"${c.id === draft.cat}\" data-c=\"${esc(c.id)}\">${icon(c.icon)}<span>${esc(c.name)}</span></button>`).join(\"\")\n        + `<button class=\"cat\" data-new=\"1\"><span class=\"plus\">＋</span><span>新增</span></button>`;\n    };\n    paintAmt(); paintCats();\n    el.querySelector(\"#keys\").onclick = (e) => {\n      const k = e.target.closest(\"[data-k]\")?.dataset.k; if (!k) return;\n      if (k === \"⌫\") draft.amt = draft.amt.slice(0, -1);\n      else if (k === \".\") { if (!draft.amt.includes(\".\")) draft.amt = (draft.amt || \"0\") + \".\"; }\n      else if (draft.amt.replace(\".\", \"\").length < 9 && !/\\.\\d\\d$/.test(draft.amt)) draft.amt = (draft.amt === \"0\" ? \"\" : draft.amt) + k;\n      paintAmt();\n    };\n    // 編輯分類時會換掉這個面板：先記下輸入到一半的內容，回來時帶回去（新增的分類直接選好）\n    const backHere = () => {\n      const keep = { ...draft, note: el.querySelector(\"#note\").value };\n      return (newCat) => { openEntry(b, entry); $(\"#scrim .sheet\").__restore(keep, newCat); };\n    };\n    el.querySelector(\"#cats\").onclick = (e) => {\n      if (e.target.closest(\"[data-new]\")) { openCatEditor(null, backHere()); return; }\n      const c = e.target.closest(\"[data-c]\"); if (!c) return;\n      draft.cat = c.dataset.c; paintCats();\n    };\n    el.__restore = (keep, newCat) => {\n      Object.assign(draft, keep);\n      if (newCat) draft.cat = newCat;\n      if (!catOf(draft.cat)) draft.cat = data.cats[0]?.id; // 原本選的分類被刪掉了\n      el.querySelector(\"#note\").value = draft.note;\n      el.querySelector(\"#when\").value = toLocalInput(draft.ts);\n      paintAmt(); paintCats();\n    };\n    el.querySelector(\"#when\").onchange = (e) => { const t = new Date(e.target.value).getTime(); if (!isNaN(t)) draft.ts = t; };\n    el.addEventListener(\"click\", (e) => {\n      const act = e.target.closest(\"[data-act]\")?.dataset.act;\n      if (act === \"close\") closeSheet();\n      if (act === \"cats\") { const back = backHere(); openCatManager(() => back()); }\n      if (act === \"del\") {\n        const btn = e.target.closest(\"[data-act]\");\n        if (!btn.classList.contains(\"danger\")) { btn.className = \"danger\"; btn.dataset.act = \"del\"; btn.textContent = \"確定刪除\"; return; }\n        const idx = b.entries.indexOf(entry);\n        b.entries.splice(idx, 1); changed(); closeSheet(); render();\n        toast(\"已刪除這筆\", () => { b.entries.splice(idx, 0, entry); changed(); render(); });\n      }\n      if (act === \"save\") {\n        const amt = Number(draft.amt);\n        if (!draft.amt || !(amt > 0)) { toast(\"先輸入金額喔\"); return; }\n        const note = el.querySelector(\"#note\").value.trim();\n        if (entry) Object.assign(entry, { amt, cat: draft.cat, note, ts: draft.ts });\n        else b.entries.push({ id: uid(\"e\"), ts: draft.ts, amt, cat: draft.cat, note });\n        lastCat = draft.cat; data.lastBook = b.id;\n        changed(); closeSheet(); render();\n        const c = catOf(draft.cat);\n        toast(entry ? \"改好了\" : `記好了：${c ? c.name + \" \" : \"\"}${fmt(amt)}`);\n      }\n    });\n  });\n}\n\n// 分類列表：點一個分類修改，或新增\nfunction openCatManager(back) {\n  openSheet(`\n    <div class=\"sheet-top\"><h2>編輯分類</h2><button class=\"ibtn\" data-act=\"close\" aria-label=\"完成\">✓</button></div>\n    <p class=\"hint\">點分類可以改名字、顏色和圖示；刪掉的分類，用到它的記錄會顯示「未分類」。</p>\n    <div class=\"catlist\">${data.cats.map((c) => `<button class=\"chip\" style=\"background:${bg(c.color)}\" data-c=\"${esc(c.id)}\">${icon(c.icon)}${esc(c.name)}</button>`).join(\"\")}\n      <button class=\"chip dashed\" data-new=\"1\" style=\"padding:8px 16px\">＋ 新增分類</button></div>`, (el) => {\n    el.addEventListener(\"click\", (e) => {\n      if (e.target.closest('[data-act=\"close\"]')) { back ? back() : closeSheet(); return; }\n      if (e.target.closest(\"[data-new]\")) { openCatEditor(null, () => openCatManager(back)); return; }\n      const c = e.target.closest(\"[data-c]\"); if (c) openCatEditor(catOf(c.dataset.c), () => openCatManager(back));\n    });\n  });\n}\n\n// 新增／修改分類、帳本共用：名字、8 色、圖示\nfunction editorSheet({ title, item, fresh, placeholder, onSave, onDelete, back }) {\n  const draft = item ? { ...item } : { name: \"\", ...fresh };\n  openSheet(`\n    <div class=\"sheet-top\"><button class=\"ibtn\" data-act=\"back\" aria-label=\"返回\">‹</button><h2>${title}</h2></div>\n    <div class=\"prev\"><span class=\"chip\" id=\"chip\"></span></div>\n    <input class=\"namein\" id=\"name\" value=\"${esc(draft.name)}\" maxlength=\"8\" placeholder=\"${esc(placeholder || \"名字\")}\" autocomplete=\"off\" aria-label=\"名字\">\n    <span class=\"lbl\">顏色</span><div class=\"dots\" id=\"dots\"></div>\n    <span class=\"lbl\">圖示</span><div class=\"icons\" id=\"icons\"></div>\n    <div class=\"row2\">${item && onDelete ? `<button class=\"soft\" data-act=\"del\">刪除</button>` : \"\"}<button class=\"save\" data-act=\"ok\" style=\"background:var(--blue)\">${item ? \"儲存\" : \"加入\"}</button></div>`, (el) => {\n    const chip = () => { el.querySelector(\"#chip\").style.background = bg(draft.color); el.querySelector(\"#chip\").innerHTML = icon(draft.icon) + esc(draft.name || \"名字\"); };\n    el.querySelector(\"#dots\").innerHTML = COLORS.map((c) => `<button class=\"dot\" style=\"background:${STRONG[c]}\" aria-pressed=\"${c === draft.color}\" data-c=\"${c}\" aria-label=\"${COLOR_NAMES[c]}\"></button>`).join(\"\");\n    el.querySelector(\"#icons\").innerHTML = ICONS.map((k) => `<button class=\"iopt\" aria-pressed=\"${k === draft.icon}\" data-k=\"${k}\" aria-label=\"${k}\">${icon(k)}</button>`).join(\"\");\n    chip();\n    el.querySelector(\"#name\").oninput = (e) => { draft.name = e.target.value.trim(); chip(); };\n    el.querySelector(\"#dots\").onclick = (e) => { const d = e.target.closest(\"[data-c]\"); if (!d) return; draft.color = d.dataset.c; el.querySelectorAll(\".dot\").forEach((x) => x.setAttribute(\"aria-pressed\", x === d)); chip(); };\n    el.querySelector(\"#icons\").onclick = (e) => { const o = e.target.closest(\"[data-k]\"); if (!o) return; draft.icon = o.dataset.k; el.querySelectorAll(\".iopt\").forEach((x) => x.setAttribute(\"aria-pressed\", x === o)); chip(); };\n    el.addEventListener(\"click\", (e) => {\n      const btn = e.target.closest(\"[data-act]\"); if (!btn) return;\n      if (btn.dataset.act === \"back\") back();\n      if (btn.dataset.act === \"ok\") { if (!draft.name) { el.querySelector(\"#name\").focus(); toast(\"請輸入名字\"); return; } onSave(draft); }\n      if (btn.dataset.act === \"del\") {\n        if (!btn.classList.contains(\"danger\")) { btn.className = \"danger\"; btn.dataset.act = \"del\"; btn.textContent = \"確定刪除\"; return; }\n        onDelete();\n      }\n    });\n  });\n}\nfunction openCatEditor(cat, back) {\n  editorSheet({\n    title: cat ? \"修改分類\" : \"新增分類\", item: cat, placeholder: \"例如：寵物\",\n    // 新分類先挑還沒用過的顏色\n    fresh: { color: COLORS.find((c) => !data.cats.some((x) => x.color === c)) || \"yellow\", icon: \"star\" },\n    onSave: (d) => {\n      if (data.cats.some((c) => c.name === d.name && c !== cat)) { toast(`已經有「${d.name}」了`); return; }\n      let id;\n      if (cat) { Object.assign(cat, { name: d.name, color: d.color, icon: d.icon }); id = cat.id; }\n      else { id = uid(\"c\"); data.cats.push({ id, name: d.name, color: d.color, icon: d.icon }); lastCat = id; }\n      changed(); back(id);\n    },\n    onDelete: cat ? () => { data.cats = data.cats.filter((c) => c !== cat); changed(); back(); } : null,\n    back: () => back(),\n  });\n}\nfunction openBookEditor(book) {\n  editorSheet({\n    title: book ? \"修改帳本\" : \"新帳本\", item: book, placeholder: \"例如：首爾旅行\",\n    fresh: { color: COLORS[data.books.length % COLORS.length], icon: \"travel\" },\n    onSave: (d) => {\n      if (book) Object.assign(book, { name: d.name, color: d.color, icon: d.icon });\n      else data.books.push({ id: uid(\"b\"), name: d.name, color: d.color, icon: d.icon, entries: [] });\n      changed(); closeSheet(); renderHome();\n    },\n    back: closeSheet,\n  });\n}\n\n// Scriptable 回報匯出、複製的結果\nwindow.__exported = (msg) => toast(msg);\n\n/* ---------- 開始 ---------- */\nif (boot.openBook && bookOf(boot.openBook)) view = { page: \"book\", book: boot.openBook };\nrender();\n// 從主畫面小工具點「＋記一筆」進來：直接打開那本帳本的記一筆\nif (boot.add && bookOf(boot.add)) { view = { page: \"book\", book: boot.add }; render(); openEntry(bookOf(boot.add), null); }\nif (boot.warn) toast(boot.warn);\n</script>\n</body>\n</html>\n";
+}
+
+// ---- 帳本畫面
+async function openApp(params) {
+  const data = loadData();
+  const iconFailed = await ensureAnimalIcons();
+  await ensureStickerArt();
+  const boot = {
+    data, iconImages: await animalDataURLs(), logos: logoDataURLs(),
+    add: params.add || null, openBook: params.book || null,
+    warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。" : "",
+  };
+  const html = pageHTML().replace("/*BOOT*/null", () => js(boot));
+
+  const wv = new WebView();
+  let queue = Promise.resolve();
+  const tell = msg => wv.evaluateJavaScript(`window.__exported(${js(msg)}); 0;`);
+  const run = async cmds => {
+    for (const c of cmds) {
+      if (c.type === "save") saveData(c.data);
+      else if (c.type === "copy") {
+        // 用 Tab 分隔，在 Excel 貼上會自動分欄
+        Pasteboard.copyString(c.text);
+        await tell(`已複製 ${c.count} 筆，到 Excel 貼上就好`);
+      } else if (c.type === "share") {
+        // 存成 CSV 檔（開頭有 BOM，Excel 打開中文不會亂碼），用分享選單存到「檔案」或傳出去
+        const name = c.name.replace(/[\/\\:*?"<>|]/g, "-");
+        const p = local.joinPath(local.temporaryDirectory(), name);
+        local.writeString(p, c.text);
+        await ShareSheet.present([p]);
+      }
+    }
+  };
+  // 畫面用 kidsledger:// 網址叫我們：把它要做的事拿回來處理
+  const drain = async () => {
+    const raw = await wv.evaluateJavaScript("window.__takeOutbox ? window.__takeOutbox() : '[]'");
+    await run(JSON.parse(raw || "[]"));
+  };
+  wv.shouldAllowRequest = req => {
+    if ((req.url || "").startsWith("kidsledger://")) {
+      queue = queue.then(drain).catch(e => wv.evaluateJavaScript(`window.__toast(${js("出了點問題：" + e)}); 0;`).catch(() => {}));
+      return false;
+    }
+    return true;
+  };
+  await wv.loadHTML(html);
+  await wv.present(true);
+
+  // 關掉畫面後再拿一次最新的內容，確保最後的改動有存到
+  try {
+    await queue;
+    const raw = await wv.evaluateJavaScript("window.__finalState ? window.__finalState() : ''");
+    if (raw) saveData(JSON.parse(raw));
+  } catch (e) { console.error(e); }
+}
+
+// ---- 主畫面小工具
+const SF = {
+  fork: "fork.knife", bus: "bus", shoppingbag: "bag", idea: "lightbulb", music: "music.note", heart: "heart",
+  balloon: "balloon", car: "car", train: "tram", travel: "paperplane", gift: "gift", drink: "cup.and.saucer",
+};
+function addIcon(stack, key, size) {
+  const p = ANIMALS[key] ? iconPath(key) : artPath(key);
+  if (local.fileExists(p)) {
+    const im = stack.addImage(Image.fromFile(p));
+    im.imageSize = new Size(size, size);
+    if (ANIMALS[key]) im.cornerRadius = size / 2;
+    return;
+  }
+  const sym = SFSymbol.named(SF[key] || "star");
+  sym.applyFont(Font.semiboldSystemFont(size * 0.55));
+  const im = stack.addImage(sym.image);
+  im.imageSize = new Size(size * 0.7, size * 0.7);
+  im.tintColor = col(K.ink);
+}
+const money = n => "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+function buildWidget(family) {
+  const w = new ListWidget();
+  w.backgroundColor = col(K.cream);
+  const bgImg = notesArt("bg-" + family + "-plain") || notesArt("bg-" + family);
+  if (bgImg) w.backgroundImage = bgImg;
+  w.setPadding(12, 14, 12, 14);
+  w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
+
+  const data = loadData();
+  // 哪一本：Parameter 填了帳本名稱就用那本，不然用最近記帳的那本
+  const param = (args.widgetParameter || "").trim();
+  const books = data ? data.books : [];
+  const book = (param && books.find(b => b.name === param)) || books.find(b => b.id === (data || {}).lastBook) || books[0];
+  if (!book) {
+    w.url = runURL({});
+    const t = w.addText("還沒有帳本，點一下開始記帳");
+    t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.ink);
+    return w;
+  }
+  const cats = data.cats || [];
+  const now = new Date();
+  const entries = [...book.entries].sort((a, b) => b.ts - a.ts);
+  const today = entries.filter(e => sameDay(new Date(e.ts), now));
+  const todaySum = today.reduce((s, e) => s + Number(e.amt || 0), 0);
+  const allSum = entries.reduce((s, e) => s + Number(e.amt || 0), 0);
+  w.url = runURL({ book: book.id });
+
+  // 左邊（小尺寸就是全部）：圖示、帳本名稱、今天花了多少、全部、＋記一筆
+  const leftCol = parent => {
+    const head = parent.addStack();
+    head.centerAlignContent();
+    head.spacing = 5;
+    for (const im of logoImages()) { const li = head.addImage(im); li.imageSize = new Size(30, 30); }
+    const name = head.addText(book.name);
+    name.font = Font.heavyRoundedSystemFont(12); name.textColor = col(K.ink); name.lineLimit = 1;
+    parent.addSpacer(4);
+    const l = parent.addText("今天");
+    l.font = Font.boldRoundedSystemFont(10); l.textColor = col(K.body);
+    const big = parent.addText(money(todaySum));
+    big.font = Font.heavyRoundedSystemFont(24); big.textColor = col(K.ink); big.minimumScaleFactor = 0.6; big.lineLimit = 1;
+    const all = parent.addText(`全部 ${money(allSum)}`);
+    all.font = Font.semiboldRoundedSystemFont(10); all.textColor = col(K.body); all.lineLimit = 1;
+    parent.addSpacer();
+    const pill = parent.addStack();
+    pill.backgroundColor = col(K.tomato);
+    pill.cornerRadius = 11;
+    pill.setPadding(4, 10, 4, 10);
+    pill.url = runURL({ add: book.id });
+    const pt = pill.addText("＋ 記一筆");
+    pt.font = Font.heavyRoundedSystemFont(12); pt.textColor = col(K.white);
+  };
+
+  if (family === "small") {
+    // 小尺寸只能整個小工具一個連結：點了就記一筆
+    w.url = runURL({ add: book.id });
+    leftCol(w);
+    return w;
+  }
+
+  const row = w.addStack();
+  const left = row.addStack();
+  left.layoutVertically();
+  left.size = new Size(118, 0);
+  leftCol(left);
+  row.addSpacer(10);
+  const right = row.addStack();
+  right.layoutVertically();
+  right.spacing = 5;
+  right.addSpacer();
+  if (!entries.length) {
+    const t = right.addText("還沒有記錄");
+    t.font = Font.boldRoundedSystemFont(12); t.textColor = col(K.body);
+  }
+  // 最近 3 筆
+  for (const e of entries.slice(0, 3)) {
+    const c = cats.find(x => x.id === e.cat) || { name: "未分類", color: "yellow", icon: "star" };
+    const chip = right.addStack();
+    chip.backgroundColor = col(CAT_BG[c.color] || CAT_BG.yellow);
+    chip.cornerRadius = 11;
+    chip.setPadding(4, 5, 4, 8);
+    chip.centerAlignContent();
+    chip.spacing = 5;
+    addIcon(chip, c.icon, 20);
+    const t = chip.addText(e.note || c.name);
+    t.font = Font.heavyRoundedSystemFont(11.5); t.textColor = col(K.ink); t.lineLimit = 1;
+    chip.addSpacer();
+    const a = chip.addText(Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }));
+    a.font = Font.heavyRoundedSystemFont(12); a.textColor = col(K.ink);
+  }
+  right.addSpacer();
+  return w;
+}
+
+// ---- 進入點
+if (config.runsInWidget) {
+  Script.setWidget(buildWidget(config.widgetFamily || "small"));
+} else {
+  await openApp(args.queryParameters || {});
+}
+Script.complete();
