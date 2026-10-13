@@ -382,7 +382,7 @@ async function exportCard(b) {
   for (const k of new Set([b.icon, ...list.map((e) => (catOf(e.cat) || { icon: "star" }).icon)])) imgs[k] = await loadImg(iconSrc(k)).catch(() => null);
 
   // 先算高度：上下留白 24、標題 44、總額 58、每天一行日期 28、每筆 58，區塊間距 14、記錄間距 8
-  const W = 390, S = 3, side = 16, inner = W - side * 2;
+  const W = 390, S = 3, side = 26, inner = W - side * 2; // 左右各留 26，卡片不會壓到兩邊的色塊
   const days = []; for (const e of list) { const k = dayKey(e.ts); if (!days.length || days[days.length - 1].k !== k) days.push({ k, items: [] }); days[days.length - 1].items.push(e); }
   let H = 24 + 44 + 14 + 58;
   for (const d of days) H += 14 + 28 + 8 + d.items.length * 58 + (d.items.length - 1) * 8;
@@ -391,9 +391,10 @@ async function exportCard(b) {
   const ctx = cv.getContext("2d"); ctx.scale(S, S);
   // 背景：米白紙和彩色色塊
   ctx.fillStyle = "#FFFCEF"; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = "#FFD426"; blobPath(ctx, W - 2, 14, 170, 140); ctx.fill();
-  ctx.fillStyle = "#D5F5D0"; blobPath(ctx, -12, Math.min(H * 0.45, 420), 120, 150); ctx.fill();
-  ctx.fillStyle = "#C9F0E9"; blobPath(ctx, W - 10, H + 10, 170, 120); ctx.fill();
+  // 色塊都停在卡片外面：右上黃色在總額上面、左邊綠色在 26 以內、右下青色在最後一筆下面
+  ctx.fillStyle = "#FFD426"; blobPath(ctx, W + 4, 6, 150, 120); ctx.fill();
+  ctx.fillStyle = "#D5F5D0"; blobPath(ctx, -22, Math.min(H * 0.45, 420), 80, 130); ctx.fill();
+  ctx.fillStyle = "#C9F0E9"; blobPath(ctx, W + 6, H + 22, 130, 80); ctx.fill();
   let y = 24;
   // 標題：帳本圖示 + 名稱
   if (imgs[b.icon]) { ctx.save(); if (ICON_IMAGES[b.icon]) { ctx.beginPath(); ctx.arc(side + 20, y + 22, 20, 0, Math.PI * 2); ctx.clip(); } ctx.drawImage(imgs[b.icon], side, y + 2, 40, 40); ctx.restore(); }
