@@ -598,14 +598,17 @@ function buildWidget(family) {
   const sums = w.addStack();
   sums.centerAlignContent();
   sums.spacing = 8;
+  // 今天和全部的金額都是 14 點；「＋」和全部往右挪一點
   const tl = sums.addText("今天"); tl.font = Font.boldRoundedSystemFont(12); tl.textColor = col(K.body);
-  const tv = sums.addText(money(todaySum)); tv.font = Font.heavyRoundedSystemFont(26); tv.textColor = col(K.ink);
+  const tv = sums.addText(money(todaySum)); tv.font = Font.heavyRoundedSystemFont(14); tv.textColor = col(K.ink);
+  sums.addSpacer(14);
   addPill(sums, book, true); // 「＋」放在全部金額前面
-  const al = sums.addText(`全部 ${money(total(entries))}`); al.font = Font.boldRoundedSystemFont(12); al.textColor = col(K.body);
+  const al = sums.addText("全部"); al.font = Font.boldRoundedSystemFont(12); al.textColor = col(K.body);
+  const av = sums.addText(money(total(entries))); av.font = Font.heavyRoundedSystemFont(14); av.textColor = col(K.ink);
   sums.addSpacer();
   w.addSpacer(8);
   const inner = W - 28, INSET = 8, chipW = inner - INSET * 2; // 記錄卡片左右各縮 8
-  let room = H - 24 - LOGO - 6 - 32 - 8;
+  let room = H - 24 - LOGO - 6 - 20 - 8;
   if (!entries.length) { const t = w.addText("還沒有記錄，點「＋」開始記一筆"); t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.body); }
   let day = null;
   for (const e of entries) {
