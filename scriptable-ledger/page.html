@@ -229,7 +229,7 @@ function renderHome() {
   $("#app").innerHTML = `
     <header class="top">${logoHTML()}<h1>我的帳本</h1>
       <button class="ibtn ${managing ? "on" : ""}" id="manage" aria-label="管理帳本">${managing ? "✓" : "✎"}</button></header>
-    ${managing ? `<p class="hint">點帳本可以改名字、圖示和顏色；按左上角的 ✕ 刪除整本。</p>` : ""}
+    ${managing ? `<p class="hint">點帳本可以改名字、圖示和顏色；按左上角的 ✕ 刪除整本。</p><button class="dashed" id="corner">換小工具右上角的照片</button>` : ""}
     <div class="books">${data.books.map((b) => `
       <button class="book" style="background:${bg(b.color)}" data-book="${esc(b.id)}">
         ${managing ? `<span class="del" data-del="${esc(b.id)}" aria-label="刪除 ${esc(b.name)}">✕</span>` : ""}
@@ -240,6 +240,7 @@ function renderHome() {
   $("#bottom").innerHTML = "";
   $("#manage").onclick = () => { managing = !managing; renderHome(); };
   $("#newbook").onclick = () => openBookEditor(null);
+  if ($("#corner")) $("#corner").onclick = () => send({ type: "corner" });
   $("#app").querySelector(".books").onclick = (e) => {
     const del = e.target.closest("[data-del]");
     if (del) { deleteBook(del.dataset.del); return; }
