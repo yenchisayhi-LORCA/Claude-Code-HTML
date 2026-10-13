@@ -351,7 +351,58 @@ function addIcon(stack, key, size) {
   im.tintColor = col(K.ink);
 }
 const money = n => "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
-const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+// 依螢幕寬度推算小工具的大小（單位：點），跟筆記同一張表
+function widgetSizes() {
+  const s = Device.screenSize();
+  const w = Math.min(s.width, s.height), h = Math.max(s.width, s.height);
+  const t = w >= 428 ? [170, 364, 382] : w >= 414 ? (h >= 896 ? [169, 360, 379] : [159, 348, 357])
+    : w >= 390 ? [158, 338, 354] : w >= 375 ? (h >= 812 ? [155, 329, 345] : [148, 321, 324]) : [141, 292, 311];
+  return { small: [t[0], t[0]], medium: [t[1], t[0]], large: [t[1], t[2]] };
+}
+const WEEK = "日一二三四五六";
+const LOGO = 45; // 左上角「彥」（原本 30，放大 1.5 倍）
+const CHIP_H = 34, CHIP_GAP = 5, DAY_H = 18; // 每筆記錄（放大 1.2 倍）的高度、間距；日期小計那一行的高度
+
+// 標題列：「彥」+ 帳本圖示 + 帳本名稱（大尺寸右邊再放「＋記一筆」）
+function addHeader(parent, book, withPill, withName = true) {
+  const head = parent.addStack();
+  head.centerAlignContent();
+  head.spacing = 6;
+  for (const im of logoImages()) { const li = head.addImage(im); li.imageSize = new Size(LOGO, LOGO); }
+  addIcon(head, book.icon, 26);
+  if (withName) {
+    const name = head.addText(book.name);
+    name.font = Font.heavyRoundedSystemFont(15); name.textColor = col(K.ink); name.lineLimit = 1; name.minimumScaleFactor = 0.7;
+  }
+  if (withPill) { head.addSpacer(); addPill(head, book); }
+}
+function addPill(parent, book) {
+  const pill = parent.addStack();
+  pill.backgroundColor = col(K.tomato);
+  pill.cornerRadius = 12;
+  pill.setPadding(5, 11, 5, 11);
+  pill.url = runURL({ add: book.id });
+  const pt = pill.addText("＋ 記一筆");
+  pt.font = Font.heavyRoundedSystemFont(13); pt.textColor = col(K.white);
+}
+// 一筆記錄：分類圖示、備註（沒有就寫分類）、金額
+function addChip(parent, e, cats, width) {
+  const c = cats.find(x => x.id === e.cat) || { name: "未分類", color: "yellow", icon: "star" };
+  const chip = parent.addStack();
+  chip.size = new Size(width, CHIP_H);
+  chip.backgroundColor = col(CAT_BG[c.color] || CAT_BG.yellow);
+  chip.cornerRadius = 13;
+  chip.setPadding(0, 6, 0, 10);
+  chip.centerAlignContent();
+  chip.spacing = 6;
+  addIcon(chip, c.icon, 24);
+  const t = chip.addText(e.note || c.name);
+  t.font = Font.heavyRoundedSystemFont(13.8); t.textColor = col(K.ink); t.lineLimit = 1;
+  chip.addSpacer();
+  const a = chip.addText(Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }));
+  a.font = Font.heavyRoundedSystemFont(14.4); a.textColor = col(K.ink);
+}
 
 function buildWidget(family) {
   const w = new ListWidget();
@@ -360,6 +411,7 @@ function buildWidget(family) {
   if (bgImg) w.backgroundImage = bgImg;
   w.setPadding(12, 14, 12, 14);
   w.refreshAfterDate = new Date(Date.now() + 15 * 60000);
+  const [W, H] = widgetSizes()[family] || widgetSizes().medium;
 
   const data = loadData();
   // 哪一本：Parameter 填了帳本名稱就用那本，不然用最近記帳的那本
@@ -375,74 +427,95 @@ function buildWidget(family) {
   const cats = data.cats || [];
   const now = new Date();
   const entries = [...book.entries].sort((a, b) => b.ts - a.ts);
-  const today = entries.filter(e => sameDay(new Date(e.ts), now));
-  const todaySum = today.reduce((s, e) => s + Number(e.amt || 0), 0);
-  const allSum = entries.reduce((s, e) => s + Number(e.amt || 0), 0);
+  const dayKey = ts => { const d = new Date(ts); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
+  const total = list => list.reduce((s, e) => s + Number(e.amt || 0), 0);
+  const todaySum = total(entries.filter(e => dayKey(e.ts) === dayKey(now)));
   w.url = runURL({ book: book.id });
 
-  // 左邊（小尺寸就是全部）：圖示、帳本名稱、今天花了多少、全部、＋記一筆
-  const leftCol = parent => {
-    const head = parent.addStack();
-    head.centerAlignContent();
-    head.spacing = 5;
-    for (const im of logoImages()) { const li = head.addImage(im); li.imageSize = new Size(30, 30); }
-    const name = head.addText(book.name);
-    name.font = Font.heavyRoundedSystemFont(12); name.textColor = col(K.ink); name.lineLimit = 1;
-    parent.addSpacer(4);
+  // 今天花了多少、全部多少
+  const addSums = (parent, big) => {
     const l = parent.addText("今天");
-    l.font = Font.boldRoundedSystemFont(10); l.textColor = col(K.body);
-    const big = parent.addText(money(todaySum));
-    big.font = Font.heavyRoundedSystemFont(24); big.textColor = col(K.ink); big.minimumScaleFactor = 0.6; big.lineLimit = 1;
-    const all = parent.addText(`全部 ${money(allSum)}`);
-    all.font = Font.semiboldRoundedSystemFont(10); all.textColor = col(K.body); all.lineLimit = 1;
-    parent.addSpacer();
-    const pill = parent.addStack();
-    pill.backgroundColor = col(K.tomato);
-    pill.cornerRadius = 11;
-    pill.setPadding(4, 10, 4, 10);
-    pill.url = runURL({ add: book.id });
-    const pt = pill.addText("＋ 記一筆");
-    pt.font = Font.heavyRoundedSystemFont(12); pt.textColor = col(K.white);
+    l.font = Font.boldRoundedSystemFont(11); l.textColor = col(K.body);
+    const v = parent.addText(money(todaySum));
+    v.font = Font.heavyRoundedSystemFont(big); v.textColor = col(K.ink); v.minimumScaleFactor = 0.6; v.lineLimit = 1;
+    const all = parent.addText(`全部 ${money(total(entries))}`);
+    all.font = Font.semiboldRoundedSystemFont(11); all.textColor = col(K.body); all.lineLimit = 1;
   };
 
   if (family === "small") {
     // 小尺寸只能整個小工具一個連結：點了就記一筆
     w.url = runURL({ add: book.id });
-    leftCol(w);
+    addHeader(w, book, false);
+    w.addSpacer(4);
+    addSums(w, 24);
+    w.addSpacer();
+    addPill(w, book);
     return w;
   }
 
-  const row = w.addStack();
-  const left = row.addStack();
-  left.layoutVertically();
-  left.size = new Size(118, 0);
-  leftCol(left);
-  row.addSpacer(10);
-  const right = row.addStack();
-  right.layoutVertically();
-  right.spacing = 5;
-  right.addSpacer();
-  if (!entries.length) {
-    const t = right.addText("還沒有記錄");
-    t.font = Font.boldRoundedSystemFont(12); t.textColor = col(K.body);
+  if (family === "medium") {
+    // 左邊：標題、今天、全部、＋記一筆；右邊：最近 3 筆
+    const row = w.addStack();
+    const left = row.addStack();
+    left.layoutVertically();
+    left.size = new Size(128, H - 24);
+    addHeader(left, book, false, false); // 左欄比較窄：名稱放下一行
+    const nm = left.addText(book.name);
+    nm.font = Font.heavyRoundedSystemFont(13); nm.textColor = col(K.ink); nm.lineLimit = 1;
+    left.addSpacer(2);
+    addSums(left, 22);
+    left.addSpacer();
+    addPill(left, book);
+    row.addSpacer(10);
+    const right = row.addStack();
+    right.layoutVertically();
+    right.spacing = CHIP_GAP;
+    right.addSpacer();
+    const rw = W - 28 - 128 - 10;
+    if (!entries.length) { const t = right.addText("還沒有記錄"); t.font = Font.boldRoundedSystemFont(12); t.textColor = col(K.body); }
+    for (const e of entries.slice(0, 3)) addChip(right, e, cats, rw);
+    right.addSpacer();
+    return w;
   }
-  // 最近 3 筆
-  for (const e of entries.slice(0, 3)) {
-    const c = cats.find(x => x.id === e.cat) || { name: "未分類", color: "yellow", icon: "star" };
-    const chip = right.addStack();
-    chip.backgroundColor = col(CAT_BG[c.color] || CAT_BG.yellow);
-    chip.cornerRadius = 11;
-    chip.setPadding(4, 5, 4, 8);
-    chip.centerAlignContent();
-    chip.spacing = 5;
-    addIcon(chip, c.icon, 20);
-    const t = chip.addText(e.note || c.name);
-    t.font = Font.heavyRoundedSystemFont(11.5); t.textColor = col(K.ink); t.lineLimit = 1;
-    chip.addSpacer();
-    const a = chip.addText(Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }));
-    a.font = Font.heavyRoundedSystemFont(12); a.textColor = col(K.ink);
+
+  // 大尺寸：標題（右邊＋記一筆）、今天和全部，下面依日期列出，每天一行小計；放得下幾筆就放幾筆
+  addHeader(w, book, true);
+  w.addSpacer(6);
+  const sums = w.addStack();
+  sums.bottomAlignContent();
+  sums.spacing = 8;
+  const tl = sums.addText("今天"); tl.font = Font.boldRoundedSystemFont(12); tl.textColor = col(K.body);
+  const tv = sums.addText(money(todaySum)); tv.font = Font.heavyRoundedSystemFont(26); tv.textColor = col(K.ink);
+  sums.addSpacer();
+  const al = sums.addText(`全部 ${money(total(entries))}`); al.font = Font.boldRoundedSystemFont(12); al.textColor = col(K.body);
+  w.addSpacer(8);
+  const inner = W - 28;
+  let room = H - 24 - LOGO - 6 - 32 - 8;
+  if (!entries.length) { const t = w.addText("還沒有記錄，點右上角的「＋ 記一筆」開始"); t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.body); }
+  let day = null;
+  for (const e of entries) {
+    const k = dayKey(e.ts);
+    const needDay = k !== day;
+    if (room < (needDay ? DAY_H + 4 : 0) + CHIP_H) break;
+    if (needDay) {
+      day = k;
+      const d = new Date(e.ts);
+      const diff = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+      const label = (diff === 0 ? "今天 " : diff === 1 ? "昨天 " : "") + `${d.getMonth() + 1}/${d.getDate()}（${WEEK[d.getDay()]}）`;
+      const dr = w.addStack();
+      dr.size = new Size(inner, DAY_H);
+      dr.centerAlignContent();
+      const dl = dr.addText(label); dl.font = Font.heavyRoundedSystemFont(12); dl.textColor = col(K.ink);
+      dr.addSpacer();
+      const ds = dr.addText(money(total(entries.filter(x => dayKey(x.ts) === k)))); ds.font = Font.heavyRoundedSystemFont(12); ds.textColor = col(K.body);
+      w.addSpacer(4);
+      room -= DAY_H + 4;
+    }
+    addChip(w, e, cats, inner);
+    w.addSpacer(CHIP_GAP);
+    room -= CHIP_H + CHIP_GAP;
   }
-  right.addSpacer();
+  w.addSpacer();
   return w;
 }
 
