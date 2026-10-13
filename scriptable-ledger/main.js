@@ -127,6 +127,13 @@ async function ensureStickerArt() {
   } catch (e) {}
 }
 
+// 圖卡左上角的 App 圖示（跟網頁版日常記帳同一張），第一次下載後存在這台
+async function appIconDataURL() {
+  const p = local.joinPath(DIR, "app-icon.png");
+  if (!local.fileExists(p)) { const d = await download("icon-192.png"); if (!d) return null; mkdir(DIR); local.write(p, d); }
+  return "data:image/png;base64," + local.read(p).toBase64String();
+}
+
 async function animalDataURLs() {
   const out = {};
   for (const k of Object.keys(ANIMALS)) {
@@ -163,7 +170,7 @@ async function openApp(params) {
   const iconFailed = await ensureAnimalIcons();
   await ensureStickerArt();
   const boot = {
-    data, iconImages: await animalDataURLs(), logos: logoDataURLs(),
+    data, iconImages: await animalDataURLs(), logos: logoDataURLs(), appIcon: await appIconDataURL(),
     add: params.add || null, openBook: params.book || null,
     warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。" : "",
   };
@@ -171,20 +178,17 @@ async function openApp(params) {
 
   const wv = new WebView();
   let queue = Promise.resolve();
-  const tell = msg => wv.evaluateJavaScript(`window.__exported(${js(msg)}); 0;`);
   const run = async cmds => {
     for (const c of cmds) {
       if (c.type === "save") saveData(c.data);
-      else if (c.type === "copy") {
-        // 用 Tab 分隔，在 Excel 貼上會自動分欄
-        Pasteboard.copyString(c.text);
-        await tell(`已複製 ${c.count} 筆，到 Excel 貼上就好`);
-      } else if (c.type === "share") {
-        // 存成 CSV 檔（開頭有 BOM，Excel 打開中文不會亂碼），用分享選單存到「檔案」或傳出去
-        const name = c.name.replace(/[\/\\:*?"<>|]/g, "-");
-        const p = local.joinPath(local.temporaryDirectory(), name);
-        local.writeString(p, c.text);
+      else if (c.type === "file") {
+        // 匯出 Excel：畫面組好的 .xlsx 存成暫存檔，用分享選單存到「檔案」、用 Excel 打開或傳出去
+        const p = local.joinPath(local.temporaryDirectory(), c.name.replace(/[\/\\:*?"<>|]/g, "-"));
+        local.write(p, Data.fromBase64String(c.b64));
         await ShareSheet.present([p]);
+      } else if (c.type === "image") {
+        // 圖卡：用分享選單「儲存影像」到照片，或用 LINE 傳出去
+        await ShareSheet.present([Image.fromData(Data.fromBase64String(c.b64))]);
       }
     }
   };
