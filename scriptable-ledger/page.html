@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>童趣風記帳</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gluten:wght@700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gluten:wght@700;800&family=Noto+Sans+TC:wght@500;700;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <style>
 /* 版面：手機寬的一欄。首頁是帳本卡片，點進去是帳本內頁（依日期列出），記一筆、編輯分類、編輯帳本都是從下面升上來的面板 */
 :root {
@@ -282,7 +282,7 @@ function renderBook() {
     <div class="total"><span>${b.entries.length} 筆，總共</span><span class="money">${fmt(sum(b.entries))}</span></div>
     ${list.length ? `<div class="items">${html}</div>` : `<p class="empty">還沒有記錄<br>按下面的「＋ 記一筆」開始</p>`}`;
   $("#bottom").innerHTML = `<div class="in"><button class="add" id="add">＋ 記一筆</button>
-    <div class="tools"><button class="go" id="export">匯出 CSV</button><button id="copy">複製給 Excel</button><button id="clear">清空</button></div></div>`;
+    <div class="tools"><button class="go" id="export">匯出 Excel</button><button id="card">圖卡</button><button id="clear">清空</button></div></div>`;
   $("#back").onclick = () => { view = { page: "home" }; render(); };
   $("#add").onclick = () => openEntry(b, null);
   $("#app").querySelector(".items")?.addEventListener("click", (e) => {
@@ -290,24 +290,154 @@ function renderBook() {
   });
   $("#export").onclick = () => {
     if (!b.entries.length) { toast("這本還沒有記錄"); return; }
-    send({ type: "share", name: `${b.name}-${dayKey(Date.now())}.csv`, text: "﻿" + table(b, ",") });
+    send({ type: "file", name: `${b.name}-${dayKey(Date.now())}.xlsx`, b64: xlsx(b) });
   };
-  $("#copy").onclick = () => {
+  $("#card").onclick = () => {
     if (!b.entries.length) { toast("這本還沒有記錄"); return; }
-    send({ type: "copy", text: table(b, "\t"), count: b.entries.length });
+    toast("正在畫圖卡…");
+    exportCard(b).then((b64) => send({ type: "image", b64 })).catch((e) => toast("圖卡畫不出來：" + e));
   };
   $("#clear").onclick = () => clearBook(b);
 }
 
-// 匯出：日期、時間、帳本、分類、金額、備註，舊的在上面（跟 Excel 帳冊一樣由上往下）
-function table(b, sep) {
-  const cell = (v) => { v = String(v ?? ""); return sep === "," && /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v.replace(/[\t\n]/g, " "); };
-  const rows = [["日期", "時間", "帳本", "分類", "金額", "備註"]];
-  for (const e of [...b.entries].sort((x, y) => x.ts - y.ts)) {
+// 匯出 Excel：日期、時間、帳本、分類、金額、備註，舊的在上面（跟 Excel 帳冊一樣由上往下）
+// 自己組一個最小的 .xlsx（其實是 zip 檔：幾個 XML 不壓縮直接包起來），金額存成數字，Excel 可以直接加總
+function rowsOf(b) {
+  return [...b.entries].sort((x, y) => x.ts - y.ts).map((e) => {
     const d = new Date(e.ts);
-    rows.push([`${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())}`, hm(e.ts), b.name, (catOf(e.cat) || { name: "未分類" }).name, e.amt, e.note || ""]);
+    return [`${d.getFullYear()}/${p2(d.getMonth() + 1)}/${p2(d.getDate())}`, hm(e.ts), b.name, (catOf(e.cat) || { name: "未分類" }).name, Number(e.amt), e.note || ""];
+  });
+}
+function xlsx(b) {
+  const x = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  const rows = [["日期", "時間", "帳本", "分類", "金額", "備註"], ...rowsOf(b)];
+  const sheetRows = rows.map((r, ri) => `<row r="${ri + 1}">${r.map((v, ci) => {
+    const ref = "ABCDEF"[ci] + (ri + 1), st = ri === 0 ? ' s="1"' : "";
+    return typeof v === "number" ? `<c r="${ref}"${st}><v>${v}</v></c>` : `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${x(v)}</t></is></c>`;
+  }).join("")}</row>`).join("");
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const files = {
+    "[Content_Types].xml": head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+    "_rels/.rels": head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    "xl/workbook.xml": head + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(b.name.replace(/[\\/?*\[\]:]/g, " ").slice(0, 31) || "記帳")}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+    "xl/_rels/workbook.xml.rels": head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+    "xl/styles.xml": head + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="12"/><name val="Calibri"/></font><font><b/><sz val="12"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+    "xl/worksheets/sheet1.xml": head + `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="8" customWidth="1"/><col min="3" max="5" width="10" customWidth="1"/><col min="6" max="6" width="28" customWidth="1"/></cols><sheetData>${sheetRows}</sheetData></worksheet>`,
+  };
+  return zipBase64(files);
+}
+// 不壓縮的 zip（STORE）：每個檔案一個 local header，最後放目錄
+function zipBase64(files) {
+  const enc = new TextEncoder(), table = [];
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; table[n] = c >>> 0; }
+  const crc32 = (u) => { let c = 0xFFFFFFFF; for (const v of u) c = table[(c ^ v) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const le = (n, size) => { const a = []; for (let i = 0; i < size; i++) a.push((n >>> (8 * i)) & 0xFF); return a; };
+  const parts = [], central = []; let offset = 0;
+  for (const [name, text] of Object.entries(files)) {
+    const nameU = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+    // 版本、旗標（UTF-8 檔名）、不壓縮、時間、日期、CRC、大小、大小、檔名長度、額外欄位長度
+    const common = [...le(20, 2), ...le(0x0800, 2), ...le(0, 2), ...le(0, 2), ...le(0x21, 2), ...le(crc, 4), ...le(data.length, 4), ...le(data.length, 4), ...le(nameU.length, 2), ...le(0, 2)];
+    const local = new Uint8Array([...le(0x04034b50, 4), ...common, ...nameU]);
+    parts.push(local, data);
+    central.push(new Uint8Array([...le(0x02014b50, 4), ...le(20, 2), ...common, ...le(0, 2), ...le(0, 2), ...le(0, 2), ...le(0, 4), ...le(offset, 4), ...nameU]));
+    offset += local.length + data.length;
   }
-  return rows.map((r) => r.map(cell).join(sep)).join("\r\n");
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  const end = new Uint8Array([...le(0x06054b50, 4), ...le(0, 2), ...le(0, 2), ...le(central.length, 2), ...le(central.length, 2), ...le(cdSize, 4), ...le(offset, 4), ...le(0, 2)]);
+  const all = new Uint8Array(offset + cdSize + end.length); let pos = 0;
+  for (const u of [...parts, ...central, end]) { all.set(u, pos); pos += u.length; }
+  let bin = ""; for (let i = 0; i < all.length; i += 0x8000) bin += String.fromCharCode.apply(null, all.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+// 圖卡：照網頁版「日常記帳」的匯出圖卡畫（粉色底、白色卡片、標頭、Σ 總額、花費明細），回傳 PNG 的 base64
+const AMOUNT_COLORS = ["#4A7FC9", "#8F6BC9", "#5FAE5A", "#C99A2E", "#DB7A3A"];
+const colorFor = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AMOUNT_COLORS[h % AMOUNT_COLORS.length]; };
+const amtComma = (n) => { n = Number(n) || 0; const s = Number.isInteger(n) ? String(n) : n.toFixed(2); const [a, d] = s.split("."); return a.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (d ? "." + d : ""); };
+const ymd = (ts) => { const d = new Date(ts); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
+const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fitText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text; while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+  return t + "…";
+}
+async function exportCard(b) {
+  const list = [...b.entries].sort((x, y) => y.ts - x.ts);
+  const W = 1080, pad = 48, innerPad = 56, headerH = 280, totalH = 150, sectionLabelH = 80, rowH = 148, footerH = 110;
+  const H = pad * 2 + headerH + totalH + sectionLabelH + list.length * rowH + footerH;
+  const total = sum(list), accent = colorFor(b.id);
+  const font = "'Zen Maru Gothic','Noto Sans TC',sans-serif";
+  const textAll = "日常記帳" + b.name + "花費明細共筆元" + list.map((e) => (e.note || "") + (catOf(e.cat) || { name: "未分類" }).name).join("");
+  try { await Promise.all(["900 56px", "700 34px", "500 28px"].map((w) => document.fonts.load(`${w} 'Zen Maru Gothic'`, textAll))); } catch (e) {}
+  const appIcon = boot.appIcon ? await loadImg(boot.appIcon).catch(() => null) : null;
+  const bookIcon = await loadImg(ICON_IMAGES[b.icon] || "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(ICON_SVGS[b.icon] ? b.icon : "star", ICON_SVGS))).catch(() => null);
+
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  // 背景
+  ctx.fillStyle = "#FBE3E0"; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = "#FBE9BE"; ctx.beginPath(); ctx.arc(W - 40, 60, 170, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#D7E4F7"; ctx.beginPath(); ctx.arc(40, H - 40, 190, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+  // 卡片面板
+  rrect(ctx, pad, pad, W - pad * 2, H - pad * 2, 40);
+  ctx.fillStyle = "#FFFFFF"; ctx.shadowColor = "rgba(30,58,138,0.12)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10; ctx.fill();
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  const x = pad + innerPad, rightX = W - pad - innerPad;
+  let y = pad + innerPad;
+  // 標頭第一行：App 圖示 + 日常記帳
+  const appIconSize = 113;
+  if (appIcon) { rrect(ctx, x, y, appIconSize, appIconSize, 30); ctx.save(); ctx.clip(); ctx.drawImage(appIcon, x, y, appIconSize, appIconSize); ctx.restore(); }
+  ctx.fillStyle = "#6E74C7"; ctx.font = "900 41px " + font; ctx.textBaseline = "middle";
+  ctx.fillText("日常記帳", x + (appIcon ? appIconSize + 20 : 0), y + appIconSize / 2 + 2);
+  // 標頭第二行：帳本圖示 + 帳本名稱
+  const rowY = y + appIconSize + 32, iconSize = 68;
+  if (bookIcon) {
+    rrect(ctx, x, rowY, iconSize, iconSize, 22); ctx.save(); ctx.clip();
+    ctx.fillStyle = "#FFFBF2"; ctx.fillRect(x, rowY, iconSize, iconSize);
+    ctx.drawImage(bookIcon, x, rowY, iconSize, iconSize); ctx.restore();
+  }
+  const tx = x + iconSize + 28;
+  ctx.fillStyle = "#A68990"; ctx.font = "700 24px " + font; ctx.textBaseline = "top";
+  ctx.fillText("DAILY EXPENSE REPORT", tx, rowY + 6);
+  ctx.fillStyle = accent; ctx.font = "900 56px " + font;
+  ctx.fillText(fitText(ctx, b.name, rightX - tx), tx, rowY + 38);
+  y += headerH;
+  ctx.strokeStyle = "#F3D9D8"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(rightX, y); ctx.stroke();
+  // 總額
+  ctx.fillStyle = "#C98A24"; ctx.font = "900 44px " + font; ctx.textBaseline = "middle";
+  ctx.fillText("Σ " + amtComma(total), x, y + totalH / 2);
+  ctx.fillStyle = "#A68990"; ctx.font = "500 26px " + font; ctx.textAlign = "right";
+  ctx.fillText("共 " + list.length + " 筆", rightX, y + totalH / 2); ctx.textAlign = "left";
+  y += totalH;
+  // 花費明細標題
+  ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(x + 10, y + 20, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#2B3159"; ctx.font = "700 32px " + font; ctx.textBaseline = "middle";
+  ctx.fillText("花費明細", x + 34, y + 22);
+  y += sectionLabelH;
+  // 逐筆：備註（沒有就寫分類）、日期・分類、金額
+  list.forEach((e, i) => {
+    const c = colorFor(e.id), cat = (catOf(e.cat) || { name: "未分類" }).name;
+    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + 12, y + rowH / 2 - 14, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#2B3159"; ctx.font = "700 34px " + font; ctx.textBaseline = "alphabetic";
+    ctx.fillText(fitText(ctx, e.note || cat, rightX - (x + 42) - 260), x + 42, y + rowH / 2 - 6);
+    ctx.fillStyle = "#A68990"; ctx.font = "500 26px " + font;
+    ctx.fillText(`${ymd(e.ts)}・${cat}`, x + 42, y + rowH / 2 + 32);
+    ctx.fillStyle = c; ctx.font = "900 40px " + font; ctx.textAlign = "right";
+    ctx.fillText(amtComma(e.amt) + " 元", rightX, y + rowH / 2 + 10); ctx.textAlign = "left";
+    y += rowH;
+    if (i < list.length - 1) { ctx.strokeStyle = "#F5EEE4"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(rightX, y - 18); ctx.stroke(); }
+  });
+  // 頁尾
+  ctx.fillStyle = "#A68990"; ctx.font = "500 24px " + font; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("日常記帳 · " + b.name + " · " + ymd(Date.now()), W / 2, H - pad - footerH / 2 + 10);
+  return cv.toDataURL("image/png").split(",")[1];
 }
 
 let armedClear = null;
