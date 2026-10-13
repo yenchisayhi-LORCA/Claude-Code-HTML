@@ -350,16 +350,23 @@ function zipBase64(files) {
   return btoa(bin);
 }
 
-// 圖卡：照網頁版「日常記帳」的匯出圖卡畫（粉色底、白色卡片、標頭、Σ 總額、花費明細），回傳 PNG 的 base64
-const AMOUNT_COLORS = ["#4A7FC9", "#8F6BC9", "#5FAE5A", "#C99A2E", "#DB7A3A"];
-const colorFor = (id) => { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AMOUNT_COLORS[h % AMOUNT_COLORS.length]; };
-const amtComma = (n) => { n = Number(n) || 0; const s = Number.isInteger(n) ? String(n) : n.toFixed(2); const [a, d] = s.split("."); return a.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (d ? "." + d : ""); };
-const ymd = (ts) => { const d = new Date(ts); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
+// 圖卡：把帳本畫面原樣畫成一張圖（從帳本圖示和名稱，到最後一筆記錄；不含返回鍵和下面的按鈕），回傳 PNG 的 base64
+// 每一筆都會畫進去，記錄再多也不會被切掉；尺寸、顏色、字型都跟畫面一樣，寬 390 點畫成 3 倍
+const CARD_HEX = { yellow: "#FFF0AF", orange: "#FFE2BA", green: "#D5F5D0", blue: "#CFDDF8", pink: "#FBD3D0", teal: "#C9F0E9", purple: "#E3DAFA", rose: "#FFD8E8" };
 const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+const iconSrc = (key) => ICON_IMAGES[key] || "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS));
 function rrect(ctx, x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function blobPath(ctx, cx, cy, w, h) { // 跟畫面背景一樣的不規則色塊
+  const r = [52, 48, 61, 39, 58, 43, 57, 42].map((v) => v / 100), x = cx - w / 2, y = cy - h / 2;
+  ctx.beginPath(); ctx.moveTo(x + r[0] * w, y); ctx.lineTo(x + w - r[1] * w, y);
+  ctx.ellipse(x + w - r[1] * w, y + r[5] * h, r[1] * w, r[5] * h, 0, -Math.PI / 2, 0); ctx.lineTo(x + w, y + h - r[6] * h);
+  ctx.ellipse(x + w - r[2] * w, y + h - r[6] * h, r[2] * w, r[6] * h, 0, 0, Math.PI / 2); ctx.lineTo(x + r[3] * w, y + h);
+  ctx.ellipse(x + r[3] * w, y + h - r[7] * h, r[3] * w, r[7] * h, 0, Math.PI / 2, Math.PI); ctx.lineTo(x, y + r[4] * h);
+  ctx.ellipse(x + r[0] * w, y + r[4] * h, r[0] * w, r[4] * h, 0, Math.PI, Math.PI * 1.5); ctx.closePath();
 }
 function fitText(ctx, text, maxW) {
   if (ctx.measureText(text).width <= maxW) return text;
@@ -368,75 +375,55 @@ function fitText(ctx, text, maxW) {
 }
 async function exportCard(b) {
   const list = [...b.entries].sort((x, y) => y.ts - x.ts);
-  const W = 1080, pad = 48, innerPad = 56, headerH = 280, totalH = 150, sectionLabelH = 80, rowH = 148, footerH = 110;
-  const H = pad * 2 + headerH + totalH + sectionLabelH + list.length * rowH + footerH;
-  const total = sum(list), accent = colorFor(b.id);
-  const font = "'Zen Maru Gothic','Noto Sans TC',sans-serif";
-  const textAll = "日常記帳" + b.name + "花費明細共筆元" + list.map((e) => (e.note || "") + (catOf(e.cat) || { name: "未分類" }).name).join("");
-  try { await Promise.all(["900 56px", "700 34px", "500 28px"].map((w) => document.fonts.load(`${w} 'Zen Maru Gothic'`, textAll))); } catch (e) {}
-  const appIcon = boot.appIcon ? await loadImg(boot.appIcon).catch(() => null) : null;
-  const bookIcon = await loadImg(ICON_IMAGES[b.icon] || "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(ICON_SVGS[b.icon] ? b.icon : "star", ICON_SVGS))).catch(() => null);
+  const sans = '"Noto Sans TC", -apple-system, "PingFang TC", sans-serif', disp = 'Gluten, "Noto Sans TC", sans-serif';
+  const all = b.name + "筆總共今天昨天" + list.map((e) => (e.note || "") + (catOf(e.cat) || { name: "未分類" }).name).join("");
+  try { await Promise.all([document.fonts.load(`900 24px "Noto Sans TC"`, all), document.fonts.load(`700 14px "Noto Sans TC"`, all), document.fonts.load(`800 20px Gluten`, "$0123456789,.")]); } catch (e) {}
+  const imgs = {};
+  for (const k of new Set([b.icon, ...list.map((e) => (catOf(e.cat) || { icon: "star" }).icon)])) imgs[k] = await loadImg(iconSrc(k)).catch(() => null);
 
-  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
-  const ctx = cv.getContext("2d");
-  // 背景
-  ctx.fillStyle = "#FBE3E0"; ctx.fillRect(0, 0, W, H);
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = "#FBE9BE"; ctx.beginPath(); ctx.arc(W - 40, 60, 170, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#D7E4F7"; ctx.beginPath(); ctx.arc(40, H - 40, 190, 0, Math.PI * 2); ctx.fill();
-  ctx.globalAlpha = 1;
-  // 卡片面板
-  rrect(ctx, pad, pad, W - pad * 2, H - pad * 2, 40);
-  ctx.fillStyle = "#FFFFFF"; ctx.shadowColor = "rgba(30,58,138,0.12)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10; ctx.fill();
-  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  const x = pad + innerPad, rightX = W - pad - innerPad;
-  let y = pad + innerPad;
-  // 標頭第一行：App 圖示 + 日常記帳
-  const appIconSize = 113;
-  if (appIcon) { rrect(ctx, x, y, appIconSize, appIconSize, 30); ctx.save(); ctx.clip(); ctx.drawImage(appIcon, x, y, appIconSize, appIconSize); ctx.restore(); }
-  ctx.fillStyle = "#6E74C7"; ctx.font = "900 41px " + font; ctx.textBaseline = "middle";
-  ctx.fillText("日常記帳", x + (appIcon ? appIconSize + 20 : 0), y + appIconSize / 2 + 2);
-  // 標頭第二行：帳本圖示 + 帳本名稱
-  const rowY = y + appIconSize + 32, iconSize = 68;
-  if (bookIcon) {
-    rrect(ctx, x, rowY, iconSize, iconSize, 22); ctx.save(); ctx.clip();
-    ctx.fillStyle = "#FFFBF2"; ctx.fillRect(x, rowY, iconSize, iconSize);
-    ctx.drawImage(bookIcon, x, rowY, iconSize, iconSize); ctx.restore();
-  }
-  const tx = x + iconSize + 28;
-  ctx.fillStyle = "#A68990"; ctx.font = "700 24px " + font; ctx.textBaseline = "top";
-  ctx.fillText("DAILY EXPENSE REPORT", tx, rowY + 6);
-  ctx.fillStyle = accent; ctx.font = "900 56px " + font;
-  ctx.fillText(fitText(ctx, b.name, rightX - tx), tx, rowY + 38);
-  y += headerH;
-  ctx.strokeStyle = "#F3D9D8"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(rightX, y); ctx.stroke();
+  // 先算高度：上下留白 24、標題 44、總額 58、每天一行日期 28、每筆 58，區塊間距 14、記錄間距 8
+  const W = 390, S = 3, side = 16, inner = W - side * 2;
+  const days = []; for (const e of list) { const k = dayKey(e.ts); if (!days.length || days[days.length - 1].k !== k) days.push({ k, items: [] }); days[days.length - 1].items.push(e); }
+  let H = 24 + 44 + 14 + 58;
+  for (const d of days) H += 14 + 28 + 8 + d.items.length * 58 + (d.items.length - 1) * 8;
+  H += 28;
+  const cv = document.createElement("canvas"); cv.width = W * S; cv.height = H * S;
+  const ctx = cv.getContext("2d"); ctx.scale(S, S);
+  // 背景：米白紙和彩色色塊
+  ctx.fillStyle = "#FFFCEF"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#FFD426"; blobPath(ctx, W - 2, 14, 170, 140); ctx.fill();
+  ctx.fillStyle = "#D5F5D0"; blobPath(ctx, -12, Math.min(H * 0.45, 420), 120, 150); ctx.fill();
+  ctx.fillStyle = "#C9F0E9"; blobPath(ctx, W - 10, H + 10, 170, 120); ctx.fill();
+  let y = 24;
+  // 標題：帳本圖示 + 名稱
+  if (imgs[b.icon]) { ctx.save(); if (ICON_IMAGES[b.icon]) { ctx.beginPath(); ctx.arc(side + 20, y + 22, 20, 0, Math.PI * 2); ctx.clip(); } ctx.drawImage(imgs[b.icon], side, y + 2, 40, 40); ctx.restore(); }
+  ctx.fillStyle = "#262261"; ctx.font = `900 24px ${sans}`; ctx.textBaseline = "middle";
+  ctx.fillText(fitText(ctx, b.name, inner - 52), side + 52, y + 23);
+  y += 44 + 14;
   // 總額
-  ctx.fillStyle = "#C98A24"; ctx.font = "900 44px " + font; ctx.textBaseline = "middle";
-  ctx.fillText("Σ " + amtComma(total), x, y + totalH / 2);
-  ctx.fillStyle = "#A68990"; ctx.font = "500 26px " + font; ctx.textAlign = "right";
-  ctx.fillText("共 " + list.length + " 筆", rightX, y + totalH / 2); ctx.textAlign = "left";
-  y += totalH;
-  // 花費明細標題
-  ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(x + 10, y + 20, 10, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#2B3159"; ctx.font = "700 32px " + font; ctx.textBaseline = "middle";
-  ctx.fillText("花費明細", x + 34, y + 22);
-  y += sectionLabelH;
-  // 逐筆：備註（沒有就寫分類）、日期・分類、金額
-  list.forEach((e, i) => {
-    const c = colorFor(e.id), cat = (catOf(e.cat) || { name: "未分類" }).name;
-    ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + 12, y + rowH / 2 - 14, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#2B3159"; ctx.font = "700 34px " + font; ctx.textBaseline = "alphabetic";
-    ctx.fillText(fitText(ctx, e.note || cat, rightX - (x + 42) - 260), x + 42, y + rowH / 2 - 6);
-    ctx.fillStyle = "#A68990"; ctx.font = "500 26px " + font;
-    ctx.fillText(`${ymd(e.ts)}・${cat}`, x + 42, y + rowH / 2 + 32);
-    ctx.fillStyle = c; ctx.font = "900 40px " + font; ctx.textAlign = "right";
-    ctx.fillText(amtComma(e.amt) + " 元", rightX, y + rowH / 2 + 10); ctx.textAlign = "left";
-    y += rowH;
-    if (i < list.length - 1) { ctx.strokeStyle = "#F5EEE4"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 18); ctx.lineTo(rightX, y - 18); ctx.stroke(); }
-  });
-  // 頁尾
-  ctx.fillStyle = "#A68990"; ctx.font = "500 24px " + font; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText("日常記帳 · " + b.name + " · " + ymd(Date.now()), W / 2, H - pad - footerH / 2 + 10);
+  ctx.fillStyle = "#FFF0AF"; rrect(ctx, side, y, inner, 58, 22); ctx.fill();
+  ctx.fillStyle = "#5A5788"; ctx.font = `700 14px ${sans}`; ctx.fillText(`${b.entries.length} 筆，總共`, side + 16, y + 31);
+  ctx.fillStyle = "#5A5788"; ctx.font = `800 32px ${disp}`; ctx.textAlign = "right"; ctx.fillText(fmt(sum(b.entries)), W - side - 16, y + 31); ctx.textAlign = "left";
+  y += 58;
+  // 每一天：日期 + 小計，下面是那天的記錄
+  for (const d of days) {
+    y += 14;
+    ctx.fillStyle = "#262261"; ctx.font = `900 14px ${sans}`; ctx.fillText(dayLabel(d.items[0].ts), side + 4, y + 16);
+    ctx.fillStyle = "#5A5788"; ctx.font = `800 14px ${disp}`; ctx.textAlign = "right"; ctx.fillText(fmt(sum(d.items)), W - side - 4, y + 16); ctx.textAlign = "left";
+    y += 28 + 8;
+    d.items.forEach((e, i) => {
+      const c = catOf(e.cat) || { name: "未分類", color: "yellow", icon: "star" };
+      ctx.fillStyle = CARD_HEX[c.color] || CARD_HEX.yellow; rrect(ctx, side, y, inner, 58, 18); ctx.fill();
+      const im = imgs[c.icon];
+      if (im) { ctx.save(); if (ICON_IMAGES[c.icon]) { ctx.beginPath(); ctx.arc(side + 12 + 17, y + 29, 17, 0, Math.PI * 2); ctx.clip(); } ctx.drawImage(im, side + 12, y + 12, 34, 34); ctx.restore(); }
+      ctx.fillStyle = "#262261"; ctx.font = `800 20px ${disp}`; ctx.textAlign = "right";
+      const amt = Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 });
+      ctx.fillText(amt, W - side - 12, y + 30); const aw = ctx.measureText(amt).width; ctx.textAlign = "left";
+      ctx.font = `900 16px ${sans}`; ctx.fillText(fitText(ctx, e.note || c.name, inner - 58 - aw - 24), side + 58, y + 21);
+      ctx.fillStyle = "#5A5788"; ctx.font = `700 12.5px ${sans}`; ctx.fillText(`${c.name}・${hm(e.ts)}`, side + 58, y + 41);
+      y += 58 + (i < d.items.length - 1 ? 8 : 0);
+    });
+  }
   return cv.toDataURL("image/png").split(",")[1];
 }
 

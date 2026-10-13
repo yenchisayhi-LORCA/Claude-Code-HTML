@@ -127,13 +127,6 @@ async function ensureStickerArt() {
   } catch (e) {}
 }
 
-// 圖卡左上角的 App 圖示（跟網頁版日常記帳同一張），第一次下載後存在這台
-async function appIconDataURL() {
-  const p = local.joinPath(DIR, "app-icon.png");
-  if (!local.fileExists(p)) { const d = await download("icon-192.png"); if (!d) return null; mkdir(DIR); local.write(p, d); }
-  return "data:image/png;base64," + local.read(p).toBase64String();
-}
-
 async function animalDataURLs() {
   const out = {};
   for (const k of Object.keys(ANIMALS)) {
@@ -170,7 +163,7 @@ async function openApp(params) {
   const iconFailed = await ensureAnimalIcons();
   await ensureStickerArt();
   const boot = {
-    data, iconImages: await animalDataURLs(), logos: logoDataURLs(), appIcon: await appIconDataURL(),
+    data, iconImages: await animalDataURLs(), logos: logoDataURLs(),
     add: params.add || null, openBook: params.book || null,
     warn: iconFailed ? "小動物圖示下載不到，先用線條圖示；連上網路後再打開一次就會補上。" : "",
   };
