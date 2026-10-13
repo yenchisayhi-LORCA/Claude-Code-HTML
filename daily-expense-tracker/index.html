@@ -414,7 +414,7 @@
   var CATS_KEY = "dailyExpense.categories.v1";
   var ENTRIES_KEY = "dailyExpense.entries.v1";
 
-  var ICONS = ["lion","pig","giraffe","bear","monkey","bee","owl","fox","sheep","penguin","koala","frog","rabbit","star","heart","diamond","music","clothes","pencil","pets","sun","moon","cloud","partlycloudy","cloudynight","overcast","rain","thunderstorm","lightning","snow","rainbow","gift","idea","shoppingbag","travel","train","bus","car","bicycle","camera","location"];
+  var ICONS = ["lion","pig","giraffe","bear","monkey","bee","owl","fox","sheep","penguin","koala","frog","rabbit","star","heart","diamond","music","clothes","pencil","pets","sun","moon","cloud","partlycloudy","cloudynight","overcast","rain","thunderstorm","lightning","snow","rainbow","gift","balloon","fork","drink","idea","shoppingbag","travel","train","bus","car","bicycle","camera","location"];
 
   // 手繪線條風圖示庫（24x24，細線條＋圓角，取代 emoji）
   var ICON_SVGS = {
@@ -437,6 +437,9 @@
     snow: '<path d="M7 11h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 3.1 4 4 0 0 0 7 11Z"/><circle cx="8" cy="18" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="18" r=".6" fill="currentColor" stroke="none"/>',
     rainbow: '<path d="M3 18a9 9 0 0 1 18 0"/><path d="M6.5 18a5.5 5.5 0 0 1 11 0"/>',
     gift: '<rect x="4" y="10" width="16" height="10" rx="1.5"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="12" y1="10" x2="12" y2="20"/><path d="M12 10c-2-4-6-3-6-1s3 1 6 1Zm0 0c2-4 6-3 6-1s-3 1-6 1Z"/>',
+    balloon: '<path d="M12 2.8c3.9 0 6.6 2.9 6.6 6.6s-3.2 6.3-6.6 7.3c-3.4-1-6.6-3.6-6.6-7.3S8.1 2.8 12 2.8Z"/><path d="M10.8 18.4 12 16.7l1.2 1.7Z"/><path d="M12 18.4c-1.6 1.4 1.6 2.4 0 4.2"/><path d="M8.6 8.4c.3-1.5 1.3-2.5 2.6-2.8"/>',
+    fork: '<path d="M8.5 2.8v5.4a3.5 3.5 0 0 0 7 0V2.8"/><path d="M12 2.8v5.4"/><path d="M10.8 11.6h2.4l-.3 8.9a.9.9 0 0 1-1.8 0Z"/>',
+    drink: '<path d="M6.8 9.4h10.4l-1.3 10.9a1.6 1.6 0 0 1-1.6 1.4H9.7a1.6 1.6 0 0 1-1.6-1.4Z"/><path d="M5.8 9.4h12.4V8a1.8 1.8 0 0 0-1.8-1.8H7.6A1.8 1.8 0 0 0 5.8 8Z"/><path d="M12.8 6.2 14.6 2.4h2.6"/><circle cx="10" cy="18.2" r=".9" fill="currentColor"/><circle cx="12.3" cy="19.2" r=".9" fill="currentColor"/><circle cx="14.4" cy="17.8" r=".9" fill="currentColor"/>',
     idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5a2.6 2.6 0 0 1 1.1-2.2A6 6 0 0 0 12 3Z"/>',
     shoppingbag: '<path d="M6 8h12l-1 12H7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
     travel: '<path d="M21 4 3 11l6 2 2 6 3-4 5 3Z"/>',
@@ -461,7 +464,7 @@
   };
   var STICKER_COLORS = {
     yellow: "#FFD426", red: "#EE3E33", orange: "#FF9500", green: "#6BD861", sky: "#8CC4EE", blue: "#3F6FD1",
-    teal: "#4FD2C2", pink: "#FF9EC4", lilac: "#B9A3F0", white: "#FFFFFF", mist: "#E4E2F2"
+    teal: "#4FD2C2", pink: "#FF9EC4", lilac: "#B9A3F0", white: "#FFFFFF", mist: "#E4E2F2", balloon: "#7DCB6E", milkTea: "#D9B48F"
   };
   var STICKERS = {
     star: { chip: "yellow", fill: { 0: STICKER_COLORS.yellow } },
@@ -483,6 +486,9 @@
     snow: { chip: "teal", fill: { 0: STICKER_COLORS.white } },
     rainbow: { chip: "yellow", stroke: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.blue } },
     gift: { chip: "blue", fill: { 0: STICKER_COLORS.sky, 3: STICKER_COLORS.red } },
+    balloon: { chip: "teal", fill: { 0: STICKER_COLORS.balloon, 1: STICKER_COLORS.balloon } },
+    fork: { chip: "orange", fill: { 0: STICKER_COLORS.white, 2: STICKER_COLORS.white } },
+    drink: { chip: "teal", fill: { 0: STICKER_COLORS.milkTea, 1: STICKER_COLORS.white } },
     idea: { chip: "yellow", fill: { 1: STICKER_COLORS.yellow } },
     shoppingbag: { chip: "orange", fill: { 0: STICKER_COLORS.orange } },
     travel: { chip: "teal", fill: { 0: STICKER_COLORS.sky } },
