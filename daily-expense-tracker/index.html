@@ -102,7 +102,7 @@
     width:54px;height:54px;border-radius:16px;flex:0 0 auto;color:var(--ink);
     display:flex;align-items:center;justify-content:center;
   }
-  .cat-icon svg{width:30px;height:30px;}
+  .cat-icon svg{width:46px;height:46px;}
   .cat-name{flex:1;min-width:0;font-weight:700;font-size:25px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cat-total{font-family:var(--font-display);font-weight:800;font-size:27px;color:var(--warn-dark);flex:0 0 auto;}
   .cat-chevron{flex:0 0 auto;color:var(--text-soft);width:18px;height:18px;}
@@ -195,8 +195,8 @@
     background:var(--card);touch-action:pan-y;
   }
   .entry-row:active{background:var(--primary-tint);}
-  .entry-icon{width:36px;height:36px;border-radius:50%;flex:0 0 auto;background:var(--cream);color:var(--ink);display:flex;align-items:center;justify-content:center;}
-  .entry-icon svg{width:21px;height:21px;}
+  .entry-icon{width:36px;height:36px;border-radius:50%;flex:0 0 auto;color:var(--ink);display:flex;align-items:center;justify-content:center;}
+  .entry-icon svg{width:32px;height:32px;}
   .entry-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
   .entry-amount{font-family:var(--font-display);font-weight:800;font-size:25px;color:var(--primary-dark);flex:0 0 auto;min-width:80px;}
   .entry-note{flex:1;min-width:0;color:var(--text-soft);font-size:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -225,7 +225,7 @@
     width:48px;height:48px;border-radius:14px;border:none;background:var(--cream);color:var(--ink);
     display:flex;align-items:center;justify-content:center;cursor:pointer;
   }
-  .icon-opt svg{width:26px;height:26px;}
+  .icon-opt svg{width:40px;height:40px;}
   .icon-opt.selected{background:var(--warn);box-shadow:0 2px 0 rgba(0,0,0,.08);}
   .icon-opt-none{border:2px dashed var(--line);color:var(--text-soft);}
   .icon-opt-none.selected{border-color:var(--warn-dark);background:var(--warn);color:#fff;}
@@ -453,6 +453,75 @@
     lion: '<line x1="17.5" y1="13" x2="19.7" y2="13"/><line x1="15.9" y1="9.1" x2="17.4" y2="7.6"/><line x1="12" y1="7.5" x2="12" y2="5.3"/><line x1="8.1" y1="9.1" x2="6.6" y2="7.6"/><line x1="6.5" y1="13" x2="4.3" y2="13"/><line x1="8.1" y1="16.9" x2="6.6" y2="18.4"/><line x1="12" y1="18.5" x2="12" y2="20.7"/><line x1="15.9" y1="16.9" x2="17.4" y2="18.4"/><circle cx="12" cy="13" r="5.5"/><ellipse cx="12" cy="15.2" rx="2" ry="1.4"/><circle cx="9.9" cy="11.7" r=".5" fill="currentColor" stroke="none"/><circle cx="14.1" cy="11.7" r=".5" fill="currentColor" stroke="none"/>'
   };
 
+  // 貼紙風圖示：線條圖示塗上顏色＋不規則色塊底，取代原本純單色的線條（動物圖示不受影響，已經是全彩照片／SVG）
+  var STICKER_INK = "#262261";
+  var STICKER_CHIP = {
+    yellow: "#FFF0AF", orange: "#FFE2BA", green: "#D5F5D0", blue: "#CFDDF8",
+    pink: "#FBD3D0", teal: "#C9F0E9", purple: "#E3DAFA", rose: "#FFD8E8"
+  };
+  var STICKER_COLORS = {
+    yellow: "#FFD426", red: "#EE3E33", orange: "#FF9500", green: "#6BD861", sky: "#8CC4EE", blue: "#3F6FD1",
+    teal: "#4FD2C2", pink: "#FF9EC4", lilac: "#B9A3F0", white: "#FFFFFF", mist: "#E4E2F2"
+  };
+  var STICKERS = {
+    star: { chip: "yellow", fill: { 0: STICKER_COLORS.yellow } },
+    heart: { chip: "pink", fill: { 0: STICKER_COLORS.red } },
+    diamond: { chip: "blue", fill: { 0: STICKER_COLORS.sky } },
+    music: { chip: "purple", fill: { 1: STICKER_COLORS.lilac, 2: STICKER_COLORS.lilac } },
+    pencil: { chip: "orange", fill: { 0: STICKER_COLORS.yellow } },
+    pets: { chip: "rose", fill: { 0: STICKER_COLORS.pink, 1: STICKER_COLORS.pink, 2: STICKER_COLORS.pink, 3: STICKER_COLORS.pink, 4: STICKER_COLORS.pink } },
+    clothes: { chip: "green", fill: { 0: STICKER_COLORS.green } },
+    sun: { chip: "orange", fill: { 0: STICKER_COLORS.yellow } },
+    moon: { chip: "purple", fill: { 0: STICKER_COLORS.yellow } },
+    cloud: { chip: "blue", fill: { 0: STICKER_COLORS.white } },
+    partlycloudy: { chip: "blue", fill: { 0: STICKER_COLORS.yellow, 2: STICKER_COLORS.white } },
+    cloudynight: { chip: "purple", fill: { 0: STICKER_COLORS.yellow, 1: STICKER_COLORS.white } },
+    overcast: { chip: "blue", fill: { 0: STICKER_COLORS.mist } },
+    rain: { chip: "blue", fill: { 0: STICKER_COLORS.white }, stroke: { 1: STICKER_COLORS.blue } },
+    thunderstorm: { chip: "purple", fill: { 0: STICKER_COLORS.mist }, stroke: { 1: STICKER_COLORS.orange } },
+    lightning: { chip: "yellow", fill: { 0: STICKER_COLORS.yellow } },
+    snow: { chip: "teal", fill: { 0: STICKER_COLORS.white } },
+    rainbow: { chip: "yellow", stroke: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.blue } },
+    gift: { chip: "blue", fill: { 0: STICKER_COLORS.sky, 3: STICKER_COLORS.red } },
+    idea: { chip: "yellow", fill: { 1: STICKER_COLORS.yellow } },
+    shoppingbag: { chip: "orange", fill: { 0: STICKER_COLORS.orange } },
+    travel: { chip: "teal", fill: { 0: STICKER_COLORS.sky } },
+    train: { chip: "yellow", fill: { 0: STICKER_COLORS.red, 2: STICKER_COLORS.yellow, 3: STICKER_COLORS.yellow } },
+    bus: { chip: "teal", fill: { 0: STICKER_COLORS.green, 2: STICKER_COLORS.white, 3: STICKER_COLORS.white } },
+    car: { chip: "blue", fill: { 0: STICKER_COLORS.yellow, 2: STICKER_COLORS.white, 3: STICKER_COLORS.white } },
+    bicycle: { chip: "green", fill: { 0: STICKER_COLORS.white, 1: STICKER_COLORS.white } },
+    camera: { chip: "purple", fill: { 0: STICKER_COLORS.lilac, 2: STICKER_COLORS.white } },
+    location: { chip: "rose", fill: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.white } }
+  };
+  // 不規則色塊的 8 個圓角百分比，依圖示名稱挑一組、旋轉 ±4 度
+  var STICKER_BLOBS = [[52, 48, 61, 39, 58, 43, 57, 42], [60, 40, 44, 56, 46, 55, 45, 54], [45, 55, 52, 48, 62, 40, 60, 38], [55, 45, 48, 52, 44, 58, 42, 56]];
+  function stickerHash(s){ var h = 0; for(var i = 0; i < s.length; i++){ h = (h * 31 + s.charCodeAt(i)) | 0; } return Math.abs(h); }
+  function blobPathD(w, h, r){
+    var a = r[0] / 100, b = r[1] / 100, c = r[2] / 100, d = r[3] / 100, e = r[4] / 100, f = r[5] / 100, g = r[6] / 100, k = r[7] / 100;
+    return "M" + (a * w) + " 0H" + (w - b * w) + "A" + (b * w) + " " + (f * h) + " 0 0 1 " + w + " " + (f * h)
+      + "V" + (h - g * h) + "A" + (c * w) + " " + (g * h) + " 0 0 1 " + (w - c * w) + " " + h
+      + "H" + (d * w) + "A" + (d * w) + " " + (k * h) + " 0 0 1 0 " + (h - k * h)
+      + "V" + (e * h) + "A" + (a * w) + " " + (e * h) + " 0 0 1 " + (a * w) + " 0Z";
+  }
+  // 一個圖示的完整貼紙 SVG（viewBox 24x24）：底下不規則色塊，上面是塗好色的線條圖示
+  function stickerSVG(key, svgs){
+    var spec = STICKERS[key] || { chip: "yellow", fill: {} };
+    var inner = svgs[key] || svgs.star;
+    var i = 0;
+    var body = inner.replace(/<(\w+)([^>]*?)\/>/g, function(m, tag, attrs){
+      var idx = i++;
+      if(/fill="currentColor"/.test(attrs)) return "<" + tag + attrs.replace('fill="currentColor"', 'fill="' + STICKER_INK + '"') + "/>";
+      var fill = (spec.fill && spec.fill[idx]) ? spec.fill[idx] : "none";
+      var stroke = (spec.stroke && spec.stroke[idx]) ? ' stroke="' + spec.stroke[idx] + '" stroke-width="2.8"' : "";
+      return "<" + tag + attrs + ' fill="' + fill + '"' + stroke + "/>";
+    });
+    var h = stickerHash(key), deg = (h % 9) - 4;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+      + '<path d="' + blobPathD(22, 22, STICKER_BLOBS[h % 4]) + '" transform="translate(1 1) rotate(' + deg + ' 11 11)" fill="' + STICKER_CHIP[spec.chip] + '"/>'
+      + '<g transform="translate(4.4 4.4) scale(.633)" stroke="' + STICKER_INK + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + body + '</g>'
+      + '</svg>';
+  }
+
   // 動物頭像圖示改用實際插畫照片（裁自氣球動物園素材），不是線條 SVG
   var ICON_IMAGES = {
     pig: "icons/animal-pig.png",
@@ -474,24 +543,15 @@
     if(ICON_IMAGES[key]){
       return '<img src="' + ICON_IMAGES[key] + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
     }
-    var inner = ICON_SVGS[key] || ICON_SVGS[ICONS[0]];
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+    return stickerSVG(ICON_SVGS[key] ? key : ICONS[0], ICON_SVGS);
   }
 
-  // 給 <img>/canvas 用的圖示來源：動物是真的圖片，其餘用指定顏色現畫成 SVG data URI
-  function iconImageSrc(key, color){
+  // 給 <img>/canvas 用的圖示來源：動物是真的圖片，其餘是塗好色的貼紙風 SVG data URI
+  function iconImageSrc(key){
     if(ICON_IMAGES[key]) return ICON_IMAGES[key];
-    var inner = ICON_SVGS[key] || ICON_SVGS[ICONS[0]];
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="' + color + '" style="color:' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+    var svg = stickerSVG(ICON_SVGS[key] ? key : ICONS[0], ICON_SVGS);
     return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
   }
-
-  // 圖示徽章底色循環，走粉嫩派對色（粉紅／粉藍／鵝黃輪流）
-  var PALETTE = [
-    { bg:"#FBE1DD" },
-    { bg:"#DCE8F7" },
-    { bg:"#FDEFCB" }
-  ];
 
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
@@ -752,7 +812,6 @@
     els.homeEmptyState.hidden = true;
 
     categories.forEach(function(cat, idx){
-      var color = PALETTE[idx % PALETTE.length];
       var row = document.createElement("div");
       row.className = "cat-row";
 
@@ -767,7 +826,6 @@
 
       var iconEl = document.createElement("div");
       iconEl.className = "cat-icon";
-      iconEl.style.background = color.bg;
       iconEl.innerHTML = iconSvgMarkup(cat.icon);
       row.appendChild(iconEl);
 
@@ -1204,8 +1262,7 @@
         ctx.save(); ctx.clip();
         ctx.fillStyle = "#FFFBF2";
         ctx.fillRect(x, catRowY, catIconSize, catIconSize);
-        var pad2 = ICON_IMAGES[cat.icon] ? 0 : catIconSize * 0.22;
-        ctx.drawImage(catIcon, x + pad2, catRowY + pad2, catIconSize - pad2 * 2, catIconSize - pad2 * 2);
+        ctx.drawImage(catIcon, x, catRowY, catIconSize, catIconSize);
         ctx.restore();
       }
       var textX = x + catIconSize + 28;
@@ -1256,8 +1313,7 @@
           ctx.beginPath(); ctx.arc(slotCx, slotCy, badgeSize / 2, 0, Math.PI * 2); ctx.clip();
           ctx.fillStyle = "#FFFBF2";
           ctx.fillRect(bx, by, badgeSize, badgeSize);
-          var pad3 = ICON_IMAGES[entry.icon] ? 0 : badgeSize * 0.2;
-          ctx.drawImage(iconImg, bx + pad3, by + pad3, badgeSize - pad3 * 2, badgeSize - pad3 * 2);
+          ctx.drawImage(iconImg, bx, by, badgeSize, badgeSize);
           ctx.restore();
         } else {
           ctx.fillStyle = rowColor;
