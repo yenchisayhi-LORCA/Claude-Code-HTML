@@ -60,7 +60,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--sun); outli
 .day { font-size: 14px; font-weight: 900; display: flex; justify-content: space-between; padding: 6px 4px 0; }
 .day em { font-style: normal; color: var(--body); }
 .items { display: flex; flex-direction: column; gap: 8px; }
-.item { display: flex; align-items: center; gap: 12px; border-radius: 18px; padding: 10px 12px; width: 100%; text-align: left; }
+.item { display: flex; align-items: center; gap: 12px; border-radius: 18px; padding: 10px 12px; width: 100%; text-align: left; position: relative; transition: transform .2s; }
+.swipe { position: relative; border-radius: 18px; overflow: hidden; }
+.swipe:not(.open):not(.drag) .swdel { visibility: hidden; } /* 沒滑的時候藏起來，卡片圓角邊才不會透出紅色 */
+.swdel { position: absolute; top: 0; right: 0; bottom: 0; width: 84px; background: var(--tomato); color: var(--white); font-weight: 900; font-size: 15px; }
+@media (prefers-reduced-motion: reduce) { .item { transition: none; } }
 .item .ic { width: 34px; height: 34px; }
 .item .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .item strong { font-size: 16px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -77,7 +81,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--sun); outli
 
 /* 面板 */
 .scrim { position: fixed; inset: 0; background: rgba(38,34,97,.28); display: flex; align-items: flex-end; justify-content: center; z-index: 10; padding-top: var(--top-bar); }
-.sheet { background: var(--cream); width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; border-radius: 34px 34px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.sheet { background: var(--cream); width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; border-radius: 34px 34px 0 0; padding: 16px 16px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
 .sheet-top { display: flex; align-items: center; gap: 10px; }
 .sheet-top h2 { margin: 0; font-size: 20px; font-weight: 900; flex: 1; min-width: 0; }
 .lbl { font-size: 13px; font-weight: 700; color: var(--body); }
@@ -87,17 +91,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--sun); outli
 /* 記一筆 */
 .amount { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .when { border: 0; background: var(--white); border-radius: 12px; padding: 7px 10px; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); min-width: 0; max-width: 60%; }
-.amount .num { font-family: var(--sans); font-weight: 900; font-size: 42px; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
+.amount .num { font-family: var(--sans); font-weight: 900; font-size: 36px; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
 .amount .num small { font-size: 22px; margin-right: 4px; }
-.cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.cat { background: transparent; padding: 6px 0 4px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; min-width: 0; }
+/* 分類小一點、一排 5 個，輸入完金額不用往下滑就看得到「記下來」 */
+.cats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.cat { background: transparent; padding: 4px 0 3px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; font-weight: 700; min-width: 0; }
+.cat .ic { width: 30px; height: 30px; }
 .cat span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-inline: 2px; }
 .cat[aria-pressed="true"] { outline: 3px solid var(--ink); }
-.cat .plus { width: 40px; height: 40px; border-radius: 50%; border: 2px dashed var(--body); display: grid; place-items: center; font-size: 20px; font-weight: 900; color: var(--body); }
+.cat .plus { width: 30px; height: 30px; border-radius: 50%; border: 2px dashed var(--body); display: grid; place-items: center; font-size: 20px; font-weight: 900; color: var(--body); }
 .note { background: var(--white); border-radius: 14px; padding: 10px 12px; font-size: 15px; color: var(--body); display: flex; gap: 8px; align-items: center; }
 .note input { border: 0; outline: 0; font: inherit; font-size: 16px; color: var(--ink); background: transparent; flex: 1; min-width: 0; }
-.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.key { height: 50px; border-radius: 16px; background: var(--white); font-family: var(--display); font-size: 25px; font-weight: 800; }
+.keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.key { height: 44px; border-radius: 14px; background: var(--white); font-family: var(--display); font-size: 23px; font-weight: 800; }
 .key:active { background: var(--yellow-100); }
 .row2 { display: flex; gap: 8px; }
 .row2 button { flex: 1; border-radius: 999px; padding: 13px; font-weight: 900; font-size: 16px; }
@@ -274,9 +280,11 @@ function renderBook() {
       html += `<div class="day">${dayLabel(e.ts)}<em class="money">${fmt(sum(list.filter((x) => dayKey(x.ts) === k)))}</em></div>`;
     }
     const c = catOf(e.cat) || { name: "未分類", color: "yellow", icon: "star" };
-    html += `<button class="item" style="background:${bg(c.color)}" data-e="${esc(e.id)}">${icon(c.icon)}
+    // 往左滑會露出後面紅色的「刪除」
+    html += `<div class="swipe" data-e="${esc(e.id)}"><button class="swdel" data-del="${esc(e.id)}">刪除</button>
+      <button class="item" style="background:${bg(c.color)}">${icon(c.icon)}
       <span class="t"><strong>${esc(e.note || c.name)}</strong><small>${esc(c.name)}・${hm(e.ts)}</small></span>
-      <span class="money">${Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span></button>`;
+      <span class="money">${Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span></button></div>`;
   }
   $("#app").innerHTML = `
     <header class="top"><button class="ibtn" id="back" aria-label="回到帳本列表">‹</button>${icon(b.icon)}<h1>${esc(b.name)}</h1></header>
@@ -286,8 +294,14 @@ function renderBook() {
     <div class="tools"><button class="go" id="export">匯出 Excel</button><button id="card">圖卡</button><button id="clear">清空</button></div></div>`;
   $("#back").onclick = () => { view = { page: "home" }; render(); };
   $("#add").onclick = () => openEntry(b, null);
-  $("#app").querySelector(".items")?.addEventListener("click", (e) => {
-    const it = e.target.closest("[data-e]"); if (it) openEntry(b, b.entries.find((x) => x.id === it.dataset.e));
+  const items = $("#app").querySelector(".items");
+  if (items) setupSwipe(items, b);
+  items?.addEventListener("click", (e) => {
+    const del = e.target.closest("[data-del]");
+    if (del) { quickDelete(b, del.dataset.del); return; }
+    const sw = e.target.closest(".swipe"); if (!sw) return;
+    if (sw.classList.contains("open")) { closeSwipes(); return; } // 滑開的時候點一下是收回去
+    openEntry(b, b.entries.find((x) => x.id === sw.dataset.e));
   });
   $("#export").onclick = () => {
     if (!b.entries.length) { toast("這本還沒有記錄"); return; }
@@ -427,6 +441,46 @@ async function exportCard(b) {
     });
   }
   return cv.toDataURL("image/png").split(",")[1];
+}
+
+// 往左滑刪除：滑過 40 點就停在打開的位置，露出「刪除」；按刪除後 5 秒內可以復原
+const SWIPE_W = 84;
+function closeSwipes(except) {
+  document.querySelectorAll(".swipe.open").forEach((sw) => { if (sw !== except) { sw.classList.remove("open"); sw.querySelector(".item").style.transform = ""; } });
+}
+function setupSwipe(list, b) {
+  let sw = null, x0 = 0, y0 = 0, dx = 0, horiz = null;
+  list.addEventListener("touchstart", (e) => {
+    sw = e.target.closest(".swipe"); if (!sw) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; horiz = null;
+    closeSwipes(sw);
+  }, { passive: true });
+  list.addEventListener("touchmove", (e) => {
+    if (!sw) return;
+    const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+    if (horiz === null && Math.abs(mx) + Math.abs(my) > 8) horiz = Math.abs(mx) > Math.abs(my);
+    if (!horiz) return;
+    e.preventDefault();
+    sw.classList.add("drag");
+    const base = sw.classList.contains("open") ? -SWIPE_W : 0;
+    dx = Math.max(-SWIPE_W - 20, Math.min(0, base + mx));
+    const it = sw.querySelector(".item"); it.style.transition = "none"; it.style.transform = `translateX(${dx}px)`;
+  }, { passive: false });
+  list.addEventListener("touchend", () => {
+    if (!sw || !horiz) { sw = null; return; }
+    const it = sw.querySelector(".item"); it.style.transition = "";
+    sw.classList.remove("drag");
+    const open = dx < -40;
+    sw.classList.toggle("open", open);
+    it.style.transform = open ? `translateX(${-SWIPE_W}px)` : "";
+    sw = null;
+  });
+}
+function quickDelete(b, id) {
+  const idx = b.entries.findIndex((x) => x.id === id); if (idx < 0) return;
+  const entry = b.entries[idx];
+  b.entries.splice(idx, 1); changed(); render();
+  toast("已刪除這筆", () => { b.entries.splice(idx, 0, entry); changed(); render(); });
 }
 
 let armedClear = null;

@@ -352,9 +352,11 @@ function addPill(parent, book, plusOnly = false) {
   pill.cornerRadius = 12;
   pill.url = runURL({ add: book.id });
   // 大尺寸只放一個「＋」（紅色底），小、中尺寸寫「＋ 記一筆」
-  pill.setPadding(plusOnly ? 2 : 5, plusOnly ? 12 : 11, plusOnly ? 2 : 5, plusOnly ? 12 : 11);
+  // 「＋」比帳本名稱（16）小一點
+  if (plusOnly) pill.cornerRadius = 9;
+  pill.setPadding(plusOnly ? 1 : 5, plusOnly ? 8 : 11, plusOnly ? 1 : 5, plusOnly ? 8 : 11);
   const pt = pill.addText(plusOnly ? "＋" : "＋ 記一筆");
-  pt.font = Font.heavyRoundedSystemFont(plusOnly ? 18 : 13); pt.textColor = col(K.white);
+  pt.font = Font.heavyRoundedSystemFont(plusOnly ? 12 : 13); pt.textColor = col(K.white);
 }
 // 一筆記錄：分類圖示、備註（沒有就寫分類）、金額
 function addChip(parent, e, cats, width, inset = 0) {
@@ -473,14 +475,15 @@ function buildWidget(family) {
   const hr = head.addStack();
   hr.size = new Size(SIDE, LOGO);
   w.addSpacer(6);
+  // 今天、全部、「＋」都靠左排，右邊空著，不會被右上角的照片蓋到
   const sums = w.addStack();
-  sums.bottomAlignContent();
+  sums.centerAlignContent();
   sums.spacing = 8;
   const tl = sums.addText("今天"); tl.font = Font.boldRoundedSystemFont(12); tl.textColor = col(K.body);
   const tv = sums.addText(money(todaySum)); tv.font = Font.heavyRoundedSystemFont(26); tv.textColor = col(K.ink);
-  sums.addSpacer();
   addPill(sums, book, true); // 「＋」放在全部金額前面
   const al = sums.addText(`全部 ${money(total(entries))}`); al.font = Font.boldRoundedSystemFont(12); al.textColor = col(K.body);
+  sums.addSpacer();
   w.addSpacer(8);
   const inner = W - 28, INSET = 8, chipW = inner - INSET * 2; // 記錄卡片左右各縮 8
   let room = H - 24 - LOGO - 6 - 32 - 8;
