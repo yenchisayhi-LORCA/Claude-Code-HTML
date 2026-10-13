@@ -271,9 +271,12 @@ function addPill(parent, book) {
   pt.font = Font.heavyRoundedSystemFont(13); pt.textColor = col(K.white);
 }
 // 一筆記錄：分類圖示、備註（沒有就寫分類）、金額
-function addChip(parent, e, cats, width) {
+function addChip(parent, e, cats, width, inset = 0) {
   const c = cats.find(x => x.id === e.cat) || { name: "未分類", color: "yellow", icon: "star" };
-  const chip = parent.addStack();
+  // inset：左右各縮進一點（大尺寸用），兩邊一樣寬
+  let holder = parent;
+  if (inset) { holder = parent.addStack(); holder.addSpacer(inset); }
+  const chip = holder.addStack();
   chip.size = new Size(width, CHIP_H);
   chip.backgroundColor = col(CAT_BG[c.color] || CAT_BG.yellow);
   chip.cornerRadius = 13;
@@ -286,6 +289,7 @@ function addChip(parent, e, cats, width) {
   chip.addSpacer();
   const a = chip.addText(Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }));
   a.font = Font.heavyRoundedSystemFont(14.4); a.textColor = col(K.ink);
+  if (inset) holder.addSpacer(inset);
 }
 
 function buildWidget(family) {
@@ -362,8 +366,29 @@ function buildWidget(family) {
     return w;
   }
 
-  // 大尺寸：標題（右邊＋記一筆）、今天和全部，下面依日期列出，每天一行小計；放得下幾筆就放幾筆
-  addHeader(w, book, true);
+  // 大尺寸：標題（左「彥」、中間帳本圖示和名稱、右＋記一筆）、今天和全部，下面依日期列出，每天一行小計；放得下幾筆就放幾筆
+  // 左右兩邊用一樣寬的欄位，中間的帳本圖示和名稱才會在正中間
+  const SIDE = 96;
+  const head = w.addStack();
+  head.centerAlignContent();
+  const hl = head.addStack();
+  hl.size = new Size(SIDE, LOGO);
+  hl.centerAlignContent();
+  for (const im of logoImages()) { const li = hl.addImage(im); li.imageSize = new Size(LOGO, LOGO); }
+  hl.addSpacer();
+  head.addSpacer();
+  const mid = head.addStack();
+  mid.centerAlignContent();
+  mid.spacing = 6;
+  addIcon(mid, book.icon, 28);
+  const bn = mid.addText(book.name);
+  bn.font = Font.heavyRoundedSystemFont(16); bn.textColor = col(K.ink); bn.lineLimit = 1; bn.minimumScaleFactor = 0.7;
+  head.addSpacer();
+  const hr = head.addStack();
+  hr.size = new Size(SIDE, LOGO);
+  hr.centerAlignContent();
+  hr.addSpacer();
+  addPill(hr, book);
   w.addSpacer(6);
   const sums = w.addStack();
   sums.bottomAlignContent();
@@ -373,7 +398,7 @@ function buildWidget(family) {
   sums.addSpacer();
   const al = sums.addText(`全部 ${money(total(entries))}`); al.font = Font.boldRoundedSystemFont(12); al.textColor = col(K.body);
   w.addSpacer(8);
-  const inner = W - 28;
+  const inner = W - 28, INSET = 8, chipW = inner - INSET * 2; // 記錄卡片左右各縮 8
   let room = H - 24 - LOGO - 6 - 32 - 8;
   if (!entries.length) { const t = w.addText("還沒有記錄，點右上角的「＋ 記一筆」開始"); t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.body); }
   let day = null;
@@ -388,6 +413,7 @@ function buildWidget(family) {
       const label = (diff === 0 ? "今天 " : diff === 1 ? "昨天 " : "") + `${d.getMonth() + 1}/${d.getDate()}（${WEEK[d.getDay()]}）`;
       const dr = w.addStack();
       dr.size = new Size(inner, DAY_H);
+      dr.setPadding(0, INSET, 0, INSET); // 日期小計跟卡片對齊
       dr.centerAlignContent();
       const dl = dr.addText(label); dl.font = Font.heavyRoundedSystemFont(12); dl.textColor = col(K.ink);
       dr.addSpacer();
@@ -395,7 +421,7 @@ function buildWidget(family) {
       w.addSpacer(4);
       room -= DAY_H + 4;
     }
-    addChip(w, e, cats, inner);
+    addChip(w, e, cats, chipW, INSET);
     w.addSpacer(CHIP_GAP);
     room -= CHIP_H + CHIP_GAP;
   }
