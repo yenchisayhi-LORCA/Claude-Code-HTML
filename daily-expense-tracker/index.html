@@ -195,6 +195,9 @@
     background:var(--card);touch-action:pan-y;
   }
   .entry-row:active{background:var(--primary-tint);}
+  .entry-icon{width:36px;height:36px;border-radius:50%;flex:0 0 auto;background:var(--cream);color:var(--ink);display:flex;align-items:center;justify-content:center;}
+  .entry-icon svg{width:21px;height:21px;}
+  .entry-icon img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
   .entry-amount{font-family:var(--font-display);font-weight:800;font-size:25px;color:var(--primary-dark);flex:0 0 auto;min-width:80px;}
   .entry-note{flex:1;min-width:0;color:var(--text-soft);font-size:21px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .entry-date{flex:0 0 auto;font-size:18px;color:var(--text-soft);}
@@ -224,6 +227,9 @@
   }
   .icon-opt svg{width:26px;height:26px;}
   .icon-opt.selected{background:var(--warn);box-shadow:0 2px 0 rgba(0,0,0,.08);}
+  .icon-opt-none{border:2px dashed var(--line);color:var(--text-soft);}
+  .icon-opt-none.selected{border-color:var(--warn-dark);background:var(--warn);color:#fff;}
+  .icon-opt-none svg{width:20px;height:20px;}
   .modal-btns{display:flex;gap:8px;margin-top:16px;}
   .modal-btns button{flex:1;font-family:var(--font-display);font-weight:700;font-size:17px;border:none;border-radius:12px;padding:12px;cursor:pointer;}
   .btn-save{background:var(--warn);color:#fff;box-shadow:0 4px 0 var(--warn-dark);}
@@ -357,6 +363,10 @@
   <div class="modal-backdrop" id="entryModal" hidden>
     <div class="modal-sheet">
       <h2 id="entryModalTitle">新增紀錄</h2>
+      <div class="field">
+        <label>圖示（選填）</label>
+        <div class="icon-grid" id="entryIconGrid"></div>
+      </div>
       <div class="field">
         <label>金額</label>
         <input type="number" id="entryAmountInput" inputmode="decimal" step="0.01" placeholder="0" />
@@ -556,6 +566,7 @@
   var editingEntryId = null;
   var editingCategoryId = null;
   var selectedIcon = ICONS[0];
+  var selectedEntryIcon = "";
   var pendingUndo = null;
 
   function pad(n){ return n < 10 ? "0" + n : "" + n; }
@@ -611,6 +622,7 @@
 
     entryModal: document.getElementById("entryModal"),
     entryModalTitle: document.getElementById("entryModalTitle"),
+    entryIconGrid: document.getElementById("entryIconGrid"),
     entryTimeStatic: document.getElementById("entryTimeStatic"),
     entryAmountInput: document.getElementById("entryAmountInput"),
     entryNoteInput: document.getElementById("entryNoteInput"),
@@ -829,6 +841,13 @@
         row.className = "entry-row";
         row.setAttribute("data-id", entry.id);
 
+        if(entry.icon){
+          var iconEl = document.createElement("div");
+          iconEl.className = "entry-icon";
+          iconEl.innerHTML = iconSvgMarkup(entry.icon);
+          row.appendChild(iconEl);
+        }
+
         var amountEl = document.createElement("div");
         amountEl.className = "entry-amount";
         amountEl.style.color = colorForEntry(entry.id);
@@ -869,6 +888,32 @@
         renderIconGrid();
       });
       els.categoryIconGrid.appendChild(btn);
+    });
+  }
+
+  function renderEntryIconGrid(){
+    els.entryIconGrid.innerHTML = "";
+    var noneBtn = document.createElement("button");
+    noneBtn.type = "button";
+    noneBtn.className = "icon-opt icon-opt-none" + (!selectedEntryIcon ? " selected" : "");
+    noneBtn.title = "不要圖示";
+    noneBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+    noneBtn.addEventListener("click", function(){
+      selectedEntryIcon = "";
+      renderEntryIconGrid();
+    });
+    els.entryIconGrid.appendChild(noneBtn);
+
+    ICONS.forEach(function(icon){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "icon-opt" + (icon === selectedEntryIcon ? " selected" : "");
+      btn.innerHTML = iconSvgMarkup(icon);
+      btn.addEventListener("click", function(){
+        selectedEntryIcon = icon;
+        renderEntryIconGrid();
+      });
+      els.entryIconGrid.appendChild(btn);
     });
   }
 
@@ -938,6 +983,8 @@
     els.entryModalTitle.textContent = "新增紀錄";
     els.entryAmountInput.value = "";
     els.entryNoteInput.value = "";
+    selectedEntryIcon = "";
+    renderEntryIconGrid();
     els.entryTimeStatic.textContent = formatDateTime(Date.now());
     els.entryDeleteBtn.hidden = true;
     els.entryModal.hidden = false;
@@ -951,6 +998,8 @@
     els.entryModalTitle.textContent = "編輯紀錄";
     els.entryAmountInput.value = entry.amount;
     els.entryNoteInput.value = entry.note || "";
+    selectedEntryIcon = entry.icon || "";
+    renderEntryIconGrid();
     els.entryTimeStatic.textContent = formatDateTime(entry.ts);
     els.entryDeleteBtn.hidden = false;
     els.entryModal.hidden = false;
@@ -965,9 +1014,9 @@
 
     if(editingEntryId){
       var entry = entries.find(function(e){ return e.id === editingEntryId; });
-      if(entry){ entry.amount = amount; entry.note = note; entry.ts = Date.now(); }
+      if(entry){ entry.amount = amount; entry.note = note; entry.ts = Date.now(); entry.icon = selectedEntryIcon || null; }
     } else {
-      entries.push({ id: uid(), categoryId: currentCategoryId, amount: amount, note: note, ts: Date.now() });
+      entries.push({ id: uid(), categoryId: currentCategoryId, amount: amount, note: note, ts: Date.now(), icon: selectedEntryIcon || null });
     }
     saveEntries(entries);
     closeEntryModal();
@@ -1089,13 +1138,20 @@
       document.fonts.load("500 28px 'Zen Maru Gothic'", dynamicText)
     ] : [];
 
+    var entryIconPromises = list.map(function(entry){
+      if(!entry.icon) return Promise.resolve(null);
+      return loadImage(iconImageSrc(entry.icon, colorForEntry(entry.id))).catch(function(){ return null; });
+    });
+
     Promise.all([
       loadImage("icons/icon-192.png").catch(function(){ return null; }),
       loadImage(iconImageSrc(cat.icon, accent)).catch(function(){ return null; }),
-      (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve()
+      (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve(),
+      Promise.all(entryIconPromises)
     ].concat(fontLoads)).then(function(res){
       var appIcon = res[0];
       var catIcon = res[1];
+      var entryIcons = res[3];
       var canvas = document.createElement("canvas");
       canvas.width = W;
       canvas.height = H;
@@ -1190,21 +1246,34 @@
       y += sectionLabelH;
 
       // 逐筆列表
-      list.forEach(function(entry){
+      list.forEach(function(entry, entryIdx){
         var rowColor = colorForEntry(entry.id);
-        ctx.fillStyle = rowColor;
-        ctx.beginPath(); ctx.arc(x + 12, y + rowH / 2 - 14, 12, 0, Math.PI * 2); ctx.fill();
+        var iconImg = entryIcons[entryIdx];
+        var slotCx = x + 28, slotCy = y + rowH / 2;
+        if(iconImg){
+          var badgeSize = 48, bx = slotCx - badgeSize / 2, by = slotCy - badgeSize / 2;
+          ctx.save();
+          ctx.beginPath(); ctx.arc(slotCx, slotCy, badgeSize / 2, 0, Math.PI * 2); ctx.clip();
+          ctx.fillStyle = "#FFFBF2";
+          ctx.fillRect(bx, by, badgeSize, badgeSize);
+          var pad3 = ICON_IMAGES[entry.icon] ? 0 : badgeSize * 0.2;
+          ctx.drawImage(iconImg, bx + pad3, by + pad3, badgeSize - pad3 * 2, badgeSize - pad3 * 2);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = rowColor;
+          ctx.beginPath(); ctx.arc(slotCx, slotCy, 11, 0, Math.PI * 2); ctx.fill();
+        }
 
         ctx.fillStyle = "#2B3159";
         ctx.font = "700 34px " + fontFamily;
         ctx.textBaseline = "alphabetic";
         var noteText = entry.note || "（無備註）";
-        var noteMaxW = rightX - (x + 42) - 260;
-        ctx.fillText(truncateToWidth(ctx, noteText, noteMaxW), x + 42, y + rowH / 2 - 6);
+        var noteMaxW = rightX - (x + 68) - 260;
+        ctx.fillText(truncateToWidth(ctx, noteText, noteMaxW), x + 68, y + rowH / 2 - 6);
 
         ctx.fillStyle = "#A68990";
         ctx.font = "500 26px " + fontFamily;
-        ctx.fillText(formatDate(entry.ts), x + 42, y + rowH / 2 + 32);
+        ctx.fillText(formatDate(entry.ts), x + 68, y + rowH / 2 + 32);
 
         ctx.fillStyle = rowColor;
         ctx.font = "900 40px " + fontFamily;
