@@ -13,18 +13,24 @@ tracker = (HERE.parent / "daily-expense-tracker" / "index.html").read_text(encod
 icons = re.search(r"var ICONS = (\[.*?\]);", tracker).group(1)
 svgs = re.search(r"var ICON_SVGS = (\{.*?\n  \});", tracker, re.S).group(1)
 
-# 圖示清單多了氣球、叉子、飲料杯（放在禮物後面）；貼紙樣式在 stickers.js
-icons = icons.replace('"gift",', '"gift","balloon","fork","drink",')
-assert '"drink"' in icons
+# 圖示清單：日常記帳那一套（已經有氣球、叉子、飲料杯）加上水果；貼紙樣式在 stickers.js
+# 挑圖示時不顯示 HIDDEN 的天氣圖示，但小工具還是會畫它們，以前選過的照樣顯示
+names = json.loads(icons)
+assert len(names) == len(set(names)) and "drink" in names
+names[names.index("drink") + 1:names.index("drink") + 1] = ["apple", "strawberry", "grape", "watermelon", "orange", "cherry"]
+HIDDEN = {"partlycloudy", "cloudynight", "overcast", "thunderstorm"}
+assert HIDDEN <= set(names)
+icons = json.dumps(names)
+picker = json.dumps([k for k in names if k not in HIDDEN])
 stickers = (HERE.parent / "scriptable-notes" / "stickers.js").read_text(encoding="utf-8").strip()  # 貼紙樣式跟筆記共用
 
-def fill(src):
+def fill(src, icons=icons):
     for key, val in (("/*ICONS*/[]", icons), ("/*ICON_SVGS*/{}", svgs.strip()), ("/*STICKERS*/", stickers)):
         assert src.count(key) == 1, key
         src = src.replace(key, val)
     return src
 
-page = fill((HERE / "page.html").read_text(encoding="utf-8"))
+page = fill((HERE / "page.html").read_text(encoding="utf-8"), picker)
 assert "/*BOOT*/null" in page
 
 main = fill((HERE / "main.js").read_text(encoding="utf-8"))
