@@ -13,21 +13,22 @@ tracker = (HERE.parent / "daily-expense-tracker" / "index.html").read_text(encod
 icons = re.search(r"var ICONS = (\[.*?\]);", tracker).group(1)
 svgs = re.search(r"var ICON_SVGS = (\{.*?\n  \});", tracker, re.S).group(1)
 
-# 圖示清單：日常記帳那一套（已經有氣球、叉子、飲料杯）加上水果、雨靴、夾腳拖（放在衣服後面）、更多交通工具；貼紙樣式在 stickers.js
-# 挑圖示時不顯示 HIDDEN 的天氣圖示和舊的火車、公車、汽車、西瓜、腳踏車，但小工具還是會畫它們，以前選過的照樣顯示
+# 圖示清單：日常記帳那一套（已經有氣球、叉子、飲料杯）加上水果、雨靴、夾腳拖（放在衣服後面）、更多交通工具和餐飲；貼紙樣式在 stickers.js
+# 挑圖示時不顯示 HIDDEN 的天氣圖示和舊的火車、公車、汽車、西瓜、腳踏車、夾腳拖、雪、叉子、柳橙，但小工具還是會畫它們，以前選過的照樣顯示
 names = json.loads(icons)
 assert len(names) == len(set(names)) and "drink" in names
 # 日常記帳的清單可能已經有其中幾個（也可能拿掉了舊的天氣圖示），沒有的才補上
 for after, extra in (("cloud", ["partlycloudy", "cloudynight", "overcast"]), ("rain", ["thunderstorm"]),
                      ("drink", ["apple", "strawberry", "grape", "watermelon", "orange", "cherry"]),
                      ("clothes", ["rainboot", "flipflop"]), ("travel", ["plane", "planeside"]),
-                     ("train", ["steamtrain", "metro"]), ("car", ["carside"])):
+                     ("train", ["steamtrain", "metro"]), ("car", ["carside"]),
+                     ("fork", ["forkknife", "burger", "pizza", "cake"])):
     at = names.index(after) + 1
     for k in extra:
         if k not in names:
             names.insert(at, k)
         at = names.index(k) + 1
-HIDDEN = {"partlycloudy", "cloudynight", "overcast", "thunderstorm", "train", "bus", "car", "watermelon", "bicycle"}
+HIDDEN = {"partlycloudy", "cloudynight", "overcast", "thunderstorm", "train", "bus", "car", "watermelon", "bicycle", "flipflop", "snow", "fork", "orange"}
 assert HIDDEN <= set(names)
 icons = json.dumps(names)
 picker = json.dumps([k for k in names if k not in HIDDEN])
