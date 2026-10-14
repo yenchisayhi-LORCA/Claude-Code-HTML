@@ -13,11 +13,12 @@ tracker = (HERE.parent / "daily-expense-tracker" / "index.html").read_text(encod
 icons = re.search(r"var ICONS = (\[.*?\]);", tracker).group(1)
 svgs = re.search(r"var ICON_SVGS = (\{.*?\n  \});", tracker, re.S).group(1)
 
-# 圖示清單：日常記帳那一套（已經有氣球、叉子、飲料杯）加上水果；貼紙樣式在 stickers.js
+# 圖示清單：日常記帳那一套（已經有氣球、叉子、飲料杯）加上水果、雨靴、夾腳拖（放在衣服後面）；貼紙樣式在 stickers.js
 # 挑圖示時不顯示 HIDDEN 的天氣圖示，但小工具還是會畫它們，以前選過的照樣顯示
 names = json.loads(icons)
 assert len(names) == len(set(names)) and "drink" in names
 names[names.index("drink") + 1:names.index("drink") + 1] = ["apple", "strawberry", "grape", "watermelon", "orange", "cherry"]
+names[names.index("clothes") + 1:names.index("clothes") + 1] = ["rainboot", "flipflop"]
 HIDDEN = {"partlycloudy", "cloudynight", "overcast", "thunderstorm"}
 assert HIDDEN <= set(names)
 icons = json.dumps(names)
