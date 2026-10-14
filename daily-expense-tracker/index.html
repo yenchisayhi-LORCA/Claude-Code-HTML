@@ -414,7 +414,7 @@
   var CATS_KEY = "dailyExpense.categories.v1";
   var ENTRIES_KEY = "dailyExpense.entries.v1";
 
-  var ICONS = ["lion","pig","giraffe","bear","monkey","bee","owl","fox","sheep","penguin","koala","frog","rabbit","star","heart","diamond","music","clothes","pencil","pets","sun","moon","cloud","partlycloudy","cloudynight","overcast","rain","thunderstorm","lightning","snow","rainbow","gift","balloon","fork","drink","idea","shoppingbag","travel","train","bus","car","bicycle","camera","location"];
+  var ICONS = ["lion","pig","giraffe","bear","monkey","bee","owl","fox","sheep","penguin","koala","frog","rabbit","star","heart","diamond","music","clothes","rainboot","flipflop","pencil","pets","sun","moon","cloud","rain","lightning","snow","rainbow","gift","balloon","fork","drink","apple","strawberry","grape","watermelon","orange","cherry","idea","shoppingbag","travel","train","bus","car","bicycle","camera","location"];
 
   // 手繪線條風圖示庫（24x24，細線條＋圓角，取代 emoji）
   var ICON_SVGS = {
@@ -425,6 +425,8 @@
     pencil: '<path d="M4 20l1-4L16 5l3 3L8 19l-4 1Z"/><path d="M14 7l3 3"/>',
     pets: '<circle cx="12" cy="15" r="3.4"/><circle cx="6.5" cy="10" r="1.6"/><circle cx="10" cy="7" r="1.6"/><circle cx="14" cy="7" r="1.6"/><circle cx="17.5" cy="10" r="1.6"/>',
     clothes: '<path d="M8 4 4 7l2 3 2-1.3V20h8V8.7L18 10l2-3-4-3-2 1.5h-4Z"/>',
+    rainboot: '<path d="M6 3.4h6.2v9.8l4.2 1.4c2.4.8 4 2 4 3.4H6Z"/><path d="M5.6 18h15v1.2c0 .8-.6 1.4-1.4 1.4H7c-.8 0-1.4-.6-1.4-1.4Z"/><path d="M5.2 3.4h7.8"/>',
+    flipflop: '<path d="M12 2.6c3 0 4.6 2.6 4.6 6 0 2.2-.6 3.6-.6 5.4 0 2.2 1.2 3.6 1.2 5.4 0 1.8-2 2.8-5.2 2.8s-5.2-1-5.2-2.8c0-1.8 1.2-3.2 1.2-5.4 0-1.8-.6-3.2-.6-5.4 0-3.4 1.6-6 4.6-6Z"/><path d="M12 6.4 8.2 11.8M12 6.4l3.8 5.4"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
     moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>',
     cloud: '<path d="M7 18h10a4 4 0 0 0 .5-7.97A5.5 5.5 0 0 0 7.1 10.1 4 4 0 0 0 7 18Z"/>',
@@ -440,6 +442,12 @@
     balloon: '<path d="M12 2.8c3.9 0 6.6 2.9 6.6 6.6s-3.2 6.3-6.6 7.3c-3.4-1-6.6-3.6-6.6-7.3S8.1 2.8 12 2.8Z"/><path d="M10.8 18.4 12 16.7l1.2 1.7Z"/><path d="M12 18.4c-1.6 1.4 1.6 2.4 0 4.2"/><path d="M8.6 8.4c.3-1.5 1.3-2.5 2.6-2.8"/>',
     fork: '<path d="M8.5 2.8v5.4a3.5 3.5 0 0 0 7 0V2.8"/><path d="M12 2.8v5.4"/><path d="M10.8 11.6h2.4l-.3 8.9a.9.9 0 0 1-1.8 0Z"/>',
     drink: '<path d="M6.8 9.4h10.4l-1.3 10.9a1.6 1.6 0 0 1-1.6 1.4H9.7a1.6 1.6 0 0 1-1.6-1.4Z"/><path d="M5.8 9.4h12.4V8a1.8 1.8 0 0 0-1.8-1.8H7.6A1.8 1.8 0 0 0 5.8 8Z"/><path d="M12.8 6.2 14.6 2.4h2.6"/><circle cx="10" cy="18.2" r=".9" fill="currentColor"/><circle cx="12.3" cy="19.2" r=".9" fill="currentColor"/><circle cx="14.4" cy="17.8" r=".9" fill="currentColor"/>',
+    apple: '<path d="M12 7.6c-1.6-1.1-4.6-1.3-6.2.6-2 2.3-1.3 6.7.6 9.6 1.4 2.1 3 3 4.2 2.4.9-.4 1.9-.4 2.8 0 1.2.6 2.8-.3 4.2-2.4 1.9-2.9 2.6-7.3.6-9.6-1.6-1.9-4.6-1.7-6.2-.6Z"/><path d="M12 7.6c0-1.8.6-3.2 1.8-4.2"/><path d="M13.4 5c1.2-1.5 3.2-1.8 4.6-1.1-.6 1.6-2.4 2.4-4.6 1.1Z"/>',
+    strawberry: '<path d="M12 20.6c-3.2-1.6-6.6-5.6-6.6-9.2 0-2 1.6-3.3 3.6-3.3 1.2 0 2.2.4 3 .9.8-.5 1.8-.9 3-.9 2 0 3.6 1.3 3.6 3.3 0 3.6-3.4 7.6-6.6 9.2Z"/><path d="M8.4 8.4 7.4 5.6l3 1L12 4.2l1.6 2.4 3-1-1 2.8Z"/><circle cx="9.8" cy="12" r=".7" fill="currentColor"/><circle cx="14.2" cy="12" r=".7" fill="currentColor"/><circle cx="12" cy="15.2" r=".7" fill="currentColor"/>',
+    grape: '<circle cx="7.6" cy="9.4" r="2.8"/><circle cx="12" cy="9.4" r="2.8"/><circle cx="16.4" cy="9.4" r="2.8"/><circle cx="9.8" cy="14" r="2.8"/><circle cx="14.2" cy="14" r="2.8"/><circle cx="12" cy="18.6" r="2.8"/><path d="M12 6.6V3.4"/><path d="M12 4.8c1.4-1.6 3.6-1.9 5-1-1 1.6-3 2.1-5 1Z"/>',
+    watermelon: '<path d="M2.4 8.4h19.2a9.6 9.6 0 0 1-19.2 0Z"/><path d="M4.6 8.4h14.8a7.4 7.4 0 0 1-14.8 0Z"/><circle cx="9.4" cy="11" r=".8" fill="currentColor"/><circle cx="12" cy="13" r=".8" fill="currentColor"/><circle cx="14.6" cy="11" r=".8" fill="currentColor"/>',
+    orange: '<circle cx="12" cy="13.6" r="7"/><path d="M12 6.6c.3-1.9 1.9-3 3.8-2.7-.3 1.9-1.9 3-3.8 2.7Z"/><path d="M8.4 11.4c.4-1.2 1.3-2.1 2.4-2.5"/>',
+    cherry: '<circle cx="8" cy="16.4" r="3"/><circle cx="16" cy="15.4" r="3"/><path d="M8 13.4c.8-4 2.4-7 5.2-9"/><path d="M16 12.4c-.6-3.6-1.4-6.2-2.8-8"/><path d="M13.2 4.4c1.4-1.3 3.6-1.1 4.8.2-1.4 1.1-3.4 1-4.8-.2Z"/>',
     idea: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5a2.6 2.6 0 0 1 1.1-2.2A6 6 0 0 0 12 3Z"/>',
     shoppingbag: '<path d="M6 8h12l-1 12H7Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
     travel: '<path d="M21 4 3 11l6 2 2 6 3-4 5 3Z"/>',
@@ -489,6 +497,14 @@
     balloon: { chip: "teal", fill: { 0: STICKER_COLORS.balloon, 1: STICKER_COLORS.balloon } },
     fork: { chip: "orange", fill: { 0: STICKER_COLORS.white, 2: STICKER_COLORS.white } },
     drink: { chip: "teal", fill: { 0: STICKER_COLORS.milkTea, 1: STICKER_COLORS.white } },
+    apple: { chip: "pink", fill: { 0: "#EE3E33", 2: "#6BD861" } },
+    strawberry: { chip: "rose", fill: { 0: "#EE3E33", 1: "#6BD861" } },
+    grape: { chip: "purple", fill: { 0: "#9B6BE8", 1: "#9B6BE8", 2: "#9B6BE8", 3: "#9B6BE8", 4: "#9B6BE8", 5: "#9B6BE8", 7: "#6BD861" } },
+    watermelon: { chip: "green", fill: { 0: "#3FA34D", 1: "#FF5A6E" } },
+    orange: { chip: "orange", fill: { 0: "#FF9500", 1: "#6BD861" } },
+    cherry: { chip: "rose", fill: { 0: "#D9322B", 1: "#D9322B", 4: "#6BD861" } },
+    rainboot: { chip: "teal", fill: { 0: "#FFD426", 1: "#3F6FD1" } },
+    flipflop: { chip: "yellow", fill: { 0: "#4FD2C2" }, stroke: { 1: "#EE3E33" } },
     idea: { chip: "yellow", fill: { 1: STICKER_COLORS.yellow } },
     shoppingbag: { chip: "orange", fill: { 0: STICKER_COLORS.orange } },
     travel: { chip: "teal", fill: { 0: STICKER_COLORS.sky } },
