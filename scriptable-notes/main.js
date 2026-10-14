@@ -324,7 +324,7 @@ async function animalDataURLs() {
 // 圖示的字跟童趣風月曆共用設定（月曆選單的「圖示文字」），沒設定過就是「彥」
 const local = FileManager.local();
 const ART_DIR = local.joinPath(local.documentsDirectory(), "kids-notes-art");
-const ART_VERSION = 21; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（21：加刀叉、漢堡、披薩、蛋糕；20：加小火車、捷運、飛機、小汽車；19：加雨靴、夾腳拖；18：加水果圖示；17：行事曆底圖左下粉紅改小，不讓最後一張卡片壓到；16：行事曆卡片左右各縮 12，綠色、橘色跟著放大；15：行事曆底圖左邊綠色跟右邊橘色一樣只露一小條；14：行事曆底圖右邊橘色改小，不讓全寬卡片壓到；13：行事曆底圖下面的藍色改窄，不壓到左右的粉紅、青色；12：行事曆用的底圖右邊橘色、下面藍色色塊放大；2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝；11：多畫一張沒有菱形的底圖給行事曆小工具）
+const ART_VERSION = 22; // 底圖或圖示畫法改過就加 1，讓已存的圖重畫（22：圖示多畫一張白底的，卡片同色時用；21：加刀叉、漢堡、披薩、蛋糕；20：加小火車、捷運、飛機、小汽車；19：加雨靴、夾腳拖；18：加水果圖示；17：行事曆底圖左下粉紅改小，不讓最後一張卡片壓到；16：行事曆卡片左右各縮 12，綠色、橘色跟著放大；15：行事曆底圖左邊綠色跟右邊橘色一樣只露一小條；14：行事曆底圖右邊橘色改小，不讓全寬卡片壓到；13：行事曆底圖下面的藍色改窄，不壓到左右的粉紅、青色；12：行事曆用的底圖右邊橘色、下面藍色色塊放大；2：加了圖示貼紙；3：加叉子、飲料杯；4：飲料改奶茶色；5：左上角可放 1～3 個字；6：中間改綠色加粉紅小花；7：綠色配紫花、藍色配粉紅花；8：紫花移到左下；9：左下小花改橘色；10：第一個字右下也有藍枝；11：多畫一張沒有菱形的底圖給行事曆小工具）
 const artPath = name => local.joinPath(ART_DIR, name + ".png");
 const ART_META = local.joinPath(ART_DIR, "meta.json");
 const DEFAULT_LOGO = "彥";
@@ -420,7 +420,7 @@ async function ensureArt(ch, corner = 0) {
   try {
     const faces = await fetchFont("Huninn", null, ch);
     const stickerSvgs = {};
-    for (const k of ICONS) if (!ANIMALS[k]) stickerSvgs[k] = stickerSVG(k, ICON_SVGS);
+    for (const k of ICONS) if (!ANIMALS[k]) { stickerSvgs[k] = stickerSVG(k, ICON_SVGS); stickerSvgs[k + "-w"] = stickerSVG(k, ICON_SVGS, (STICKERS[k] || { chip: "yellow" }).chip); }
     const wv = new WebView();
     await wv.loadHTML("<html><body></body></html>");
     const res = await wv.evaluateJavaScript(`${CANVAS_COMPAT_JS}
@@ -667,8 +667,8 @@ const SF = {
 const hash = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 
 function addIcon(stack, n, size, onColor) {
-  // 線條圖示：用 App 內畫好的貼紙圖（跟 App 畫面一樣有塗色和底色）
-  const sticker = !ANIMALS[n.icon] && artImage("icon-" + n.icon);
+  // 線條圖示：用 App 內畫好的貼紙圖（跟 App 畫面一樣有塗色和底色）；貼紙底色跟卡片同色時用白底的那張
+  const sticker = !ANIMALS[n.icon] && ((stickerClash(n.icon, onColor) && artImage("icon-" + n.icon + "-w")) || artImage("icon-" + n.icon));
   if (sticker) {
     const im = stack.addImage(sticker);
     im.imageSize = new Size(size + 2, size + 2);
@@ -737,7 +737,7 @@ function addCard(parent, n, cats, maxLines, compact, width, bgColor, height) {
   const head = card.addStack();
   head.centerAlignContent();
   head.spacing = 6;
-  addIcon(head, n, compact ? 18 : 20, true);
+  addIcon(head, n, compact ? 18 : 20, bg);
   const t = head.addText(n.title || "未命名筆記");
   t.font = Font.heavyRoundedSystemFont(compact ? 12 : 13);
   t.textColor = col(K.ink);
