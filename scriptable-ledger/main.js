@@ -113,7 +113,7 @@ async function ensureAnimalIcons() {
 }
 
 // 貼紙圖示畫成 PNG，給主畫面小工具用（小工具裡不能畫 SVG）；樣式改過就把 STICKER_ART 加 1
-const STICKER_ART = 1;
+const STICKER_ART = 2; // 2：加水果圖示
 async function ensureStickerArt() {
   const meta = local.joinPath(ART_DIR, "meta.json");
   try { if (local.fileExists(meta) && JSON.parse(local.readString(meta)).version === STICKER_ART) return; } catch (e) {}

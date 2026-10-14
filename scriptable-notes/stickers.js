@@ -42,13 +42,26 @@ const STICKERS = {
   bicycle: { chip: "green", fill: { 0: STICKER_COLORS.white, 1: STICKER_COLORS.white } },
   camera: { chip: "purple", fill: { 0: STICKER_COLORS.lilac, 2: STICKER_COLORS.white } },
   location: { chip: "rose", fill: { 0: STICKER_COLORS.red, 1: STICKER_COLORS.white } },
+  apple: { chip: "pink", fill: { 0: "#EE3E33", 2: "#6BD861" } },
+  strawberry: { chip: "rose", fill: { 0: "#EE3E33", 1: "#6BD861" } },
+  grape: { chip: "purple", fill: { 0: "#9B6BE8", 1: "#9B6BE8", 2: "#9B6BE8", 3: "#9B6BE8", 4: "#9B6BE8", 5: "#9B6BE8", 7: "#6BD861" } },
+  watermelon: { chip: "green", fill: { 0: "#3FA34D", 1: "#FF5A6E" } },
+  orange: { chip: "orange", fill: { 0: "#FF9500", 1: "#6BD861" } },
+  cherry: { chip: "rose", fill: { 0: "#D9322B", 1: "#D9322B", 4: "#6BD861" } },
 };
 // 新增的圖示（24×24，跟其他線條圖示同一個格子）
 // 氣球：球、綁口、線、反光；叉子：叉頭、中間的齒、叉柄；飲料杯：杯身、杯蓋、吸管、珍珠
+// 水果：蘋果、草莓、葡萄、西瓜、柳橙、櫻桃（果實塗色，葉子塗綠）
 const EXTRA_ICON_SVGS = {
   balloon: '<path d="M12 2.8c3.9 0 6.6 2.9 6.6 6.6s-3.2 6.3-6.6 7.3c-3.4-1-6.6-3.6-6.6-7.3S8.1 2.8 12 2.8Z"/><path d="M10.8 18.4 12 16.7l1.2 1.7Z"/><path d="M12 18.4c-1.6 1.4 1.6 2.4 0 4.2"/><path d="M8.6 8.4c.3-1.5 1.3-2.5 2.6-2.8"/>',
   fork: '<path d="M8.5 2.8v5.4a3.5 3.5 0 0 0 7 0V2.8"/><path d="M12 2.8v5.4"/><path d="M10.8 11.6h2.4l-.3 8.9a.9.9 0 0 1-1.8 0Z"/>',
   drink: '<path d="M6.8 9.4h10.4l-1.3 10.9a1.6 1.6 0 0 1-1.6 1.4H9.7a1.6 1.6 0 0 1-1.6-1.4Z"/><path d="M5.8 9.4h12.4V8a1.8 1.8 0 0 0-1.8-1.8H7.6A1.8 1.8 0 0 0 5.8 8Z"/><path d="M12.8 6.2 14.6 2.4h2.6"/><circle cx="10" cy="18.2" r=".9" fill="currentColor"/><circle cx="12.3" cy="19.2" r=".9" fill="currentColor"/><circle cx="14.4" cy="17.8" r=".9" fill="currentColor"/>',
+  apple: '<path d="M12 7.6c-1.6-1.1-4.6-1.3-6.2.6-2 2.3-1.3 6.7.6 9.6 1.4 2.1 3 3 4.2 2.4.9-.4 1.9-.4 2.8 0 1.2.6 2.8-.3 4.2-2.4 1.9-2.9 2.6-7.3.6-9.6-1.6-1.9-4.6-1.7-6.2-.6Z"/><path d="M12 7.6c0-1.8.6-3.2 1.8-4.2"/><path d="M13.4 5c1.2-1.5 3.2-1.8 4.6-1.1-.6 1.6-2.4 2.4-4.6 1.1Z"/>',
+  strawberry: '<path d="M12 20.6c-3.2-1.6-6.6-5.6-6.6-9.2 0-2 1.6-3.3 3.6-3.3 1.2 0 2.2.4 3 .9.8-.5 1.8-.9 3-.9 2 0 3.6 1.3 3.6 3.3 0 3.6-3.4 7.6-6.6 9.2Z"/><path d="M8.4 8.4 7.4 5.6l3 1L12 4.2l1.6 2.4 3-1-1 2.8Z"/><circle cx="9.8" cy="12" r=".7" fill="currentColor"/><circle cx="14.2" cy="12" r=".7" fill="currentColor"/><circle cx="12" cy="15.2" r=".7" fill="currentColor"/>',
+  grape: '<circle cx="7.6" cy="9.4" r="2.8"/><circle cx="12" cy="9.4" r="2.8"/><circle cx="16.4" cy="9.4" r="2.8"/><circle cx="9.8" cy="14" r="2.8"/><circle cx="14.2" cy="14" r="2.8"/><circle cx="12" cy="18.6" r="2.8"/><path d="M12 6.6V3.4"/><path d="M12 4.8c1.4-1.6 3.6-1.9 5-1-1 1.6-3 2.1-5 1Z"/>',
+  watermelon: '<path d="M2.4 8.4h19.2a9.6 9.6 0 0 1-19.2 0Z"/><path d="M4.6 8.4h14.8a7.4 7.4 0 0 1-14.8 0Z"/><circle cx="9.4" cy="11" r=".8" fill="currentColor"/><circle cx="12" cy="13" r=".8" fill="currentColor"/><circle cx="14.6" cy="11" r=".8" fill="currentColor"/>',
+  orange: '<circle cx="12" cy="13.6" r="7"/><path d="M12 6.6c.3-1.9 1.9-3 3.8-2.7-.3 1.9-1.9 3-3.8 2.7Z"/><path d="M8.4 11.4c.4-1.2 1.3-2.1 2.4-2.5"/>',
+  cherry: '<circle cx="8" cy="16.4" r="3"/><circle cx="16" cy="15.4" r="3"/><path d="M8 13.4c.8-4 2.4-7 5.2-9"/><path d="M16 12.4c-.6-3.6-1.4-6.2-2.8-8"/><path d="M13.2 4.4c1.4-1.3 3.6-1.1 4.8.2-1.4 1.1-3.4 1-4.8-.2Z"/>',
 };
 
 // 不規則色塊的 8 個圓角百分比（同童趣風月曆的 R1–R4），依圖示名稱挑一組、旋轉 ±4 度
