@@ -29,11 +29,19 @@ function writeCache(text) { try { localFM.writeString(CACHE_PATH, text); } catch
 function readCache() {
   try {
     if (!localFM.fileExists(CACHE_PATH)) return null;
-    const d = JSON.parse(localFM.readString(CACHE_PATH));
-    if (d && Array.isArray(d.notes)) return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {}, fromCache: true };
+    const d = parseNotes(localFM.readString(CACHE_PATH));
+    if (d) return { ...d, fromCache: true };
   } catch (e) {}
   return null;
-} // 小工具右上角色塊裡的照片（兩台裝置共用）
+}
+// 讀出來的不是筆記就當作沒讀到（iCloud 檔案還沒下載完時 readString 會給 null，JSON.parse(null) 不會報錯而是得到 null）
+function parseNotes(raw) {
+  if (typeof raw !== "string" || !raw) return null;
+  const d = JSON.parse(raw);
+  if (!d || !Array.isArray(d.notes)) return null;
+  return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {} };
+}
+function readBackup() { try { return parseNotes(store.readString(BACKUP_PATH)); } catch (e) { return null; } } // 小工具右上角色塊裡的照片（兩台裝置共用）
 const photoPath = (id, small) => store.joinPath(PHOTO_DIR, id + (small ? "-s" : "") + ".jpg");
 const iconPath = key => store.joinPath(ICON_DIR, key + ".png");
 const mkdir = p => { if (!store.fileExists(p)) store.createDirectory(p, true); };
@@ -88,21 +96,24 @@ async function loadData() {
     const cached = readCache();
     if (cached) return cached;
     if (await fetchFromCloud(BACKUP_PATH)) {
-      try { return JSON.parse(store.readString(BACKUP_PATH)); } catch (e) {}
+      const backup = readBackup();
+      if (backup) return backup;
     }
     if (store.fileExists(cloudPlaceholder(DATA_PATH)) || store.fileExists(cloudPlaceholder(BACKUP_PATH))) throw new Error("筆記還在從 iCloud 下載，等一下再試");
     return starterData();
   }
   try {
     const raw = store.readString(DATA_PATH);
-    const d = JSON.parse(raw);
+    const d = parseNotes(raw);
+    if (!d) throw new Error("notes.json 還沒下載好");
     writeCache(raw);
-    return { cats: d.cats || [], catsModified: d.catsModified || 0, notes: d.notes || [], deleted: d.deleted || {}, settings: d.settings || {} };
+    return d;
   } catch (e) {
     // 檔案壞掉時改讀備份，不要把原本的蓋掉
     if (store.fileExists(BACKUP_PATH)) {
-      await ensureLocal(BACKUP_PATH);
-      try { return JSON.parse(store.readString(BACKUP_PATH)); } catch (e2) {}
+      try { await ensureLocal(BACKUP_PATH); } catch (e2) {}
+      const backup = readBackup();
+      if (backup) return backup;
     }
     const cached = readCache();
     if (cached) return cached;
@@ -147,12 +158,15 @@ function mergeData(mine, disk) {
 async function saveData(d) {
   mkdir(DIR);
   let disk = null;
-  if (await fetchFromCloud(DATA_PATH)) { try { disk = JSON.parse(store.readString(DATA_PATH)); } catch (e) {} }
+  if (await fetchFromCloud(DATA_PATH)) { try { disk = parseNotes(store.readString(DATA_PATH)); } catch (e) {} }
   d = mergeData(d, disk);
   // 每天留一份備份（notes-backup.json），萬一存壞了還有前一天的
   if (store.fileExists(DATA_PATH)) {
     const old = store.fileExists(BACKUP_PATH) ? store.modificationDate(BACKUP_PATH) : null;
-    if (!old || Date.now() - old.getTime() > 86400000) store.writeString(BACKUP_PATH, store.readString(DATA_PATH));
+    if (!old || Date.now() - old.getTime() > 86400000) {
+      // 讀到的不是完整的筆記（例如還沒下載完）就不要拿來蓋掉備份
+      try { const raw = store.readString(DATA_PATH); if (parseNotes(raw)) store.writeString(BACKUP_PATH, raw); } catch (e) {}
+    }
   }
   const text = JSON.stringify({ version: 2, cats: d.cats, catsModified: d.catsModified || 0, notes: d.notes, deleted: d.deleted || {}, settings: d.settings || {} });
   store.writeString(DATA_PATH, text);
