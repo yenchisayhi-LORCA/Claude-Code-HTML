@@ -322,9 +322,10 @@ function fmtDate(ms) {
 }
 
 // 小動物用圖片；其他圖示是塗好色、有不規則底色的貼紙（stickers.js）
-function noteIcon(key) {
+// on：卡片的顏色，貼紙底色跟它一樣時改白色
+function noteIcon(key, id, on) {
   if (ICON_IMAGES[key]) return `<span class="nicon"><img src="${ICON_IMAGES[key]}" alt=""></span>`;
-  return `<span class="nicon sticker">${stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS)}</span>`;
+  return `<span class="nicon sticker">${stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS, on)}</span>`;
 }
 
 function photoInner(id) {
@@ -386,7 +387,7 @@ function renderGrid() {
     const cs = checks(n), done = cs.filter((l) => l.done).length;
     const allDone = cs.length && done === cs.length;
     return `<button class="card ${allDone ? "done-all" : ""}" data-id="${esc(n.id)}">
-      <span class="c-head">${noteIcon(n.icon, n.id)}<span class="c-title">${esc(n.title)}</span>${n.pinned ? `<span class="pin-badge" aria-label="已釘選">${icon("pin")}</span>` : ""}</span>
+      <span class="c-head">${noteIcon(n.icon, n.id, allDone ? "teal" : null)}<span class="c-title">${esc(n.title)}</span>${n.pinned ? `<span class="pin-badge" aria-label="已釘選">${icon("pin")}</span>` : ""}</span>
       ${tagHTML(n.cat)}
       ${linesHTML(n.lines, 5)}
       ${thumbsHTML(n.photos, n.photos && n.photos.length > 4 ? 6 : 4)}

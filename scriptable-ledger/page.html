@@ -188,9 +188,10 @@ const catOf = (id) => data.cats.find((c) => c.id === id);
 const sum = (list) => list.reduce((s, e) => s + Number(e.amt || 0), 0);
 
 // 小動物用圖片，其他是塗好色、有不規則底色的貼紙（跟筆記一樣）
-function icon(key) {
+// on：放在什麼顏色的卡片上，貼紙底色跟它一樣時改白色
+function icon(key, on) {
   if (ICON_IMAGES[key]) return `<span class="ic"><img src="${ICON_IMAGES[key]}" alt=""></span>`;
-  return `<span class="ic">${stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS)}</span>`;
+  return `<span class="ic">${stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS, on)}</span>`;
 }
 
 /* ---------- 跟 Scriptable 溝通：要做的事放進 outbox，再用 kidsledger:// 網址叫 Scriptable 來拿 ---------- */
@@ -282,7 +283,7 @@ function renderBook() {
     const c = catOf(e.cat) || { name: "未分類", color: "yellow", icon: "star" };
     // 往左滑會露出後面紅色的「刪除」
     html += `<div class="swipe" data-e="${esc(e.id)}"><button class="swdel" data-del="${esc(e.id)}">刪除</button>
-      <button class="item" style="background:${bg(c.color)}">${icon(c.icon)}
+      <button class="item" style="background:${bg(c.color)}">${icon(c.icon, c.color)}
       <span class="t"><strong>${esc(e.note || c.name)}</strong><small>${esc(c.name)}・${hm(e.ts)}</small></span>
       <span class="money">${Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span></button></div>`;
   }
@@ -369,7 +370,7 @@ function zipBase64(files) {
 // 每一筆都會畫進去，記錄再多也不會被切掉；尺寸、顏色、字型都跟畫面一樣，寬 390 點畫成 3 倍
 const CARD_HEX = { yellow: "#FFF0AF", orange: "#FFE2BA", green: "#D5F5D0", blue: "#CFDDF8", pink: "#FBD3D0", teal: "#C9F0E9", purple: "#E3DAFA", rose: "#FFD8E8" };
 const loadImg = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
-const iconSrc = (key) => ICON_IMAGES[key] || "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS));
+const iconSrc = (key, on) => ICON_IMAGES[key] || "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(ICON_SVGS[key] ? key : "star", ICON_SVGS, on));
 function rrect(ctx, x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
@@ -394,7 +395,9 @@ async function exportCard(b) {
   const all = b.name + "筆總共今天昨天" + list.map((e) => (e.note || "") + (catOf(e.cat) || { name: "未分類" }).name).join("");
   try { await Promise.all([document.fonts.load(`900 24px "Noto Sans TC"`, all), document.fonts.load(`700 14px "Noto Sans TC"`, all), document.fonts.load(`800 20px Gluten`, "$0123456789,.")]); } catch (e) {}
   const imgs = {};
-  for (const k of new Set([b.icon, ...list.map((e) => (catOf(e.cat) || { icon: "star" }).icon)])) imgs[k] = await loadImg(iconSrc(k)).catch(() => null);
+  imgs[b.icon] = await loadImg(iconSrc(b.icon)).catch(() => null);
+  // 記錄卡片是分類的顏色：同一個圖示放在不同顏色上可能要白底，所以依「圖示|顏色」分開載入
+  for (const e of list) { const c = catOf(e.cat) || { icon: "star", color: "yellow" }, k = c.icon + "|" + c.color; if (!(k in imgs)) imgs[k] = await loadImg(iconSrc(c.icon, c.color)).catch(() => null); }
 
   // 先算高度：上下留白 24、標題 44、總額 58、每天一行日期 28、每筆 58，區塊間距 14、記錄間距 8
   const W = 390, S = 3, side = 26, inner = W - side * 2; // 左右各留 26，卡片不會壓到兩邊的色塊
@@ -430,7 +433,7 @@ async function exportCard(b) {
     d.items.forEach((e, i) => {
       const c = catOf(e.cat) || { name: "未分類", color: "yellow", icon: "star" };
       ctx.fillStyle = CARD_HEX[c.color] || CARD_HEX.yellow; rrect(ctx, side, y, inner, 58, 18); ctx.fill();
-      const im = imgs[c.icon];
+      const im = imgs[c.icon + "|" + c.color];
       if (im) { ctx.save(); if (ICON_IMAGES[c.icon]) { ctx.beginPath(); ctx.arc(side + 12 + 17, y + 29, 17, 0, Math.PI * 2); ctx.clip(); } ctx.drawImage(im, side + 12, y + 12, 34, 34); ctx.restore(); }
       ctx.fillStyle = "#262261"; ctx.font = `800 20px ${disp}`; ctx.textAlign = "right";
       const amt = Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -523,7 +526,7 @@ function openEntry(b, entry) {
     <div class="row2">${entry ? `<button class="soft" data-act="del">刪除這筆</button>` : ""}<button class="save" data-act="save">${entry ? "儲存" : "記下來"}</button></div>`, (el) => {
     const paintAmt = () => { el.querySelector("#amt").innerHTML = `<small>$</small>${draft.amt ? esc(Number(draft.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }) + (draft.amt.endsWith(".") ? "." : "")) : "0"}`; };
     const paintCats = () => {
-      el.querySelector("#cats").innerHTML = data.cats.map((c) => `<button class="cat" style="background:${bg(c.color)}" aria-pressed="${c.id === draft.cat}" data-c="${esc(c.id)}">${icon(c.icon)}<span>${esc(c.name)}</span></button>`).join("")
+      el.querySelector("#cats").innerHTML = data.cats.map((c) => `<button class="cat" style="background:${bg(c.color)}" aria-pressed="${c.id === draft.cat}" data-c="${esc(c.id)}">${icon(c.icon, c.color)}<span>${esc(c.name)}</span></button>`).join("")
         + `<button class="cat" data-new="1"><span class="plus">＋</span><span>新增</span></button>`;
     };
     paintAmt(); paintCats();
@@ -584,7 +587,7 @@ function openCatManager(back) {
   openSheet(`
     <div class="sheet-top"><h2>編輯分類</h2><button class="ibtn" data-act="close" aria-label="完成">✓</button></div>
     <p class="hint">點分類可以改名字、顏色和圖示；刪掉的分類，用到它的記錄會顯示「未分類」。</p>
-    <div class="catlist">${data.cats.map((c) => `<button class="chip" style="background:${bg(c.color)}" data-c="${esc(c.id)}">${icon(c.icon)}${esc(c.name)}</button>`).join("")}
+    <div class="catlist">${data.cats.map((c) => `<button class="chip" style="background:${bg(c.color)}" data-c="${esc(c.id)}">${icon(c.icon, c.color)}${esc(c.name)}</button>`).join("")}
       <button class="chip dashed" data-new="1" style="padding:8px 16px">＋ 新增分類</button></div>`, (el) => {
     el.addEventListener("click", (e) => {
       if (e.target.closest('[data-act="close"]')) { back ? back() : closeSheet(); return; }

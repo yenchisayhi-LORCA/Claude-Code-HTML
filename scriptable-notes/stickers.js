@@ -100,7 +100,14 @@ function blobPathD(w, h, r) {
 }
 
 // 一個圖示的完整貼紙 SVG（viewBox 24×24）：底下不規則色塊，上面是塗好色的線條圖示
-function stickerSVG(key, svgs) {
+// 貼紙底色跟它放上去的卡片同色時看不出來：on 是卡片的顏色（名稱如 "orange"，或色碼），同色就回傳 true
+function stickerClash(key, on) {
+  if (!on) return false;
+  const chip = (STICKERS[key] || { chip: "yellow" }).chip;
+  return on === chip || String(on).toLowerCase() === STICKER_CHIP[chip].toLowerCase();
+}
+// on：放在什麼顏色的卡片上（可省略）；跟貼紙底色一樣時底色改白色
+function stickerSVG(key, svgs, on) {
   const spec = STICKERS[key] || { chip: "yellow", fill: {} };
   const inner = svgs[key] || svgs.star;
   let i = 0;
@@ -114,7 +121,7 @@ function stickerSVG(key, svgs) {
   const h = stickerHash(key), deg = (h % 9) - 4;
   // 寫明寬高，畫成 PNG 時才不會被當成 300×150 而變形
   return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24">`
-    + `<path d="${blobPathD(22, 22, STICKER_BLOBS[h % 4])}" transform="translate(1 1) rotate(${deg} 11 11)" fill="${STICKER_CHIP[spec.chip]}"/>`
+    + `<path d="${blobPathD(22, 22, STICKER_BLOBS[h % 4])}" transform="translate(1 1) rotate(${deg} 11 11)" fill="${stickerClash(key, on) ? "#FFFFFF" : STICKER_CHIP[spec.chip]}"/>`
     + `<g transform="translate(4.4 4.4) scale(.633)" stroke="${STICKER_INK}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${body}</g>`
     + `</svg>`;
 }

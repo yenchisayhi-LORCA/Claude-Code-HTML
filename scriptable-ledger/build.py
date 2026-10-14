@@ -13,21 +13,16 @@ tracker = (HERE.parent / "daily-expense-tracker" / "index.html").read_text(encod
 icons = re.search(r"var ICONS = (\[.*?\]);", tracker).group(1)
 svgs = re.search(r"var ICON_SVGS = (\{.*?\n  \});", tracker, re.S).group(1)
 
-# 圖示清單：日常記帳那一套（已經有氣球、叉子、飲料杯）加上水果、雨靴、夾腳拖（放在衣服後面）、更多交通工具和餐飲；貼紙樣式在 stickers.js
-# 挑圖示時不顯示 HIDDEN 的天氣圖示和舊的火車、公車、汽車、西瓜、腳踏車、夾腳拖、雪、叉子、柳橙，但小工具還是會畫它們，以前選過的照樣顯示
-names = json.loads(icons)
-assert len(names) == len(set(names)) and "drink" in names
-# 日常記帳的清單可能已經有其中幾個（也可能拿掉了舊的天氣圖示），沒有的才補上
-for after, extra in (("cloud", ["partlycloudy", "cloudynight", "overcast"]), ("rain", ["thunderstorm"]),
-                     ("drink", ["apple", "strawberry", "grape", "watermelon", "orange", "cherry"]),
-                     ("clothes", ["rainboot", "flipflop"]), ("travel", ["plane", "planeside"]),
-                     ("train", ["steamtrain", "metro"]), ("car", ["carside"]),
-                     ("fork", ["forkknife", "burger", "pizza", "cake"])):
-    at = names.index(after) + 1
-    for k in extra:
-        if k not in names:
-            names.insert(at, k)
-        at = names.index(k) + 1
+# 圖示清單：完整的順序寫在這裡（日常記帳的清單只放挑得到的，會少了下面 HIDDEN 那些）；日常記帳有、這裡沒有的接在最後
+# 挑圖示時不顯示 HIDDEN 的，但小工具還是會畫它們，以前選過的照樣顯示；貼紙樣式在 stickers.js
+ORDER = ["lion", "pig", "giraffe", "bear", "monkey", "bee", "owl", "fox", "sheep", "penguin", "koala", "frog", "rabbit",
+         "star", "heart", "diamond", "music", "clothes", "rainboot", "flipflop", "pencil", "pets",
+         "sun", "moon", "cloud", "partlycloudy", "cloudynight", "overcast", "rain", "thunderstorm", "lightning", "snow", "rainbow",
+         "gift", "balloon", "fork", "forkknife", "burger", "pizza", "cake", "drink",
+         "apple", "strawberry", "grape", "watermelon", "orange", "cherry", "idea", "shoppingbag",
+         "travel", "plane", "planeside", "train", "steamtrain", "metro", "bus", "car", "carside", "bicycle", "camera", "location"]
+names = ORDER + [k for k in json.loads(icons) if k not in ORDER]
+assert len(names) == len(set(names))
 HIDDEN = {"partlycloudy", "cloudynight", "overcast", "thunderstorm", "train", "bus", "car", "watermelon", "bicycle", "flipflop", "snow", "fork", "orange"}
 assert HIDDEN <= set(names)
 icons = json.dumps(names)

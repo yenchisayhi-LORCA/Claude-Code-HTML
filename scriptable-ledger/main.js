@@ -113,12 +113,16 @@ async function ensureAnimalIcons() {
 }
 
 // 貼紙圖示畫成 PNG，給主畫面小工具用（小工具裡不能畫 SVG）；樣式改過就把 STICKER_ART 加 1
-const STICKER_ART = 5; // 2：加水果圖示；3：加雨靴、夾腳拖；4：加小火車、捷運、飛機、小汽車；5：加刀叉、漢堡、披薩、蛋糕
+const STICKER_ART = 6; // 2：加水果圖示；3：加雨靴、夾腳拖；4：加小火車、捷運、飛機、小汽車；5：加刀叉、漢堡、披薩、蛋糕；6：多畫白底的圖示
 async function ensureStickerArt() {
   const meta = local.joinPath(ART_DIR, "meta.json");
   try { if (local.fileExists(meta) && JSON.parse(local.readString(meta)).version === STICKER_ART) return; } catch (e) {}
   const svgs = {};
-  for (const k of ICONS) if (!ANIMALS[k]) svgs[k] = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(k, ICON_SVGS));
+  for (const k of ICONS) if (!ANIMALS[k]) {
+    svgs[k] = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(k, ICON_SVGS));
+    // 白底的那張：分類卡片跟貼紙底色同色時用
+    svgs[k + "-w"] = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSVG(k, ICON_SVGS, (STICKERS[k] || { chip: "yellow" }).chip));
+  }
   try {
     const res = await svgToPNG(svgs, 96);
     mkdir(ART_DIR);
@@ -305,8 +309,10 @@ const SF = {
   fork: "fork.knife", bus: "bus", shoppingbag: "bag", idea: "lightbulb", music: "music.note", heart: "heart",
   balloon: "balloon", car: "car", train: "tram", travel: "paperplane", gift: "gift", drink: "cup.and.saucer",
 };
-function addIcon(stack, key, size) {
-  const p = ANIMALS[key] ? iconPath(key) : artPath(key);
+// on：放在什麼顏色的卡片上（分類顏色名稱），跟貼紙底色一樣時用白底的那張
+function addIcon(stack, key, size, on) {
+  let p = ANIMALS[key] ? iconPath(key) : artPath(key);
+  if (!ANIMALS[key] && stickerClash(key, on) && local.fileExists(artPath(key + "-w"))) p = artPath(key + "-w");
   if (local.fileExists(p)) {
     const im = stack.addImage(Image.fromFile(p));
     im.imageSize = new Size(size, size);
@@ -371,7 +377,7 @@ function addChip(parent, e, cats, width, inset = 0) {
   chip.setPadding(0, 6, 0, 10);
   chip.centerAlignContent();
   chip.spacing = 6;
-  addIcon(chip, c.icon, 24);
+  addIcon(chip, c.icon, 24, c.color || "yellow");
   const t = chip.addText(e.note || c.name);
   t.font = Font.heavyRoundedSystemFont(13.8); t.textColor = col(K.ink); t.lineLimit = 1;
   chip.addSpacer();
