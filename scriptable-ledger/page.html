@@ -8,6 +8,7 @@
 <style>
 /* 版面：手機寬的一欄。首頁是帳本卡片，點進去是帳本內頁（依日期列出），記一筆、編輯分類、編輯帳本都是從下面升上來的面板 */
 :root {
+  --refund: #17705F;
   --cream: #FFFCEF; --ink: #262261; --body: #5A5788; --white: #FFFFFF; --dis: #F0EEE4; --line: #ECE7D2;
   --sun: #FFD426; --blue: #3F6FD1; --tomato: #D93A2F; --teal-check: #17705F;
   --yellow-100: #FFF0AF; --orange-100: #FFE2BA; --green-100: #D5F5D0; --blue-100: #CFDDF8;
@@ -91,8 +92,13 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--sun); outli
 /* 記一筆 */
 .amount { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .when { border: 0; background: var(--white); border-radius: 12px; padding: 7px 10px; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); min-width: 0; max-width: 60%; }
-.amount .num { font-family: var(--sans); font-weight: 900; font-size: 36px; line-height: 1.1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; text-align: right; }
-.amount .num small { font-size: 22px; margin-right: 4px; }
+.amount .num { font-family: var(--sans); font-weight: 900; font-size: 36px; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.amount .num small { font-size: 22px; margin-right: 4px; white-space: nowrap; }
+/* 「−」：回饋、退款，金額變負的、綠色，總額會扣掉 */
+.amt-r { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; flex: 1; }
+.sign { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--white); font-family: var(--sans); font-size: 30px; font-weight: 900; line-height: 1; color: var(--ink); padding-bottom: 3px; }
+.sign[aria-pressed="true"] { background: var(--green-100); color: var(--refund); outline: 3px solid var(--refund); }
+.amount .num.neg, .money.neg { color: var(--refund); }
 /* 分類小一點、一排 5 個，輸入完金額不用往下滑就看得到「記下來」 */
 .cats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
 .cat { background: transparent; padding: 4px 0 3px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; font-weight: 700; min-width: 0; }
@@ -157,7 +163,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const bg = (c) => `var(--${COLORS.includes(c) ? c : "yellow"}-100)`;
-const fmt = (n) => "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const fmt = (n) => (Number(n) < 0 ? "−$" : "$") + Math.abs(Number(n)).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const p2 = (n) => String(n).padStart(2, "0");
 const dayKey = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
 const dayLabel = (ts) => {
@@ -285,7 +291,7 @@ function renderBook() {
     html += `<div class="swipe" data-e="${esc(e.id)}"><button class="swdel" data-del="${esc(e.id)}">刪除</button>
       <button class="item" style="background:${bg(c.color)}">${icon(c.icon, c.color)}
       <span class="t"><strong>${esc(e.note || c.name)}</strong><small>${esc(c.name)}・${hm(e.ts)}</small></span>
-      <span class="money">${Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span></button></div>`;
+      <span class="money${e.amt < 0 ? " neg" : ""}">${(e.amt < 0 ? "−" : "") + Math.abs(Number(e.amt)).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span></button></div>`;
   }
   $("#app").innerHTML = `
     <header class="top"><button class="ibtn" id="back" aria-label="回到帳本列表">‹</button>${icon(b.icon)}<h1>${esc(b.name)}</h1></header>
@@ -435,9 +441,9 @@ async function exportCard(b) {
       ctx.fillStyle = CARD_HEX[c.color] || CARD_HEX.yellow; rrect(ctx, side, y, inner, 58, 18); ctx.fill();
       const im = imgs[c.icon + "|" + c.color];
       if (im) { ctx.save(); if (ICON_IMAGES[c.icon]) { ctx.beginPath(); ctx.arc(side + 12 + 17, y + 29, 17, 0, Math.PI * 2); ctx.clip(); } ctx.drawImage(im, side + 12, y + 12, 34, 34); ctx.restore(); }
-      ctx.fillStyle = "#262261"; ctx.font = `800 20px ${disp}`; ctx.textAlign = "right";
-      const amt = Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 });
-      ctx.fillText(amt, W - side - 12, y + 30); const aw = ctx.measureText(amt).width; ctx.textAlign = "left";
+      ctx.fillStyle = e.amt < 0 ? "#17705F" : "#262261"; ctx.font = `800 20px ${disp}`; ctx.textAlign = "right";
+      const amt = (e.amt < 0 ? "−" : "") + Math.abs(Number(e.amt)).toLocaleString("en-US", { maximumFractionDigits: 2 });
+      ctx.fillText(amt, W - side - 12, y + 30); const aw = ctx.measureText(amt).width; ctx.textAlign = "left"; ctx.fillStyle = "#262261";
       ctx.font = `900 16px ${sans}`; ctx.fillText(fitText(ctx, e.note || c.name, inner - 58 - aw - 24), side + 58, y + 21);
       ctx.fillStyle = "#5A5788"; ctx.font = `700 12.5px ${sans}`; ctx.fillText(`${c.name}・${hm(e.ts)}`, side + 58, y + 41);
       y += 58 + (i < d.items.length - 1 ? 8 : 0);
@@ -515,21 +521,31 @@ $("#scrim").addEventListener("click", (e) => { if (e.target.id === "scrim") clos
 const toLocalInput = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${hm(ts)}`; };
 let lastCat = null;
 function openEntry(b, entry) {
-  const draft = { amt: entry ? String(entry.amt) : "", cat: entry ? entry.cat : (catOf(lastCat) ? lastCat : data.cats[0]?.id), note: entry ? entry.note || "" : "", ts: entry ? entry.ts : Date.now() };
+  // amt 只放數字，neg：按了「−」（回饋、退款），存成負的
+  const draft = { amt: entry ? String(Math.abs(entry.amt)) : "", neg: !!entry && entry.amt < 0, cat: entry ? entry.cat : (catOf(lastCat) ? lastCat : data.cats[0]?.id), note: entry ? entry.note || "" : "", ts: entry ? entry.ts : Date.now() };
   openSheet(`
     <div class="sheet-top"><h2>${esc(b.name)}・${entry ? "修改" : "記一筆"}</h2><button class="ibtn" data-act="close" aria-label="關閉">✕</button></div>
-    <div class="amount"><input class="when" id="when" type="datetime-local" value="${toLocalInput(draft.ts)}" aria-label="日期時間"><span class="num" id="amt"></span></div>
+    <div class="amount"><input class="when" id="when" type="datetime-local" value="${toLocalInput(draft.ts)}" aria-label="日期時間"><span class="amt-r"><button class="sign" id="sign" aria-pressed="false" aria-label="回饋、退款（金額變負的）">−</button><span class="num" id="amt"></span></span></div>
     <div class="lbl-row"><span class="lbl">分類</span><button class="link" data-act="cats">編輯分類</button></div>
     <div class="cats" id="cats"></div>
     <label class="note" for="note">備註<input id="note" value="${esc(draft.note)}" placeholder="可以不填" autocomplete="off"></label>
     <div class="keys" id="keys">${["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"].map((k) => `<button class="key" data-k="${k}" ${k === "⌫" ? 'aria-label="刪除"' : ""}>${k}</button>`).join("")}</div>
     <div class="row2">${entry ? `<button class="soft" data-act="del">刪除這筆</button>` : ""}<button class="save" data-act="save">${entry ? "儲存" : "記下來"}</button></div>`, (el) => {
-    const paintAmt = () => { el.querySelector("#amt").innerHTML = `<small>$</small>${draft.amt ? esc(Number(draft.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }) + (draft.amt.endsWith(".") ? "." : "")) : "0"}`; };
+    const paintAmt = () => {
+      el.querySelector("#sign").setAttribute("aria-pressed", draft.neg);
+      el.querySelector("#amt").classList.toggle("neg", draft.neg);
+      const shown = draft.amt ? Number(draft.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }) + (draft.amt.endsWith(".") ? "." : "") : "0";
+      el.querySelector("#amt").innerHTML = `<small>${draft.neg ? "−$" : "$"}</small>${esc(shown)}`;
+      // 金額越長字越小，跟日期擺在同一行不換行
+      const n = shown.length + (draft.neg ? 1 : 0);
+      el.querySelector("#amt").style.fontSize = (n <= 4 ? 36 : n <= 6 ? 30 : n <= 8 ? 25 : 21) + "px";
+    };
     const paintCats = () => {
       el.querySelector("#cats").innerHTML = data.cats.map((c) => `<button class="cat" style="background:${bg(c.color)}" aria-pressed="${c.id === draft.cat}" data-c="${esc(c.id)}">${icon(c.icon, c.color)}<span>${esc(c.name)}</span></button>`).join("")
         + `<button class="cat" data-new="1"><span class="plus">＋</span><span>新增</span></button>`;
     };
     paintAmt(); paintCats();
+    el.querySelector("#sign").onclick = () => { draft.neg = !draft.neg; paintAmt(); };
     el.querySelector("#keys").onclick = (e) => {
       const k = e.target.closest("[data-k]")?.dataset.k; if (!k) return;
       if (k === "⌫") draft.amt = draft.amt.slice(0, -1);
@@ -568,8 +584,8 @@ function openEntry(b, entry) {
         toast("已刪除這筆", () => { b.entries.splice(idx, 0, entry); changed(); render(); });
       }
       if (act === "save") {
-        const amt = Number(draft.amt);
-        if (!draft.amt || !(amt > 0)) { toast("先輸入金額喔"); return; }
+        if (!draft.amt || !(Number(draft.amt) > 0)) { toast("先輸入金額喔"); return; }
+        const amt = draft.neg ? -Number(draft.amt) : Number(draft.amt);
         const note = el.querySelector("#note").value.trim();
         if (entry) Object.assign(entry, { amt, cat: draft.cat, note, ts: draft.ts });
         else b.entries.push({ id: uid("e"), ts: draft.ts, amt, cat: draft.cat, note });
