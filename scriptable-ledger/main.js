@@ -325,7 +325,7 @@ function addIcon(stack, key, size, on) {
   im.imageSize = new Size(size * 0.7, size * 0.7);
   im.tintColor = col(K.ink);
 }
-const money = n => "$" + Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const money = n => (Number(n) < 0 ? "−$" : "$") + Math.abs(Number(n)).toLocaleString("en-US", { maximumFractionDigits: 2 }); // 負的是回饋、退款
 
 // 依螢幕寬度推算小工具的大小（單位：點），跟筆記同一張表
 function widgetSizes() {
@@ -381,8 +381,8 @@ function addChip(parent, e, cats, width, inset = 0) {
   const t = chip.addText(e.note || c.name);
   t.font = Font.heavyRoundedSystemFont(13.8); t.textColor = col(K.ink); t.lineLimit = 1;
   chip.addSpacer();
-  const a = chip.addText(Number(e.amt).toLocaleString("en-US", { maximumFractionDigits: 2 }));
-  a.font = Font.heavyRoundedSystemFont(14.4); a.textColor = col(K.ink);
+  const a = chip.addText((e.amt < 0 ? "−" : "") + Math.abs(Number(e.amt)).toLocaleString("en-US", { maximumFractionDigits: 2 }));
+  a.font = Font.heavyRoundedSystemFont(14.4); a.textColor = col(e.amt < 0 ? "#17705F" : K.ink); // 回饋、退款用綠色
   if (inset) holder.addSpacer(inset);
 }
 
