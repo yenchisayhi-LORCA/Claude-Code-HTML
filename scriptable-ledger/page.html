@@ -275,11 +275,25 @@ function deleteBook(id) {
   toast(`已刪除「${b.name}」`, () => { data.books.splice(idx, 0, b); changed(); renderHome(); });
 }
 
+// 記錄卡片的顏色：先用分類的顏色，跟前面 4 筆有重複時改用附近還沒用過的顏色（同一個分類連著記也不會整排同色）
+const SPREAD = ["yellow", "blue", "pink", "green", "purple", "orange", "rose", "teal"];
+function spreadColors(list, catColor) {
+  const out = [];
+  list.forEach((e, i) => {
+    const near = out.slice(Math.max(0, i - 4));
+    let c = catColor(e) || "yellow";
+    if (near.includes(c)) c = SPREAD.find(x => !near.includes(x)) || c;
+    out.push(c);
+  });
+  return out;
+}
+
 function renderBook() {
   const b = bookOf(view.book);
   const list = [...b.entries].sort((x, y) => y.ts - x.ts);
   let html = "", day = "";
-  for (const e of list) {
+  const colors = spreadColors(list, (e) => (catOf(e.cat) || {}).color);
+  for (const [i, e] of list.entries()) {
     const k = dayKey(e.ts);
     if (k !== day) {
       day = k;
@@ -288,7 +302,7 @@ function renderBook() {
     const c = catOf(e.cat) || { name: "未分類", color: "yellow", icon: "star" };
     // 往左滑會露出後面紅色的「刪除」
     html += `<div class="swipe" data-e="${esc(e.id)}"><button class="swdel" data-del="${esc(e.id)}">刪除</button>
-      <button class="item" style="background:${bg(c.color)}">${icon(c.icon, c.color)}
+      <button class="item" style="background:${bg(colors[i])}">${icon(c.icon, colors[i])}
       <span class="t"><strong>${esc(e.note || c.name)}</strong><small>${esc(c.name)}・${hm(e.ts)}</small></span>
       <span class="money${e.amt < 0 ? " neg" : ""}">${(e.amt < 0 ? "−" : "") + Math.abs(Number(e.amt)).toLocaleString("en-US", { maximumFractionDigits: 2 })}</span></button></div>`;
   }
@@ -402,7 +416,8 @@ async function exportCard(b) {
   const imgs = {};
   imgs[b.icon] = await loadImg(iconSrc(b.icon)).catch(() => null);
   // 記錄卡片是分類的顏色：同一個圖示放在不同顏色上可能要白底，所以依「圖示|顏色」分開載入
-  for (const e of list) { const c = catOf(e.cat) || { icon: "star", color: "yellow" }, k = c.icon + "|" + c.color; if (!(k in imgs)) imgs[k] = await loadImg(iconSrc(c.icon, c.color)).catch(() => null); }
+  const colors = spreadColors(list, (e) => (catOf(e.cat) || {}).color), colorOf = new Map(list.map((e, i) => [e, colors[i]]));
+  for (const e of list) { const c = catOf(e.cat) || { icon: "star" }, cc = colorOf.get(e), k = c.icon + "|" + cc; if (!(k in imgs)) imgs[k] = await loadImg(iconSrc(c.icon, cc)).catch(() => null); }
 
   // 先算高度：上下留白 24、標題 44、總額 58、每天一行日期 28、每筆 58，區塊間距 14、記錄間距 8
   const W = 390, S = 3, side = 26, inner = W - side * 2; // 左右各留 26，卡片不會壓到兩邊的色塊
@@ -437,8 +452,9 @@ async function exportCard(b) {
     y += 28 + 8;
     d.items.forEach((e, i) => {
       const c = catOf(e.cat) || { name: "未分類", color: "yellow", icon: "star" };
-      ctx.fillStyle = CARD_HEX[c.color] || CARD_HEX.yellow; rrect(ctx, side, y, inner, 58, 18); ctx.fill();
-      const im = imgs[c.icon + "|" + c.color];
+      const cc = colorOf.get(e);
+      ctx.fillStyle = CARD_HEX[cc] || CARD_HEX.yellow; rrect(ctx, side, y, inner, 58, 18); ctx.fill();
+      const im = imgs[c.icon + "|" + cc];
       if (im) { ctx.save(); if (ICON_IMAGES[c.icon]) { ctx.beginPath(); ctx.arc(side + 12 + 17, y + 29, 17, 0, Math.PI * 2); ctx.clip(); } ctx.drawImage(im, side + 12, y + 12, 34, 34); ctx.restore(); }
       ctx.fillStyle = e.amt < 0 ? "#17705F" : "#262261"; ctx.font = `800 20px ${disp}`; ctx.textAlign = "right";
       const amt = (e.amt < 0 ? "−" : "") + Math.abs(Number(e.amt)).toLocaleString("en-US", { maximumFractionDigits: 2 });
