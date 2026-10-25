@@ -364,20 +364,33 @@ function addPill(parent, book, plusOnly = false) {
   const pt = pill.addText(plusOnly ? "＋" : "＋ 記一筆");
   pt.font = Font.heavyRoundedSystemFont(plusOnly ? 12 : 13); pt.textColor = col(K.white);
 }
-// 一筆記錄：分類圖示、備註（沒有就寫分類）、金額
-function addChip(parent, e, cats, width, inset = 0) {
+// 記錄卡片的顏色：先用分類的顏色，跟前面 4 筆有重複時改用附近還沒用過的顏色（同一個分類連著記也不會整排同色）
+const SPREAD = ["yellow", "blue", "pink", "green", "purple", "orange", "rose", "teal"];
+function spreadColors(list, catColor) {
+  const out = [];
+  list.forEach((e, i) => {
+    const near = out.slice(Math.max(0, i - 4));
+    let c = catColor(e) || "yellow";
+    if (near.includes(c)) c = SPREAD.find(x => !near.includes(x)) || c;
+    out.push(c);
+  });
+  return out;
+}
+// 一筆記錄：分類圖示、備註（沒有就寫分類）、金額；color：卡片顏色（spreadColors 排好的）
+function addChip(parent, e, cats, width, inset = 0, color) {
   const c = cats.find(x => x.id === e.cat) || { name: "未分類", color: "yellow", icon: "star" };
   // inset：左右各縮進一點（大尺寸用），兩邊一樣寬
   let holder = parent;
   if (inset) { holder = parent.addStack(); holder.addSpacer(inset); }
   const chip = holder.addStack();
   chip.size = new Size(width, CHIP_H);
-  chip.backgroundColor = col(CAT_BG[c.color] || CAT_BG.yellow);
+  const cc = color || c.color || "yellow";
+  chip.backgroundColor = col(CAT_BG[cc] || CAT_BG.yellow);
   chip.cornerRadius = 13;
   chip.setPadding(0, 6, 0, 10);
   chip.centerAlignContent();
   chip.spacing = 6;
-  addIcon(chip, c.icon, 24, c.color || "yellow");
+  addIcon(chip, c.icon, 24, cc);
   const t = chip.addText(e.note || c.name);
   t.font = Font.heavyRoundedSystemFont(13.8); t.textColor = col(K.ink); t.lineLimit = 1;
   chip.addSpacer();
@@ -455,7 +468,8 @@ function buildWidget(family) {
     right.addSpacer();
     const rw = W - 28 - 128 - 10;
     if (!entries.length) { const t = right.addText("還沒有記錄"); t.font = Font.boldRoundedSystemFont(12); t.textColor = col(K.body); }
-    for (const e of entries.slice(0, 3)) addChip(right, e, cats, rw);
+    const shown = entries.slice(0, 3), colors = spreadColors(shown, e => (cats.find(x => x.id === e.cat) || {}).color);
+    shown.forEach((e, i) => addChip(right, e, cats, rw, 0, colors[i]));
     right.addSpacer();
     return w;
   }
@@ -498,7 +512,8 @@ function buildWidget(family) {
   let room = H - 24 - LOGO - 6 - 20 - 8;
   if (!entries.length) { const t = w.addText("還沒有記錄，點「＋」開始記一筆"); t.font = Font.boldRoundedSystemFont(13); t.textColor = col(K.body); }
   let day = null;
-  for (const e of entries) {
+  const colors = spreadColors(entries.slice(0, 12), e => (cats.find(x => x.id === e.cat) || {}).color);
+  for (const [i, e] of entries.entries()) {
     const k = dayKey(e.ts);
     const needDay = k !== day;
     if (room < (needDay ? DAY_H + 4 : 0) + CHIP_H) break;
@@ -517,7 +532,7 @@ function buildWidget(family) {
       w.addSpacer(4);
       room -= DAY_H + 4;
     }
-    addChip(w, e, cats, chipW, INSET);
+    addChip(w, e, cats, chipW, INSET, colors[i]);
     w.addSpacer(CHIP_GAP);
     room -= CHIP_H + CHIP_GAP;
   }
